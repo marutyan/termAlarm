@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- アダプティブアイコン定義。前景と同じ白線画をmonochromeにも流用する -->
+<!--
+    アダプティブアイコン定義。
+    前景は指定デザインから切り出したラスター画像。背景色は円の外周と同じ濃い青にして、
+    ランチャーが円やスクワークルで抜いたときに縁が途切れて見えないようにする。
+    モノクロ(Android 13+のテーマアイコン)にはラスターを使えない。アルファで単色化されるため
+    塗りつぶした円になってしまうので、弧と針を形状で表したベクターを別に用意している。
+-->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@drawable/ic_launcher_background" />
+    <background android:drawable="@color/ic_launcher_background" />
     <foreground android:drawable="@drawable/ic_launcher_foreground" />
-    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
 </adaptive-icon>
