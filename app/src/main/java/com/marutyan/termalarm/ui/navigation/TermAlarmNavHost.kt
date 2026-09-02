@@ -21,17 +21,25 @@ import com.marutyan.termalarm.ui.alarmlist.AlarmListViewModel
 import com.marutyan.termalarm.ui.alarmlist.AlarmListViewModelFactory
 import com.marutyan.termalarm.ui.alarmlist.TermAlarmBottomBar
 import com.marutyan.termalarm.ui.alarmlist.TermAlarmTab
+import com.marutyan.termalarm.ui.clock.ClockScreen
+import com.marutyan.termalarm.ui.clock.ClockViewModel
+import com.marutyan.termalarm.ui.clock.ClockViewModelFactory
+import com.marutyan.termalarm.data.WorldClockRepository
+import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.ui.common.PlaceholderTabScreen
 import com.marutyan.termalarm.ui.permission.ExactAlarmPermissionBanner
 import com.marutyan.termalarm.ui.permission.NotificationPermissionBanner
 import com.marutyan.termalarm.ui.skipgame.SkipGameScreen
 import com.marutyan.termalarm.ui.skipgame.SkipGameViewModel
 import com.marutyan.termalarm.ui.skipgame.SkipGameViewModelFactory
+import com.marutyan.termalarm.data.StopwatchRepository
+import com.marutyan.termalarm.data.TimerRepository
+import com.marutyan.termalarm.ui.stopwatch.StopwatchScreen
+import com.marutyan.termalarm.ui.stopwatch.StopwatchViewModel
+import com.marutyan.termalarm.ui.stopwatch.StopwatchViewModelFactory
 import com.marutyan.termalarm.ui.timer.TimerScreen
 import com.marutyan.termalarm.ui.timer.TimerViewModel
 import com.marutyan.termalarm.ui.timer.TimerViewModelFactory
-import com.marutyan.termalarm.data.AlarmDatabase
-import com.marutyan.termalarm.data.TimerRepository
 import androidx.compose.ui.res.stringResource
 import com.marutyan.termalarm.R
 
@@ -98,7 +106,16 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             )
         }
         composable(ROUTE_CLOCK) {
-            PlaceholderTabScreen(stringResource(R.string.tab_clock)) { TermAlarmBottomBar(TermAlarmTab.CLOCK, ::goToTab) }
+            // AlarmDatabaseは共有シングルトンのため、ここでdaoを取り出してWorldClockRepositoryを組み立てる
+            // (MainActivityの配線は変えず、時計タブの行だけで完結させる)
+            val clockRepository = remember {
+                WorldClockRepository(
+                    AlarmDatabase.getInstance(context).worldClockCityDao(),
+                    AlarmDatabase.getInstance(context).clockSettingsDao(),
+                )
+            }
+            val viewModel: ClockViewModel = viewModel(factory = ClockViewModelFactory(clockRepository))
+            ClockScreen(viewModel = viewModel) { TermAlarmBottomBar(TermAlarmTab.CLOCK, ::goToTab) }
         }
         composable(ROUTE_TIMER) {
             val timerRepository = remember { TimerRepository(AlarmDatabase.getInstance(context).timerDao()) }
@@ -109,7 +126,12 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             )
         }
         composable(ROUTE_STOPWATCH) {
-            PlaceholderTabScreen(stringResource(R.string.tab_stopwatch)) { TermAlarmBottomBar(TermAlarmTab.STOPWATCH, ::goToTab) }
+            val stopwatchRepository = remember { StopwatchRepository(AlarmDatabase.getInstance(context).stopwatchDao()) }
+            val viewModel: StopwatchViewModel = viewModel(factory = StopwatchViewModelFactory(stopwatchRepository, context))
+            StopwatchScreen(
+                viewModel = viewModel,
+                bottomBar = { TermAlarmBottomBar(TermAlarmTab.STOPWATCH, ::goToTab) },
+            )
         }
         composable(
             route = "$ROUTE_EDIT?$ARG_ALARM_ID={$ARG_ALARM_ID}",
