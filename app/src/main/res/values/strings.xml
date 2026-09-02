@@ -57,6 +57,7 @@
     <string name="error_interval_not_positive">間隔は1分以上にしてください</string>
     <string name="error_interval_too_large">間隔が範囲に対して大きすぎます。間隔を短くするか終了時刻を後にしてください</string>
     <string name="error_custom_interval_invalid">間隔には数字を入力してください</string>
+    <string name="error_snooze_out_of_range">スヌーズは1分から60分の間で指定してください</string>
     <string name="repeat_section_title">繰り返し</string>
     <string name="label_title">ラベル</string>
     <string name="label_placeholder">なし</string>

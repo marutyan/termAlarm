@@ -1,6 +1,7 @@
 package com.marutyan.termalarm.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -43,6 +44,7 @@ private const val ARG_ALARM_ID = "alarmId"
 @Composable
 fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
     val navController = rememberNavController()
+    val context = LocalContext.current
 
     fun goToTab(tab: TermAlarmTab) {
         val route = when (tab) {
@@ -60,7 +62,7 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
 
     NavHost(navController = navController, startDestination = ROUTE_LIST) {
         composable(ROUTE_LIST) {
-            val viewModel: AlarmListViewModel = viewModel(factory = AlarmListViewModelFactory(repository))
+            val viewModel: AlarmListViewModel = viewModel(factory = AlarmListViewModelFactory(repository, context))
             AlarmListScreen(
                 viewModel = viewModel,
                 onAddAlarm = { navController.navigate(ROUTE_EDIT) },
@@ -87,7 +89,7 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
         ) { backStackEntry ->
             val rawId = backStackEntry.arguments?.getLong(ARG_ALARM_ID) ?: -1L
             val alarmId = rawId.takeIf { it >= 0 }
-            val viewModel: AlarmEditViewModel = viewModel(factory = AlarmEditViewModelFactory(repository, alarmId))
+            val viewModel: AlarmEditViewModel = viewModel(factory = AlarmEditViewModelFactory(repository, context, alarmId))
             AlarmEditScreen(viewModel = viewModel, onClose = { navController.popBackStack() })
         }
         composable(
@@ -95,7 +97,7 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             arguments = listOf(navArgument(ARG_ALARM_ID) { type = NavType.LongType }),
         ) { backStackEntry ->
             val alarmId = backStackEntry.arguments?.getLong(ARG_ALARM_ID) ?: return@composable
-            val viewModel: SkipGameViewModel = viewModel(factory = SkipGameViewModelFactory(repository, alarmId, hasShakeSensor))
+            val viewModel: SkipGameViewModel = viewModel(factory = SkipGameViewModelFactory(repository, context, alarmId, hasShakeSensor))
             SkipGameScreen(viewModel = viewModel, onClose = { navController.popBackStack() })
         }
         composable(ROUTE_ABOUT) {

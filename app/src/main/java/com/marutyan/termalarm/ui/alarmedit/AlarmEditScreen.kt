@@ -253,6 +253,7 @@ private fun validationMessageRes(error: AlarmEditValidationError): Int = when (e
     AlarmEditValidationError.INTERVAL_NOT_POSITIVE -> R.string.error_interval_not_positive
     AlarmEditValidationError.INTERVAL_TOO_LARGE -> R.string.error_interval_too_large
     AlarmEditValidationError.CUSTOM_INTERVAL_INVALID -> R.string.error_custom_interval_invalid
+    AlarmEditValidationError.SNOOZE_OUT_OF_RANGE -> R.string.error_snooze_out_of_range
 }
 
 // 開始・終了時刻の2枚のカード

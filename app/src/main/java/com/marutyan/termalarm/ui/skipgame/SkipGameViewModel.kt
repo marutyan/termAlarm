@@ -1,11 +1,13 @@
 package com.marutyan.termalarm.ui.skipgame
 
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.marutyan.termalarm.alarm.AlarmScheduler
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.domain.GameQuestion
 import com.marutyan.termalarm.domain.GameType
@@ -38,10 +40,14 @@ data class SkipGameUiState(
  */
 class SkipGameViewModel(
     private val repository: AlarmRepository,
+    context: Context,
     private val alarmId: Long,
     private val hasShakeSensor: Boolean,
     private val random: Random = Random.Default,
 ) : ViewModel() {
+
+    // PendingIntent発行やRoomアクセスにはApplication Contextで十分なため、生成時点で切り替えて保持する
+    private val appContext: Context = context.applicationContext
 
     var uiState by mutableStateOf(SkipGameUiState())
         private set
@@ -73,6 +79,7 @@ class SkipGameViewModel(
         if (judgeGameAnswer(question, answer)) {
             viewModelScope.launch {
                 repository.endTodaySession(alarmId, ZonedDateTime.now())
+                AlarmScheduler.reschedule(appContext, alarmId)
                 uiState = uiState.copy(isSuccess = true)
             }
         } else {
@@ -86,10 +93,11 @@ class SkipGameViewModel(
 // 依存注入フレームワークを使わないための手作りファクトリ
 class SkipGameViewModelFactory(
     private val repository: AlarmRepository,
+    private val context: Context,
     private val alarmId: Long,
     private val hasShakeSensor: Boolean,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        SkipGameViewModel(repository, alarmId, hasShakeSensor) as T
+        SkipGameViewModel(repository, context, alarmId, hasShakeSensor) as T
 }
