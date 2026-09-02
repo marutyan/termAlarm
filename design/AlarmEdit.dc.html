@@ -1,0 +1,192 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@100..1000&family=Noto+Sans+JP:wght@100..900&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Google Sans Flex', 'Noto Sans JP', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #6750A4; } a:hover { color: #4F378B; }
+  </style>
+</helmet>
+<div style="width: 412px; height: 917px; background: #FEF7FF; color: #1D1B20; display: flex; flex-direction: column; overflow: hidden;">
+
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 52px 16px 12px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="width: 48px; height: 48px; border-radius: 24px; display: flex; align-items: center; justify-content: center;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1D1B20" stroke-width="2" stroke-linecap="round">
+          <line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line>
+        </svg>
+      </div>
+      <span style="font-size: 22px; font-weight: 500;">アラームを編集</span>
+    </div>
+    <div style="height: 40px; padding: 0 24px; border-radius: 20px; background: #6750A4; color: #FFFFFF; font-size: 15px; font-weight: 600; display: flex; align-items: center;">保存</div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 20px; padding: 8px 16px 0; flex-grow: 1; overflow-y: auto;">
+
+    <div style="display: flex; gap: 12px;">
+      <div style="flex-grow: 1; background: #EADDFF; border: 2px solid #6750A4; border-radius: 24px; padding: 14px 18px 16px; box-sizing: border-box;">
+        <div style="font-size: 12px; font-weight: 600; color: #21005D; letter-spacing: 0.4px;">開始</div>
+        <div style="font-size: 44px; font-weight: 500; color: #21005D; line-height: 1.1; letter-spacing: -1.5px;">7:00</div>
+      </div>
+      <div style="flex-grow: 1; background: #F3EDF7; border-radius: 24px; padding: 14px 18px 16px; box-sizing: border-box;">
+        <div style="font-size: 12px; font-weight: 600; color: #49454F; letter-spacing: 0.4px;">終了</div>
+        <div style="font-size: 44px; font-weight: 500; color: #1D1B20; line-height: 1.1; letter-spacing: -1.5px;">9:00</div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="font-size: 14px; font-weight: 600; color: #49454F; padding-left: 4px;">鳴らす間隔</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        <sc-for list="{{intervals}}" as="iv" hint-placeholder-count="6">
+          <sc-if value="{{ iv.on }}" hint-placeholder-val="{{ false }}">
+            <div style="height: 40px; padding: 0 18px; border-radius: 20px; background: #6750A4; color: #FFFFFF; font-size: 15px; font-weight: 600; display: flex; align-items: center;">{{ iv.label }}</div>
+          </sc-if>
+          <sc-if value="{{ iv.off }}" hint-placeholder-val="{{ true }}">
+            <div style="height: 40px; padding: 0 18px; border-radius: 20px; border: 1px solid #79747E; color: #49454F; font-size: 15px; font-weight: 500; display: flex; align-items: center; box-sizing: border-box;">{{ iv.label }}</div>
+          </sc-if>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="background: #E8DEF8; border-radius: 20px; padding: 16px 18px; display: flex; align-items: center; gap: 12px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1D192B" stroke-width="1.8" stroke-linecap="round" style="flex-shrink: 0;">
+        <circle cx="12" cy="12" r="9"></circle><path d="M12 7.5V12l3.2 1.9"></path>
+      </svg>
+      <div style="font-size: 15px; color: #1D192B; line-height: 1.5;">7:00 から 9:00 まで<br><strong style="font-weight: 700;">25回</strong> 鳴ります</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="font-size: 14px; font-weight: 600; color: #49454F; padding-left: 4px;">繰り返し</div>
+      <div style="display: flex; gap: 6px;">
+        <sc-for list="{{days}}" as="d" hint-placeholder-count="7">
+          <sc-if value="{{ d.on }}" hint-placeholder-val="{{ true }}">
+            <div style="width: 44px; height: 44px; border-radius: 22px; background: #6750A4; color: #FFFFFF; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center;">{{ d.label }}</div>
+          </sc-if>
+          <sc-if value="{{ d.off }}" hint-placeholder-val="{{ false }}">
+            <div style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #79747E; color: #49454F; font-size: 15px; font-weight: 500; display: flex; align-items: center; justify-content: center; box-sizing: border-box;">{{ d.label }}</div>
+          </sc-if>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; background: #F3EDF7; border-radius: 24px; overflow: hidden;">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; min-height: 56px; box-sizing: border-box;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#49454F" stroke-width="1.8" stroke-linecap="round">
+            <path d="M4 7h16"></path><path d="M4 12h16"></path><path d="M4 17h10"></path>
+          </svg>
+          <span style="font-size: 16px;">ラベル</span>
+        </div>
+        <span style="font-size: 15px; color: #49454F;">起床</span>
+      </div>
+      <div style="height: 1px; background: #E6E0E9; margin: 0 20px;"></div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; min-height: 56px; box-sizing: border-box;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#49454F" stroke-width="1.8" stroke-linecap="round">
+            <path d="M4 15V9h4l5-4v14l-5-4H4z"></path><path d="M17 9.5a4 4 0 0 1 0 5"></path>
+          </svg>
+          <span style="font-size: 16px;">アラーム音</span>
+        </div>
+        <span style="font-size: 15px; color: #49454F;">Bright morning</span>
+      </div>
+      <div style="height: 1px; background: #E6E0E9; margin: 0 20px;"></div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; min-height: 56px; box-sizing: border-box;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#49454F" stroke-width="1.8" stroke-linecap="round">
+            <rect x="8" y="3" width="8" height="18" rx="2"></rect><path d="M4 9v6"></path><path d="M20 9v6"></path>
+          </svg>
+          <span style="font-size: 16px;">バイブレーション</span>
+        </div>
+        <div style="width: 52px; height: 32px; border-radius: 16px; background: #6750A4; display: flex; align-items: center; justify-content: flex-end; padding: 0 4px; box-sizing: border-box;">
+          <div style="width: 24px; height: 24px; border-radius: 12px; background: #FFFFFF;"></div>
+        </div>
+      </div>
+    </div>
+
+
+
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="font-size: 14px; font-weight: 600; color: #49454F; padding-left: 4px;">止めにくさ</div>
+      <div style="display: flex; flex-direction: column; background: #F3EDF7; border-radius: 24px; overflow: hidden;">
+
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px;">
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 16px;">当日終了はアプリからのみ</span>
+            <span style="font-size: 13px; color: #49454F; line-height: 1.4;">寝ぼけて止めてしまうのを防ぎます</span>
+          </div>
+          <div style="width: 52px; height: 32px; border-radius: 16px; background: #6750A4; display: flex; align-items: center; justify-content: flex-end; padding: 0 4px; box-sizing: border-box; flex-shrink: 0;">
+            <div style="width: 24px; height: 24px; border-radius: 12px; background: #FFFFFF;"></div>
+          </div>
+        </div>
+
+        <div style="height: 1px; background: #E6E0E9; margin: 0 20px;"></div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px;">
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 16px;">止める前にゲームを出す</span>
+            <span style="font-size: 13px; color: #49454F; line-height: 1.4;">6種類からランダムに1問</span>
+          </div>
+          <div style="width: 52px; height: 32px; border-radius: 16px; background: #E6E0E9; border: 2px solid #79747E; box-sizing: border-box; display: flex; align-items: center; padding: 0 5px; flex-shrink: 0;">
+            <div style="width: 16px; height: 16px; border-radius: 8px; background: #79747E;"></div>
+          </div>
+        </div>
+
+        <div style="height: 1px; background: #E6E0E9; margin: 0 20px;"></div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px;">
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 16px;">スヌーズ</span>
+            <span style="font-size: 13px; color: #49454F; line-height: 1.4;">間隔が長いときに使えます</span>
+          </div>
+          <div style="width: 52px; height: 32px; border-radius: 16px; background: #E6E0E9; border: 2px solid #79747E; box-sizing: border-box; display: flex; align-items: center; padding: 0 5px; flex-shrink: 0;">
+            <div style="width: 16px; height: 16px; border-radius: 8px; background: #79747E;"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <div style="padding: 16px 16px 32px;">
+    <div style="height: 52px; border-radius: 26px; border: 1px solid #79747E; display: flex; align-items: center; justify-content: center; gap: 10px; box-sizing: border-box;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B3261E" stroke-width="1.8" stroke-linecap="round">
+        <path d="M5 7h14"></path><path d="M9 7V5h6v2"></path><path d="M7 7l1 12h8l1-12"></path>
+      </svg>
+      <span style="font-size: 15px; font-weight: 600; color: #B3261E;">このアラームを削除</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":412,"height":917}}'>
+// 編集画面の選択状態を持つデータ。間隔チップと曜日チップは選択/非選択で見た目が変わるため、
+// テンプレート側の分岐用に on / off の両方の真偽値を持たせている。
+class Component extends DCLogic {
+  renderVals() {
+    const mark = (list, selected) => list.map((label) => ({
+      label,
+      on: label === selected,
+      off: label !== selected,
+    }));
+    const week = ['月', '火', '水', '木', '金', '土', '日'];
+    const activeDays = [0, 1, 2, 3, 4];
+    return {
+      intervals: mark(['1分', '5分', '10分', '15分', '30分', 'その他'], '5分'),
+      days: week.map((label, i) => ({
+        label,
+        on: activeDays.includes(i),
+        off: !activeDays.includes(i),
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>
