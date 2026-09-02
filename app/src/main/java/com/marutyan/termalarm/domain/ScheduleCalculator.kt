@@ -108,3 +108,17 @@ fun scheduleSummary(schedule: AlarmSchedule): String {
     val count = occurrenceCount(schedule)
     return if (count <= 1) "1回のみ" else "${schedule.intervalMinutes}分ごと · ${count}回"
 }
+
+/**
+ * 「今日はもう止める」を実行する意味があるかを返す。
+ * 有効なアラームで、これから鳴る回が残っている場合だけtrue。
+ *
+ * 一覧画面はこの判定で導線の表示を切り替える。押しても何も起きない状態で
+ * 導線が並ぶと、アラーム自体を無効にするトグルとの違いが分かりにくくなるため。
+ */
+fun canEndTodaySession(schedule: AlarmSchedule, now: ZonedDateTime): Boolean {
+    if (!schedule.enabled) return false
+    val next = nextTrigger(schedule, now) ?: return false
+    // 次に鳴るのが別のセッションなら、今日の分はもう残っていない
+    return sessionStartDate(schedule, next) == sessionStartDate(schedule, now)
+}
