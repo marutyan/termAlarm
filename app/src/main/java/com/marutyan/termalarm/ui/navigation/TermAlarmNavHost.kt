@@ -1,6 +1,8 @@
 package com.marutyan.termalarm.ui.navigation
 
+import android.app.Activity
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -36,6 +38,10 @@ private const val ROUTE_TIMER = "timer"
 private const val ROUTE_STOPWATCH = "stopwatch"
 private const val ARG_ALARM_ID = "alarmId"
 
+// SET_ALARM等の外部インテントを受けたAlarmIntentActivity(ui.intent)がMainActivity起動時に付ける拡張。
+// 値が-1なら新規作成画面、0以上ならそのidの編集画面へ直接遷移する。他パッケージから参照するためpublic。
+const val EXTRA_DEEPLINK_ALARM_ID = "com.marutyan.termalarm.ui.EXTRA_DEEPLINK_ALARM_ID"
+
 /**
  * アプリ全体の画面遷移。アラーム一覧を起点に、追加・編集、当日終了ゲーム、ライセンス表示、
  * 下部ナビの4タブ(アラーム/時計/タイマー/ストップウォッチ)を1つのNavHostへまとめる。
@@ -45,6 +51,17 @@ private const val ARG_ALARM_ID = "alarmId"
 fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
     val navController = rememberNavController()
     val context = LocalContext.current
+
+    // AlarmIntentActivity経由でMainActivityが起動された場合、起動intentのEXTRA_DEEPLINK_ALARM_IDを見て
+    // アラーム一覧の代わりに編集画面(または新規作成画面)へ直接遷移する。通常起動時はこの拡張が付かないため
+    // 一覧のままになる(docs/SPEC.md「SET_ALARMの扱い」: 時刻指定が無い/確認UIを出す場合に編集画面を開く)。
+    LaunchedEffect(Unit) {
+        val launchIntent = (context as? Activity)?.intent
+        if (launchIntent?.hasExtra(EXTRA_DEEPLINK_ALARM_ID) == true) {
+            val id = launchIntent.getLongExtra(EXTRA_DEEPLINK_ALARM_ID, -1L)
+            navController.navigate(if (id >= 0) "$ROUTE_EDIT?$ARG_ALARM_ID=$id" else ROUTE_EDIT)
+        }
+    }
 
     fun goToTab(tab: TermAlarmTab) {
         val route = when (tab) {
