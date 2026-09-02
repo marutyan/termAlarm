@@ -1,0 +1,98 @@
+<resources>
+    <string name="app_name">TermAlarm</string>
+
+    <!-- 鳴動中の通知チャンネル名。設定アプリの通知チャンネル一覧に表示される -->
+    <string name="ringing_channel_name">アラーム鳴動</string>
+    <!-- 鳴動中の通知タイトル -->
+    <string name="ringing_notification_title">アラーム</string>
+    <!-- 鳴動画面: 停止ボタン -->
+    <string name="ringing_stop">停止</string>
+    <!-- 鳴動画面: スヌーズボタン(snoozeMinutesが設定されているときだけ表示) -->
+    <string name="ringing_snooze">スヌーズ</string>
+    <!-- 鳴動画面: 今日はもう止めるボタン(skipRequiresAppがfalseのときだけ表示) -->
+    <string name="ringing_skip_today">今日はもう止める</string>
+    <!-- 鳴動画面: skipRequiresAppがtrue(既定)のとき、当日終了の導線の代わりに出す1行の案内文 -->
+    <string name="ringing_skip_requires_app_notice">今日はもう止めるにはアプリを開いてください</string>
+    <!-- 鳴動画面: 残り鳴動回数の表示。現在鳴っている回は含めない(docs/SPEC.md「追記」参照) -->
+    <string name="ringing_remaining_count">この時間帯であと %1$d 回鳴ります</string>
+    <!-- 鳴動画面: 次回の鳴動時刻の表示 -->
+    <string name="ringing_next_time">次は %1$s</string>
+
+    <!-- 共通 -->
+    <string name="cancel">キャンセル</string>
+    <string name="ok">OK</string>
+    <string name="close">閉じる</string>
+    <string name="save">保存</string>
+    <string name="decide">決定</string>
+    <string name="open_settings">設定を開く</string>
+    <string name="default_alarm_label">アラーム</string>
+
+    <!-- アラーム一覧画面。「今日はもう止める」の文言はringing_skip_todayを共用する -->
+    <string name="alarm_list_title">アラーム</string>
+    <string name="alarm_list_empty">アラームがありません。右下の+から追加してください</string>
+    <string name="add_alarm">アラームを追加</string>
+    <string name="menu_more">その他のメニュー</string>
+    <string name="menu_about_license">ライセンス情報</string>
+    <string name="end_today_session_confirm">今日は止める</string>
+    <string name="end_today_session_confirm_message">「%1$s」の今日の鳴動(最大%2$d回)をすべて止めます。次回は通常どおり鳴ります。</string>
+
+    <!-- 下部ナビ -->
+    <string name="tab_alarm">アラーム</string>
+    <string name="tab_clock">時計</string>
+    <string name="tab_timer">タイマー</string>
+    <string name="tab_stopwatch">ストップウォッチ</string>
+    <string name="tab_coming_soon">今後対応予定</string>
+
+    <!-- アラーム追加・編集画面 -->
+    <string name="edit_title_new">アラームを追加</string>
+    <string name="edit_title_existing">アラームを編集</string>
+    <string name="start_time">開始</string>
+    <string name="end_time">終了</string>
+    <string name="interval_section_title">鳴らす間隔</string>
+    <string name="interval_minutes_label">%1$d分</string>
+    <string name="interval_custom_label">その他</string>
+    <string name="interval_custom_input_label">間隔(分)</string>
+    <string name="preview_range">%1$s から %2$s まで %3$d回 鳴ります</string>
+    <string name="preview_single">%1$s に 1回 鳴ります</string>
+    <string name="error_interval_not_positive">間隔は1分以上にしてください</string>
+    <string name="error_interval_too_large">間隔が範囲に対して大きすぎます。間隔を短くするか終了時刻を後にしてください</string>
+    <string name="error_custom_interval_invalid">間隔には数字を入力してください</string>
+    <string name="repeat_section_title">繰り返し</string>
+    <string name="label_title">ラベル</string>
+    <string name="label_placeholder">なし</string>
+    <string name="sound_title">アラーム音</string>
+    <string name="sound_default">既定の音</string>
+    <string name="vibration_title">バイブレーション</string>
+    <string name="difficulty_section_title">止めにくさ</string>
+    <string name="skip_requires_app_title">当日終了はアプリからのみ</string>
+    <string name="skip_requires_app_subtitle">寝ぼけて止めてしまうのを防ぎます</string>
+    <string name="skip_game_title">止める前にゲームを出す</string>
+    <string name="skip_game_subtitle">6種類からランダムに1問</string>
+    <string name="skip_game_disabled_reason">「当日終了はアプリからのみ」がオフのときは選べません</string>
+    <string name="snooze_title">スヌーズ</string>
+    <string name="snooze_subtitle">間隔が長めのときに使えます。短い間隔では次の鳴動がスヌーズの役割を果たすため既定はオフです</string>
+    <string name="snooze_minutes_label">スヌーズ間隔(分)</string>
+    <string name="delete_alarm">このアラームを削除</string>
+    <string name="delete_alarm_confirm_message">このアラームを削除します。この操作は元に戻せません。</string>
+
+    <!-- 権限 -->
+    <string name="notification_permission_banner">通知を許可すると、アラームの通知を確実に受け取れます</string>
+    <string name="exact_alarm_permission_banner">正確なアラームの権限が無効になっています。設定から許可してください</string>
+
+    <!-- ライセンス -->
+    <string name="about_title">ライセンス情報</string>
+
+    <!-- 当日終了ゲーム -->
+    <string name="skip_game_banner">正解すると、%1$s の今日の鳴動(最大%2$d回)を止めます</string>
+    <string name="skip_game_wrong_answer">不正解です。もう一度どうぞ</string>
+    <string name="game_kind_arithmetic">計算</string>
+    <string name="game_kind_sequential_tap">順にタップ</string>
+    <string name="game_kind_transcribe">書き写し</string>
+    <string name="game_kind_shake_device">端末を振る</string>
+    <string name="game_kind_count_shapes">図形を数える</string>
+    <string name="game_kind_color_word">色と文字</string>
+    <string name="count_shapes_prompt">%1$s はいくつありますか</string>
+    <string name="sequential_tap_next">次にタップ: %1$d</string>
+    <string name="shake_device_progress">%1$d / %2$d 回</string>
+    <string name="color_word_prompt">この文字の「色」を選んでください</string>
+</resources>
