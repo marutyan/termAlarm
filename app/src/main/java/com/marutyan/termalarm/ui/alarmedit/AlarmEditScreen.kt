@@ -368,7 +368,11 @@ private fun PreviewBanner(startMinutes: Int, endMinutes: Int, intervalMinutes: I
 private fun RepeatDaysSection(selectedDays: Set<DayOfWeek>, onToggleDay: (DayOfWeek) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(stringResource(R.string.repeat_section_title), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // 固定間隔で並べると7つが左へ寄って右に余白ができるため、幅いっぱいに均等配置する
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
             DayOfWeek.entries.forEach { day ->
                 val selected = day in selectedDays
                 Box(
