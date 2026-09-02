@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ランチャーアイコンの前景。指定デザイン「Interval Cycle Clock」を、
+    元画像から寸法・角度・色を実測してベクターで描き直したもの。
+    生成画像をそのまま切り出すと絵の中心がわずかにずれるため、幾何学的に組み直した。
+
+    実測値（元画像の円の半径123pxを基準）
+      内側の弧  半径 53.9〜68.3px   緑(12時→4時) とシアン(4時→12時)
+      外側の弧  半径 77.4〜92.1px   黄(12時→6時) と水色(6時→12時、8時に切れ目)
+      切れ目    12時・4時・6時・8時
+      長針      59度(2時方向) 長さ44px
+      短針      298度(10時方向) 長さ38px
+    弧の切れ目が、範囲を間隔で刻むというこのアプリの性格を表す。
+
+    見た目の調整（実測からの意図的な差）
+      針の軸を8.5px相当、針を実測より太くして、小さい表示でも時計と分かるようにした。
+      黄の弧が右側に集中していて視覚的な重心が右へ寄るため、絵全体を1.2dp左へ置く。
+      円の直径は72.0dp。必ず見えるのは中央66dpだが、切り落とされるのは角だけなので
+      この大きさでも丸・スクワークル・角丸のどの形でも欠けない。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 円の地。背景レイヤーと同じ色にして、ランチャーが丸く抜いても境目が出ない -->
+    <path
+        android:fillColor="#FF2B5CBB"
+        android:pathData="M52.8,18.0 a36.0,36.0 0 1,0 0,72.0 a36.0,36.0 0 1,0 0,-72.0" />
+
+    <path
+        android:strokeColor="#FF8CDDC2"
+        android:strokeWidth="4.215"
+        android:strokeLineCap="butt"
+        android:pathData="M53.736,36.142 A17.883,17.883 0 0 1 68.734,62.119" />
+    <path
+        android:strokeColor="#FF57B7C6"
+        android:strokeWidth="4.215"
+        android:strokeLineCap="butt"
+        android:pathData="M67.798,63.740 A17.883,17.883 0 1 1 51.864,36.142" />
+    <path
+        android:strokeColor="#FFFEE48F"
+        android:strokeWidth="4.302"
+        android:strokeLineCap="butt"
+        android:pathData="M54.098,29.229 A24.805,24.805 0 0 1 54.098,78.771" />
+    <path
+        android:strokeColor="#FFA9D1F5"
+        android:strokeWidth="4.302"
+        android:strokeLineCap="butt"
+        android:pathData="M51.502,78.771 A24.805,24.805 0 0 1 31.997,67.510" />
+    <path
+        android:strokeColor="#FFA9D1F5"
+        android:strokeWidth="4.302"
+        android:strokeLineCap="butt"
+        android:pathData="M30.699,65.261 A24.805,24.805 0 0 1 51.502,29.229" />
+
+    <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.639"
+        android:strokeLineCap="round"
+        android:pathData="M52.8,54.0 L42.980,48.779" />
+    <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.346"
+        android:strokeLineCap="round"
+        android:pathData="M52.8,54.0 L63.839,47.367" />
+
+    <!-- 針の軸 -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M50.312,54.0 a2.488,2.488 0 1,0 4.976,0 a2.488,2.488 0 1,0 -4.976,0" />
+</vector>
