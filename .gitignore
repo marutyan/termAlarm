@@ -1,0 +1,19 @@
+*.iml
+.gradle
+.DS_Store
+.externalNativeBuild
+.cxx
+
+# ビルド生成物。ルート直下だけでなく全モジュールを除外する
+build/
+/captures
+
+# SDKの絶対パスなど、端末ごとに異なる設定
+local.properties
+
+# IDE設定。個人の環境に依存するため共有しない
+/.idea
+
+# デザインキャンバスの生成物。元になる .dc.html と canvas.json から再生成できる
+design/termalarm-ui.html
+design/termalarm-screens.html
