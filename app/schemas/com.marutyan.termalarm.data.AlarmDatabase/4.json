@@ -1,12 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 2,
-<<<<<<< HEAD
-    "identityHash": "5e9f44c67bb34f78c03646747e906186",
-=======
-    "identityHash": "88ec24d06fe37ff0b3937472a2b01bea",
->>>>>>> feature/clock-tab
+    "version": 4,
+    "identityHash": "3b449214f456d86664154551fb0eb00a",
     "entities": [
       {
         "tableName": "alarm_schedule",
@@ -96,13 +92,8 @@
         }
       },
       {
-<<<<<<< HEAD
         "tableName": "timer_state",
         "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `label` TEXT NOT NULL, `totalMillis` INTEGER NOT NULL, `remainingMillisAtAnchor` INTEGER NOT NULL, `anchorElapsedRealtime` INTEGER NOT NULL, `anchorWallClockMillis` INTEGER NOT NULL, `runState` TEXT NOT NULL)",
-=======
-        "tableName": "world_clock_city",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `zoneId` TEXT NOT NULL, `sortOrder` INTEGER NOT NULL)",
->>>>>>> feature/clock-tab
         "fields": [
           {
             "fieldPath": "id",
@@ -111,18 +102,12 @@
             "notNull": true
           },
           {
-<<<<<<< HEAD
             "fieldPath": "label",
             "columnName": "label",
-=======
-            "fieldPath": "zoneId",
-            "columnName": "zoneId",
->>>>>>> feature/clock-tab
             "affinity": "TEXT",
             "notNull": true
           },
           {
-<<<<<<< HEAD
             "fieldPath": "totalMillis",
             "columnName": "totalMillis",
             "affinity": "INTEGER",
@@ -151,12 +136,6 @@
             "columnName": "runState",
             "affinity": "TEXT",
             "notNull": true
-=======
-            "fieldPath": "sortOrder",
-            "columnName": "sortOrder",
-            "affinity": "INTEGER",
-            "notNull": true
->>>>>>> feature/clock-tab
           }
         ],
         "primaryKey": {
@@ -165,8 +144,114 @@
             "id"
           ]
         }
-<<<<<<< HEAD
-=======
+      },
+      {
+        "tableName": "stopwatch_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `accumulatedMillis` INTEGER NOT NULL, `anchorElapsedRealtime` INTEGER NOT NULL, `anchorWallClockMillis` INTEGER NOT NULL, `runState` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "accumulatedMillis",
+            "columnName": "accumulatedMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "anchorElapsedRealtime",
+            "columnName": "anchorElapsedRealtime",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "anchorWallClockMillis",
+            "columnName": "anchorWallClockMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "runState",
+            "columnName": "runState",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "stopwatch_lap",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `lapNumber` INTEGER NOT NULL, `lapMillis` INTEGER NOT NULL, `totalMillis` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lapNumber",
+            "columnName": "lapNumber",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lapMillis",
+            "columnName": "lapMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalMillis",
+            "columnName": "totalMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "world_clock_city",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `zoneId` TEXT NOT NULL, `sortOrder` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "zoneId",
+            "columnName": "zoneId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortOrder",
+            "columnName": "sortOrder",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
       },
       {
         "tableName": "clock_settings",
@@ -191,16 +276,11 @@
             "id"
           ]
         }
->>>>>>> feature/clock-tab
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-<<<<<<< HEAD
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5e9f44c67bb34f78c03646747e906186')"
-=======
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '88ec24d06fe37ff0b3937472a2b01bea')"
->>>>>>> feature/clock-tab
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3b449214f456d86664154551fb0eb00a')"
     ]
   }
 }

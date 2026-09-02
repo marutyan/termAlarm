@@ -142,4 +142,25 @@
     <string name="stopwatch_notification_channel_name">ストップウォッチ計測中</string>
     <string name="stopwatch_notification_title">ストップウォッチ</string>
     <string name="stopwatch_notification_text">計測中 %1$s</string>
+    <!-- 時計タブ -->
+    <string name="clock_display_mode_analog">アナログ</string>
+    <string name="clock_display_mode_digital">デジタル</string>
+    <string name="clock_world_clock_title">世界時計</string>
+    <string name="clock_city_list_empty">都市が登録されていません。右下の+から追加してください</string>
+    <string name="clock_add_city">都市を追加</string>
+    <string name="clock_add_city_title">都市を追加</string>
+    <string name="clock_search_city">都市を検索</string>
+    <string name="clock_move_up">上へ移動</string>
+    <string name="clock_move_down">下へ移動</string>
+    <string name="clock_delete_city">この都市を削除</string>
+    <!-- 都市と端末との時差。符号(+/-)は記号のためコード側でプレースホルダへ渡す -->
+    <string name="clock_diff_same_time">同じ時刻</string>
+    <string name="clock_diff_hours">%1$s%2$d時間</string>
+    <string name="clock_diff_minutes">%1$s%2$d分</string>
+    <string name="clock_diff_hours_minutes">%1$s%2$d時間%3$d分</string>
+    <string name="clock_diff_day_before">前日</string>
+    <string name="clock_diff_day_after">翌日</string>
+    <!-- 日付変更線をまたいで2日以上ずれる地域向け(例: キリバスとベーカー島の組み合わせ) -->
+    <string name="clock_diff_days_before">%1$d日前</string>
+    <string name="clock_diff_days_after">%1$d日後</string>
 </resources>
