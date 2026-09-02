@@ -14,8 +14,9 @@ import com.marutyan.termalarm.domain.occurrenceCount
 import java.time.DayOfWeek
 import kotlinx.coroutines.launch
 
-// 間隔選択チップに並べる既定値(docs/SPEC.md「アラーム追加・編集画面」)。これ以外の値は「その他」を選んだ扱いにする
-val INTERVAL_PRESETS_MINUTES = listOf(1, 5, 10, 15, 30)
+// 間隔選択チップに並べる既定値。これ以外の値は「その他」を選んだ扱いにする。
+// 1分は実用の場面が乏しいうえ、鳴り止んですぐ次が鳴るため候補から外している
+val INTERVAL_PRESETS_MINUTES = listOf(3, 5, 10, 15, 30)
 
 /** 保存を妨げる入力エラーの種類。文言はComposable側でstringResourceへ変換する(ViewModelに文字列を持たせない)。 */
 enum class AlarmEditValidationError { INTERVAL_NOT_POSITIVE, INTERVAL_TOO_LARGE, CUSTOM_INTERVAL_INVALID, SNOOZE_OUT_OF_RANGE }
