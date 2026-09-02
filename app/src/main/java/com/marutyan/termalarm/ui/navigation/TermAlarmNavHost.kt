@@ -24,7 +24,7 @@ import com.marutyan.termalarm.ui.alarmlist.TermAlarmTab
 import com.marutyan.termalarm.ui.clock.ClockScreen
 import com.marutyan.termalarm.ui.clock.ClockViewModel
 import com.marutyan.termalarm.ui.clock.ClockViewModelFactory
-import com.marutyan.termalarm.data.WorldClockRepository
+import com.marutyan.termalarm.data.ClockSettingsRepository
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.ui.common.PlaceholderTabScreen
 import com.marutyan.termalarm.ui.permission.ExactAlarmPermissionBanner
@@ -106,13 +106,10 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             )
         }
         composable(ROUTE_CLOCK) {
-            // AlarmDatabaseは共有シングルトンのため、ここでdaoを取り出してWorldClockRepositoryを組み立てる
+            // AlarmDatabaseは共有シングルトンのため、ここでdaoを取り出して組み立てる
             // (MainActivityの配線は変えず、時計タブの行だけで完結させる)
             val clockRepository = remember {
-                WorldClockRepository(
-                    AlarmDatabase.getInstance(context).worldClockCityDao(),
-                    AlarmDatabase.getInstance(context).clockSettingsDao(),
-                )
+                ClockSettingsRepository(AlarmDatabase.getInstance(context).clockSettingsDao())
             }
             val viewModel: ClockViewModel = viewModel(factory = ClockViewModelFactory(clockRepository))
             ClockScreen(viewModel = viewModel) { TermAlarmBottomBar(TermAlarmTab.CLOCK, ::goToTab) }
