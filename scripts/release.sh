@@ -86,17 +86,45 @@ cmd_keygen() {
     exit 1
   fi
 
-  # keytoolが対話で認証情報を聞くので、こちらでは受け取らない（画面にも残さない）
-  keytool -genkeypair -v \
-    -keystore "$store_path" \
-    -alias termalarm \
-    -keyalg RSA -keysize 4096 -validity 10000
+  # 認証情報はここで一度だけ受け取る。keytoolにも同じ値を渡すので、二度入力しなくてよい。
+  # 画面には出さず、変数の中だけに置く
+  echo
+  echo "鍵を守る合言葉を決めてください（6文字以上。画面には出ません）。"
+  local store_pw key_pw confirm_pw
+  while true; do
+    read -r -s -p "  合言葉: " store_pw; echo
+    if [ "${#store_pw}" -lt 6 ]; then
+      ng "6文字以上にしてください"
+      continue
+    fi
+    read -r -s -p "  もう一度: " confirm_pw; echo
+    if [ "$store_pw" != "$confirm_pw" ]; then
+      ng "一致しません"
+      continue
+    fi
+    break
+  done
+  key_pw="$store_pw"
 
   echo
-  echo "設定ファイルを作ります。さきほど決めた値を入れてください（画面には出ません）。"
-  read -r -s -p "  鍵ファイルのパスワード: " store_pw; echo
-  read -r -s -p "  鍵そのもののパスワード（同じなら空でEnter）: " key_pw; echo
-  key_pw="${key_pw:-$store_pw}"
+  echo "→ 鍵を作ります"
+  # -storepass と -keypass を渡すことで、keytool側の対話をなくす。
+  # -dname を渡さないと所属などを対話で聞かれるため、最小限の値を入れておく
+  if ! keytool -genkeypair \
+      -keystore "$store_path" \
+      -alias termalarm \
+      -keyalg RSA -keysize 4096 -validity 10000 \
+      -storepass "$store_pw" -keypass "$key_pw" \
+      -dname "CN=TermAlarm, O=TermAlarm, C=JP" 2>&1 | grep -v "^$"; then
+    ng "鍵を作れませんでした"
+    exit 1
+  fi
+
+  if [ ! -f "$store_path" ]; then
+    ng "鍵が作られませんでした"
+    exit 1
+  fi
+  ok "鍵を作った"
 
   umask 077
   {
