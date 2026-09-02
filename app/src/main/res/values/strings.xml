@@ -122,4 +122,9 @@
     <string name="timer_notification_line_running">%1$s のこり %2$s</string>
     <string name="timer_notification_line_paused">%1$s 一時停止中 %2$s</string>
     <string name="timer_notification_line_finished">%1$s 完了</string>
+    <!-- 一覧画面: 次のアラームまでの残り時間(有効なアラームのみ表示) -->
+    <string name="remaining_time_less_than_minute">あと1分未満</string>
+    <string name="remaining_time_minutes">あと%1$d分</string>
+    <string name="remaining_time_hours_minutes">あと%1$d時間%2$d分</string>
+    <string name="remaining_time_days">あと%1$d日</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.marutyan.termalarm.timer
 
+import com.marutyan.termalarm.alarm.SoundFadeIn
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -117,6 +118,7 @@ class TimerForegroundService : Service() {
             runCatching {
                 setDataSource(this@TimerForegroundService, uri)
                 prepare()
+                setVolume(SoundFadeIn.START_VOLUME, SoundFadeIn.START_VOLUME)
                 start()
             }
         }
@@ -124,16 +126,9 @@ class TimerForegroundService : Service() {
         fadeIn(player)
     }
 
-    // 鳴り始めの0.1秒刻み×15回(計1.5秒)で音量を0→1へ上げる
+    // 起きている人へ知らせるだけなので、アラームより短い1.5秒で上げきる
     private fun fadeIn(player: MediaPlayer) {
-        scope.launch {
-            val steps = 15
-            repeat(steps) { i ->
-                val volume = (i + 1) / steps.toFloat()
-                runCatching { player.setVolume(volume, volume) }
-                delay(100)
-            }
-        }
+        SoundFadeIn.start(scope, player, FADE_IN_DURATION_MILLIS)
     }
 
     private fun stopRingingFor(id: Long) {
@@ -210,6 +205,9 @@ class TimerForegroundService : Service() {
     }
 
     companion object {
+        // 起きている人へ知らせるだけなので、アラームの5秒より短くする
+        private const val FADE_IN_DURATION_MILLIS = 1500L
+
         /**
          * 動作中/完了のタイマーが1件でもあるかもしれないタイミングで呼ぶ。サービス自身が不要になったら
          * 自分で止まる設計なので、呼び出し側(ui/timer, TimerTriggerReceiver, TimerRescheduleReceiver)は

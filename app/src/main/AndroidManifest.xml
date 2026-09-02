@@ -39,6 +39,35 @@
         </activity>
 
         <!--
+            純正時計アプリを置き換えるためのインテント受け口(docs/SPEC.md「純正アプリを置き換えるために必要なもの」)。
+            画面を持たない透明なActivityとして、必要な場合だけMainActivityへ委譲する。
+            Theme.Translucent.NoTitleBarを使うのは、DB書き込みを待つ非同期処理を挟むため
+            Theme.NoDisplay(onResumeより前にfinish必須)が使えないから。
+        -->
+        <activity
+            android:name=".ui.intent.AlarmIntentActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.SET_ALARM" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SHOW_ALARMS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.DISMISS_ALARM" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SNOOZE_ALARM" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!--
             鳴動画面。ロック画面の上に全画面インテントで起動される。
             ロック画面表示自体はRingingActivity側でAPIレベルに応じてsetShowWhenLocked()または
             WindowManagerフラグを使い分けて行う（android:showOnLockScreenは意味の異なる非推奨属性のため使わない）
@@ -60,7 +89,14 @@
             android:name=".alarm.AlarmTriggerReceiver"
             android:exported="false" />
 
-        <!-- 端末再起動・タイムゾーン変更・時刻変更・ロケール変更で全アラームの予約を再計算する -->
+        <!--
+            端末再起動・タイムゾーン変更・時刻変更・ロケール変更・アプリ更新(MY_PACKAGE_REPLACED)で
+            全アラームの予約を再計算する。
+            LOCKED_BOOT_COMPLETED(ロック解除前の起動)は意図的に登録しない。RoomのDBは通常ストレージ
+            (credential encrypted storage)にあり、ロック解除前は読めないため、directBootAware=trueに
+            してもここでのDB読み込みは失敗する。DBを device protected storage へ移すのはdata/層の変更が
+            必要でありスコープ外のため、ロック解除後に届くBOOT_COMPLETEDのみで復元する運用とする。
+        -->
         <receiver
             android:name=".alarm.AlarmRescheduleReceiver"
             android:exported="true">
@@ -69,6 +105,7 @@
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
                 <action android:name="android.intent.action.TIME_SET" />
                 <action android:name="android.intent.action.LOCALE_CHANGED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 

@@ -101,6 +101,40 @@ fun remainingOccurrenceCount(schedule: AlarmSchedule, at: ZonedDateTime): Int {
 }
 
 /**
+ * 一覧画面の「あと8時間30分」表示用に、次の鳴動までの残り時間を粒度別に分類した値。
+ * 文字列化(strings.xml)はUI側の責務とし、ここでは表示に必要な数値だけを持つ。
+ */
+sealed class RemainingTime {
+    /** 1分未満。端数切り捨てで0分になる場合を含み「あと1分未満」に対応する */
+    data object LessThanOneMinute : RemainingTime()
+
+    /** 1分以上60分未満。分の値だけを表示する */
+    data class Minutes(val minutes: Long) : RemainingTime()
+
+    /** 1時間以上24時間未満。時と分の組で表示する */
+    data class HoursAndMinutes(val hours: Long, val minutes: Long) : RemainingTime()
+
+    /** 24時間以上。遠い予定ほど分単位の細かさは重要でないため、日数のみ切り捨てで表示する */
+    data class Days(val days: Long) : RemainingTime()
+}
+
+/**
+ * 次の鳴動(nextTrigger)までの残り時間を一覧画面表示用の粒度に変換する。
+ * 無効なアラームや予定が無い場合(nextTriggerがnull)はnullを返し、一覧側は何も表示しない。
+ */
+fun remainingTimeUntilNextTrigger(schedule: AlarmSchedule, now: ZonedDateTime): RemainingTime? {
+    val next = nextTrigger(schedule, now) ?: return null
+    val totalSeconds = Duration.between(now, next).seconds
+    val totalMinutes = totalSeconds / 60
+    return when {
+        totalSeconds < 60 -> RemainingTime.LessThanOneMinute
+        totalMinutes < 60 -> RemainingTime.Minutes(totalMinutes)
+        totalMinutes < 24 * 60 -> RemainingTime.HoursAndMinutes(totalMinutes / 60, totalMinutes % 60)
+        else -> RemainingTime.Days(totalMinutes / (24 * 60))
+    }
+}
+
+/**
  * 一覧画面に表示する要約文字列を組み立てる。間隔と1セッションあたりの鳴動回数を1行にまとめる。
  * 例: 「5分ごと · 25回」「1回のみ」（単発に退化する場合）。
  */

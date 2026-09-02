@@ -44,6 +44,7 @@ class RingingService : Service() {
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
     private var timeoutJob: Job? = null
+    private var fadeInJob: Job? = null
     private var currentAlarmId: Long = -1L
     private var currentTriggerAtMillis: Long = -1L
 
@@ -57,8 +58,8 @@ class RingingService : Service() {
         when (intent?.action) {
             ACTION_STOP -> stopRinging { id -> AlarmScheduler.onStopped(this, id) }
             ACTION_SNOOZE -> {
-                val minutes = intent.getIntExtra(EXTRA_SNOOZE_MINUTES, -1)
-                stopRinging { id -> if (minutes > 0) AlarmScheduler.onSnoozed(this, id, minutes) }
+                val requestedMinutes = intent.getIntExtra(EXTRA_SNOOZE_MINUTES, -1)
+                stopRinging { id -> snoozeOrStop(id, requestedMinutes) }
             }
             ACTION_SKIP -> stopRinging { id -> AlarmScheduler.onSkippedFromRingingScreen(this, id, occurrenceAt()) }
             else -> startRinging(intent)
@@ -98,9 +99,25 @@ class RingingService : Service() {
     }
 
     // 音・バイブ・タイムアウトを止め、rescheduleの完了後にサービスを終了する共通処理
+    /**
+     * スヌーズ操作の分岐。鳴動画面からは常に有効な分数が渡されるが、SNOOZE_ALARMインテント
+     * (外部アプリやアシスタント経由)は分数を指定せず呼ばれることがあるため、その場合はDBの
+     * snoozeMinutesを見て解決する。スヌーズ無効(null)のアラームに対しては、利用者が明示的に
+     * 選んだ設定を外部インテントで上書きせず、停止(次回予約)と同じ扱いにする。
+     */
+    private suspend fun snoozeOrStop(id: Long, requestedMinutes: Int) {
+        val minutes = requestedMinutes.takeIf { it > 0 } ?: repository().getById(id)?.snoozeMinutes
+        if (minutes != null && minutes > 0) {
+            AlarmScheduler.onSnoozed(this, id, minutes)
+        } else {
+            AlarmScheduler.onStopped(this, id)
+        }
+    }
+
     private fun stopRinging(reschedule: suspend (Long) -> Unit) {
         val id = currentAlarmId
         timeoutJob?.cancel()
+        fadeInJob?.cancel()
         mediaPlayer?.let { player -> runCatching { player.stop() }; player.release() }
         mediaPlayer = null
         vibrator?.cancel()
@@ -117,7 +134,9 @@ class RingingService : Service() {
         val uri: Uri = schedule.soundUri?.let(Uri::parse)
             ?: RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM)
             ?: return
-        mediaPlayer = MediaPlayer().apply {
+        val player = MediaPlayer()
+        mediaPlayer = player
+        player.apply {
             // マナーモードでも鳴る必要があるため、通知/メディアではなくALARM用途を明示する（docs/SPEC.md「鳴動」節）
             setAudioAttributes(
                 AudioAttributes.Builder()
@@ -126,12 +145,19 @@ class RingingService : Service() {
                     .build(),
             )
             isLooping = true
-            runCatching {
-                setDataSource(this@RingingService, uri)
-                prepare()
-                start()
-            }
+            // フェードイン開始時点の音量。鳴り始めから聞こえる必要があるため0にはしない
+            setVolume(SoundFadeIn.START_VOLUME, SoundFadeIn.START_VOLUME)
         }
+        runCatching {
+            player.setDataSource(this@RingingService, uri)
+            player.prepare()
+            player.start()
+        }.onSuccess { startFadeIn(player) }
+    }
+
+    // 寝ている人を起こすため、5秒かけてゆっくり音量を上げる
+    private fun startFadeIn(player: MediaPlayer) {
+        fadeInJob = SoundFadeIn.start(scope, player, FADE_IN_DURATION_MILLIS)
     }
 
     private fun startVibration() {
@@ -189,6 +215,7 @@ class RingingService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         timeoutJob?.cancel()
+        fadeInJob?.cancel()
         mediaPlayer?.let { player -> runCatching { player.stop() }; player.release() }
         vibrator?.cancel()
         scope.cancel()
@@ -197,6 +224,10 @@ class RingingService : Service() {
     companion object {
         private const val CHANNEL_ID = "ringing"
         private const val NOTIFICATION_ID = 1001
+
+        // フェードインの開始音量比率(0〜1)。0だと鳴り始めが無音になり気づけないため、わずかに聞こえる値にする
+        // 通常音量まで上げきる時間。純正時計アプリの既定(約5秒)に合わせる
+        private const val FADE_IN_DURATION_MILLIS = 5000L
 
         const val ACTION_STOP = "com.marutyan.termalarm.alarm.action.STOP"
         const val ACTION_SNOOZE = "com.marutyan.termalarm.alarm.action.SNOOZE"
