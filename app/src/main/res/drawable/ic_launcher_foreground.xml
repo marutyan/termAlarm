@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    アダプティブアイコンの前景レイヤー「Interval Cycle Clock」。
+    3本の同心円弧(黄・ティール・水色)が中心の時計を取り囲む。水色の弧だけ途中に
+    切れ目(ギャップ)があり、これが「範囲を一定間隔で区切る」アプリの性格を表す。
+    中央は針だけを描き、円板は塗らない(背景レイヤーの濃い青がそのまま透けて見える)。
+    針は短針8時・長針12時とし、開き角を大きく取る。指定画像は10時と2時だが、
+    ランチャーの表示サイズでは2本が近すぎてチェックマークに見えたため。
+    モノクロアイコン(Android 13+)にもこのファイルをそのまま使う。単色化されると
+    3本の弧は同じ色になるが、半径の違いと水色弧の切れ目という「形」で読み取れる。
+    最外周(黄, 半径29+線幅2)でも中心からの最大到達距離は約31で、
+    アダプティブアイコンの安全域(108dp中央66dp=半径33)に収まる。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 黄色い弧(最外周): 12時から5時の位置まで -->
+    <path
+        android:strokeColor="#FFFDD663"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M 54,25 A 29,29 0 0,1 68.5,79.115" />
+
+    <!-- ティールの弧(中間): 12時から4時の位置まで -->
+    <path
+        android:strokeColor="#FF78D9C8"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M 54,30 A 24,24 0 0,1 74.785,66" />
+
+    <!-- 水色の弧(最内周): 左半分に配置し、9時位置に切れ目(間隔)を入れる -->
+    <path
+        android:strokeColor="#FF8AB4F8"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M 54,73 A 19,19 0 0,1 35.415,57.95
+                           M 35.415,50.05 A 19,19 0 0,1 54,35" />
+
+    <!-- 短針(時針, 8時方向) -->
+    <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:pathData="M54.0,54.0 L47.072,58.000" />
+
+    <!-- 長針(分針, 12時方向) -->
+    <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:pathData="M54.0,54.0 L54.000,43.000" />
+
+    <!-- 針の中心軸 -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M51.8,54 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0" />
+</vector>

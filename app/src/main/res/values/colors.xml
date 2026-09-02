@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ランチャーアイコン背景色。指定デザイン「Interval Cycle Clock」の濃い青(Google Blue 600相当) -->
+    <color name="ic_launcher_background">#FF1A56DB</color>
+</resources>
