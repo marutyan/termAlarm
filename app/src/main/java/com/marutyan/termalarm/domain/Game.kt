@@ -85,9 +85,13 @@ sealed class GameQuestion(val type: GameType) {
 
 // 2桁の足し算・引き算を1問作る
 private fun generateArithmetic(random: Random): GameQuestion.Arithmetic {
-    val left = random.nextInt(10, 100)
-    val right = random.nextInt(10, 100)
+    val a = random.nextInt(10, 100)
+    val b = random.nextInt(10, 100)
     val isAddition = random.nextBoolean()
+    // 引き算では答えが負にならないよう大きい方を左に置く。回答用のテンキーに符号が無く、
+    // 負の答えは入力する手段が無いため。寝起きに負の数を計算させる必要も無い。
+    val left = if (isAddition || a >= b) a else b
+    val right = if (isAddition || a >= b) b else a
     val answer = if (isAddition) left + right else left - right
     return GameQuestion.Arithmetic(left, right, isAddition, answer.toString())
 }
