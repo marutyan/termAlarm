@@ -213,7 +213,11 @@ private fun AlarmCard(
         }
 
         if (schedule.repeatDays.isNotEmpty()) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // 固定間隔で並べると7つが左へ寄って右に余白ができるため、幅いっぱいに均等配置する
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
                 DayOfWeek.entries.forEach { day ->
                     val on = day in schedule.repeatDays
                     Box(
