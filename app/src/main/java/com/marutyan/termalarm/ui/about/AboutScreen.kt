@@ -22,8 +22,8 @@ import com.marutyan.termalarm.R
 
 // Google Fontsで配布されているSIL Open Font License 1.1の全文。フォントに同梱義務のある表示のため、
 // アプリ内から常に閲覧できるようこの画面に埋め込む(docs/SPEC.md「フォント」)。
-private const val OFL_LICENSE_TEXT = """Google Sans Flex
-Copyright Google LLC. All Rights Reserved.
+private const val OFL_LICENSE_TEXT = """Google Sans Flex 18pt (Version 4.005)
+Copyright 2015 Google LLC. All Rights Reserved.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

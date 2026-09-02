@@ -91,7 +91,7 @@ TermAlarmは、鳴らす時刻をひとつ指定するのではなく、時刻�
 | リリースビルドが動く | 実機へ入れてアラームの作成から鳴動まで通す |
 | バージョン | `versionCode` と `versionName` を上げたか |
 | 権限 | 使っていない権限が残っていないか |
-| フォントのライセンス | Google Sans Flex の OFL 表記が原文と一致するか |
+| フォントのライセンス | 確認済み。本文は公式のOFL 1.1と完全一致、著作権行もフォント内の表記と一致 |
 
 ## 6. コードの圧縮についての注意
 
@@ -110,6 +110,33 @@ TermAlarmは、鳴らす時刻をひとつ指定するのではなく、時刻�
 
 ## 7. 残っている確認事項
 
-- 🟡 Google Sans Flex の著作権表記が、Google Fonts の配布物の原文と照合できていない
 - 🟡 Doze中の鳴動、マナーモードでの音、ロック画面上の全画面表示は
   `docs/DEVICE_TEST.md` の手順で確認する
+
+## 付録: フォントのライセンス表記の確認方法
+
+Google Sans Flex の著作権表記は、**フォントファイル自身に埋め込まれた情報が原典**である。
+配布ページの表示ではなく、こちらを見る。
+
+```sh
+uv run --with fonttools python -c "
+from fontTools.ttLib import TTFont
+n = TTFont('app/src/main/res/font/google_sans_flex.ttf')['name']
+print(n.getDebugName(0))   # 著作権
+print(n.getDebugName(1))   # ファミリ名
+print(n.getDebugName(5))   # バージョン
+print(n.getDebugName(14))  # ライセンスURL
+"
+```
+
+2026年9月3日の確認結果。
+
+| 項目 | 値 |
+|---|---|
+| 著作権 | Copyright 2015 Google LLC. All Rights Reserved. |
+| ファミリ名 | Google Sans Flex 18pt |
+| バージョン | Version 4.005 |
+| ライセンスURL | https://openfontlicense.org |
+
+ライセンス本文は、Google Fonts が配布する OFL.txt と照合して完全一致（4052文字）を確認した。
+フォントを差し替えたときは、この手順で表記を作り直す。
