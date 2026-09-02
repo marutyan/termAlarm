@@ -6,6 +6,8 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 // テストで共通に使うタイムゾーン。DSTの影響を受けないためnextTrigger等の基本ケースに使う
@@ -202,5 +204,30 @@ class ScheduleCalculatorTest {
         assertEquals(1, next?.hour)
         assertEquals(30, next?.minute)
         assertEquals(java.time.ZoneOffset.ofHours(-4), next?.offset)
+    }
+
+    // 一覧の「今日はもう止める」の導線は、押して意味があるときだけ出す。
+    // 常時出すと、アラーム自体を無効にするトグルとの違いが伝わらなくなる。
+    @Test
+    fun `当日終了はこれから鳴る回が残っているときだけ実行できる`() {
+        val today = LocalDate.of(2024, 1, 3)
+        val s = schedule(7 * 60, 9 * 60, 5)
+
+        // セッションの途中。残りがあるので実行できる
+        assertTrue(canEndTodaySession(s, ZonedDateTime.of(today, java.time.LocalTime.of(7, 30), TOKYO)))
+        // セッション開始前。今日これから鳴るので実行できる
+        assertTrue(canEndTodaySession(s, ZonedDateTime.of(today, java.time.LocalTime.of(6, 0), TOKYO)))
+        // 最後の回まで鳴り終えた後。今日の分はもう無い
+        assertFalse(canEndTodaySession(s, ZonedDateTime.of(today, java.time.LocalTime.of(9, 30), TOKYO)))
+    }
+
+    @Test
+    fun `無効なアラームと既にスキップ済みのセッションでは当日終了を実行できない`() {
+        val today = LocalDate.of(2024, 1, 3)
+        val disabled = schedule(7 * 60, 9 * 60, 5, enabled = false)
+        assertFalse(canEndTodaySession(disabled, ZonedDateTime.of(today, java.time.LocalTime.of(7, 30), TOKYO)))
+
+        val alreadySkipped = schedule(7 * 60, 9 * 60, 5, repeatDays = DayOfWeek.entries.toSet(), skippedSessionStart = today)
+        assertFalse(canEndTodaySession(alreadySkipped, ZonedDateTime.of(today, java.time.LocalTime.of(7, 30), TOKYO)))
     }
 }

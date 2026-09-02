@@ -50,6 +50,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.AlarmSchedule
 import com.marutyan.termalarm.domain.occurrenceCount
+import com.marutyan.termalarm.domain.canEndTodaySession
+import java.time.ZonedDateTime
 import com.marutyan.termalarm.domain.scheduleSummary
 import com.marutyan.termalarm.ui.common.formatClockMinutes
 import java.time.DayOfWeek
@@ -231,9 +233,13 @@ private fun AlarmCard(
             }
         }
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onRequestEndTodaySession) {
-                Text(stringResource(R.string.ringing_skip_today))
+        // 押しても何も起きない状態で導線を出すと、アラーム自体を無効にするトグルとの
+        // 違いが伝わらない。今日これから鳴る回が残っているときだけ出す
+        if (canEndTodaySession(schedule, ZonedDateTime.now())) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onRequestEndTodaySession) {
+                    Text(stringResource(R.string.ringing_skip_today))
+                }
             }
         }
     }
