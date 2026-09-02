@@ -58,8 +58,8 @@ class RingingService : Service() {
         when (intent?.action) {
             ACTION_STOP -> stopRinging { id -> AlarmScheduler.onStopped(this, id) }
             ACTION_SNOOZE -> {
-                val requestedMinutes = intent.getIntExtra(EXTRA_SNOOZE_MINUTES, -1)
-                stopRinging { id -> snoozeOrStop(id, requestedMinutes) }
+                val minutes = intent.getIntExtra(EXTRA_SNOOZE_MINUTES, -1)
+                stopRinging { id -> if (minutes > 0) AlarmScheduler.onSnoozed(this, id, minutes) }
             }
             ACTION_SKIP -> stopRinging { id -> AlarmScheduler.onSkippedFromRingingScreen(this, id, occurrenceAt()) }
             else -> startRinging(intent)
@@ -95,22 +95,6 @@ class RingingService : Service() {
         timeoutJob = scope.launch {
             delay(RINGING_AUTO_STOP_TIMEOUT_MILLIS)
             stopRinging { id -> AlarmScheduler.onStopped(this@RingingService, id) }
-        }
-    }
-
-    /**
-     * スヌーズ操作の分岐。鳴動画面からは常に有効な分数が渡されるが、SNOOZE_ALARMインテント
-     * (外部アプリ/アシスタント経由)は分数を指定せず呼ばれることがあるため、その場合はDBの
-     * snoozeMinutesを見て解決する。既定でスヌーズ無効(snoozeMinutes=null)のアラームに対しては、
-     * ユーザーが明示的に選んだ「スヌーズしない」設定を外部インテントで上書きしない方針とし、
-     * 停止(次回予約)と同じ扱いにする（docs/SPEC.md「スヌーズ（既定オフ）」）。
-     */
-    private suspend fun snoozeOrStop(id: Long, requestedMinutes: Int) {
-        val minutes = requestedMinutes.takeIf { it > 0 } ?: repository().getById(id)?.snoozeMinutes
-        if (minutes != null && minutes > 0) {
-            AlarmScheduler.onSnoozed(this, id, minutes)
-        } else {
-            AlarmScheduler.onStopped(this, id)
         }
     }
 
