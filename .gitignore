@@ -17,3 +17,8 @@ local.properties
 # デザインキャンバスの生成物。元になる .dc.html と canvas.json から再生成できる
 design/termalarm-ui.html
 design/termalarm-screens.html
+
+# リリース署名の鍵と設定。雛形は keystore.properties.example
+keystore.properties
+*.jks
+*.keystore
