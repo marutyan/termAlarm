@@ -97,6 +97,31 @@
     <string name="shake_device_progress">%1$d / %2$d 回</string>
     <string name="color_word_prompt">この文字の「色」を選んでください</string>
 
+    <!-- タイマー画面: 時分秒の入力 -->
+    <string name="timer_input_hours">時間</string>
+    <string name="timer_input_minutes">分</string>
+    <string name="timer_input_seconds">秒</string>
+    <string name="timer_decrease">減らす</string>
+    <string name="timer_increase">増やす</string>
+    <string name="timer_start">開始</string>
+    <!-- タイマー画面: 一覧が空のときの案内 -->
+    <string name="timer_list_empty">動作中のタイマーがありません</string>
+    <!-- タイマー画面: 各カードの操作 -->
+    <string name="timer_pause">一時停止</string>
+    <string name="timer_resume">再開</string>
+    <string name="timer_reset">リセット</string>
+    <string name="timer_extend_one_minute">+1分</string>
+    <string name="timer_delete">削除</string>
+    <!-- タイマー画面: 完了(鳴動中)のタイマーを止めるボタン。停止するとそのタイマー自体を削除する -->
+    <string name="timer_stop">停止</string>
+
+    <!-- タイマーのフォアグラウンド通知 -->
+    <string name="timer_notification_channel_name">タイマー</string>
+    <string name="timer_notification_title">タイマー動作中</string>
+    <string name="timer_notification_summary">%1$d件のタイマー</string>
+    <string name="timer_notification_line_running">%1$s のこり %2$s</string>
+    <string name="timer_notification_line_paused">%1$s 一時停止中 %2$s</string>
+    <string name="timer_notification_line_finished">%1$s 完了</string>
     <!-- 一覧画面: 次のアラームまでの残り時間(有効なアラームのみ表示) -->
     <string name="remaining_time_less_than_minute">あと1分未満</string>
     <string name="remaining_time_minutes">あと%1$d分</string>

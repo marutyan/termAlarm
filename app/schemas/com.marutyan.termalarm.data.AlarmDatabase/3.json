@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 3,
-    "identityHash": "1ecf5b8fc12aca5f2dbd95f8935dd94e",
+    "identityHash": "6b215ddc549929e2853fbfdfbc7f8739",
     "entities": [
       {
         "tableName": "alarm_schedule",
@@ -82,6 +82,60 @@
             "fieldPath": "snoozeMinutes",
             "columnName": "snoozeMinutes",
             "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "timer_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `label` TEXT NOT NULL, `totalMillis` INTEGER NOT NULL, `remainingMillisAtAnchor` INTEGER NOT NULL, `anchorElapsedRealtime` INTEGER NOT NULL, `anchorWallClockMillis` INTEGER NOT NULL, `runState` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalMillis",
+            "columnName": "totalMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "remainingMillisAtAnchor",
+            "columnName": "remainingMillisAtAnchor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "anchorElapsedRealtime",
+            "columnName": "anchorElapsedRealtime",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "anchorWallClockMillis",
+            "columnName": "anchorWallClockMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "runState",
+            "columnName": "runState",
+            "affinity": "TEXT",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -172,7 +226,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1ecf5b8fc12aca5f2dbd95f8935dd94e')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '6b215ddc549929e2853fbfdfbc7f8739')"
     ]
   }
 }

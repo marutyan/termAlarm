@@ -146,7 +146,7 @@ class RingingService : Service() {
             )
             isLooping = true
             // フェードイン開始時点の音量。鳴り始めから聞こえる必要があるため0にはしない
-            setVolume(FADE_IN_START_VOLUME, FADE_IN_START_VOLUME)
+            setVolume(SoundFadeIn.START_VOLUME, SoundFadeIn.START_VOLUME)
         }
         runCatching {
             player.setDataSource(this@RingingService, uri)
@@ -155,19 +155,9 @@ class RingingService : Service() {
         }.onSuccess { startFadeIn(player) }
     }
 
-    // 端末のアラーム音量(STREAM_ALARM)には触れず、MediaPlayer側の音量だけを既定秒数かけて
-    // 徐々に上げる。純正時計と同じく突然大音量で鳴らさないための既定動作(docs/SPEC.md「純正にあってこのアプリに無い機能」)
+    // 寝ている人を起こすため、5秒かけてゆっくり音量を上げる
     private fun startFadeIn(player: MediaPlayer) {
-        fadeInJob = scope.launch {
-            val steps = (FADE_IN_DURATION_MILLIS / FADE_IN_STEP_MILLIS).toInt()
-            for (step in 1..steps) {
-                delay(FADE_IN_STEP_MILLIS)
-                val progress = step.toFloat() / steps
-                val volume = FADE_IN_START_VOLUME + (1f - FADE_IN_START_VOLUME) * progress
-                // stopRinging等でreleaseされた直後に呼ばれる可能性があるため例外は無視する
-                runCatching { player.setVolume(volume, volume) }
-            }
-        }
+        fadeInJob = SoundFadeIn.start(scope, player, FADE_IN_DURATION_MILLIS)
     }
 
     private fun startVibration() {
@@ -236,10 +226,8 @@ class RingingService : Service() {
         private const val NOTIFICATION_ID = 1001
 
         // フェードインの開始音量比率(0〜1)。0だと鳴り始めが無音になり気づけないため、わずかに聞こえる値にする
-        private const val FADE_IN_START_VOLUME = 0.05f
         // 通常音量まで上げきる時間。純正時計アプリの既定(約5秒)に合わせる
         private const val FADE_IN_DURATION_MILLIS = 5000L
-        private const val FADE_IN_STEP_MILLIS = 100L
 
         const val ACTION_STOP = "com.marutyan.termalarm.alarm.action.STOP"
         const val ACTION_SNOOZE = "com.marutyan.termalarm.alarm.action.SNOOZE"
