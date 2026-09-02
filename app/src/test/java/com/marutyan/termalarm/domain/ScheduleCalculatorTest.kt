@@ -230,4 +230,69 @@ class ScheduleCalculatorTest {
         val alreadySkipped = schedule(7 * 60, 9 * 60, 5, repeatDays = DayOfWeek.entries.toSet(), skippedSessionStart = today)
         assertFalse(canEndTodaySession(alreadySkipped, ZonedDateTime.of(today, java.time.LocalTime.of(7, 30), TOKYO)))
     }
+
+    // --- 残り時間表示(remainingTimeUntilNextTrigger) ---
+    // 毎週月曜7:00のみ鳴る単発アラームを固定し、「now」だけを動かして各粒度の境界を検証する。
+    // 2024-01-08は月曜日で、隔週などではなく毎週鳴るため次回は必ずこの日時に一致する。
+
+    private val weeklyMondayAlarm = schedule(7 * 60, 7 * 60, 5, repeatDays = setOf(DayOfWeek.MONDAY))
+    private val mondayTrigger = ZonedDateTime.of(2024, 1, 8, 7, 0, 0, 0, TOKYO)
+
+    @Test
+    fun `残り59秒は1分未満、ちょうど60秒で1分表示に切り替わる`() {
+        assertEquals(
+            RemainingTime.LessThanOneMinute,
+            remainingTimeUntilNextTrigger(weeklyMondayAlarm, mondayTrigger.minusSeconds(59)),
+        )
+        assertEquals(
+            RemainingTime.Minutes(1),
+            remainingTimeUntilNextTrigger(weeklyMondayAlarm, mondayTrigger.minusSeconds(60)),
+        )
+    }
+
+    @Test
+    fun `残り59分は分表示、ちょうど60分で時間表示に切り替わる`() {
+        assertEquals(
+            RemainingTime.Minutes(59),
+            remainingTimeUntilNextTrigger(weeklyMondayAlarm, mondayTrigger.minusMinutes(59)),
+        )
+        assertEquals(
+            RemainingTime.HoursAndMinutes(1, 0),
+            remainingTimeUntilNextTrigger(weeklyMondayAlarm, mondayTrigger.minusMinutes(60)),
+        )
+    }
+
+    @Test
+    fun `8時間30分は時間と分の組で表す`() {
+        assertEquals(
+            RemainingTime.HoursAndMinutes(8, 30),
+            remainingTimeUntilNextTrigger(weeklyMondayAlarm, mondayTrigger.minusMinutes(8 * 60 + 30)),
+        )
+    }
+
+    @Test
+    fun `残り23時間59分は時間表示、ちょうど24時間で日表示に切り替わる`() {
+        assertEquals(
+            RemainingTime.HoursAndMinutes(23, 59),
+            remainingTimeUntilNextTrigger(weeklyMondayAlarm, mondayTrigger.minusMinutes(23 * 60 + 59)),
+        )
+        assertEquals(
+            RemainingTime.Days(1),
+            remainingTimeUntilNextTrigger(weeklyMondayAlarm, mondayTrigger.minusHours(24)),
+        )
+    }
+
+    @Test
+    fun `2日先は日数のみで表す`() {
+        assertEquals(
+            RemainingTime.Days(2),
+            remainingTimeUntilNextTrigger(weeklyMondayAlarm, mondayTrigger.minusDays(2)),
+        )
+    }
+
+    @Test
+    fun `無効なアラームは残り時間を返さない`() {
+        val disabled = weeklyMondayAlarm.copy(enabled = false)
+        assertNull(remainingTimeUntilNextTrigger(disabled, mondayTrigger.minusMinutes(30)))
+    }
 }

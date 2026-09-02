@@ -96,4 +96,10 @@
     <string name="sequential_tap_next">次にタップ: %1$d</string>
     <string name="shake_device_progress">%1$d / %2$d 回</string>
     <string name="color_word_prompt">この文字の「色」を選んでください</string>
+
+    <!-- 一覧画面: 次のアラームまでの残り時間(有効なアラームのみ表示) -->
+    <string name="remaining_time_less_than_minute">あと1分未満</string>
+    <string name="remaining_time_minutes">あと%1$d分</string>
+    <string name="remaining_time_hours_minutes">あと%1$d時間%2$d分</string>
+    <string name="remaining_time_days">あと%1$d日</string>
 </resources>

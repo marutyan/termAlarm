@@ -33,6 +33,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
+import java.time.Duration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,12 +52,32 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.AlarmSchedule
+import com.marutyan.termalarm.domain.RemainingTime
 import com.marutyan.termalarm.domain.occurrenceCount
 import com.marutyan.termalarm.domain.canEndTodaySession
 import java.time.ZonedDateTime
+import com.marutyan.termalarm.domain.remainingTimeUntilNextTrigger
 import com.marutyan.termalarm.domain.scheduleSummary
 import com.marutyan.termalarm.ui.common.formatClockMinutes
 import java.time.DayOfWeek
+
+/**
+ * 1分ごとに更新される現在時刻を返す。
+ * 残り時間や当日終了の可否は時刻とともに変わるため、画面を触らなくても表示が追従するようにする。
+ * 秒までは表示しないので、次の分の頭に合わせて起こすことで無駄な再計算を避ける。
+ */
+@Composable
+private fun rememberCurrentMinute(): ZonedDateTime {
+    var now by remember { mutableStateOf(ZonedDateTime.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            val next = now.plusMinutes(1).withSecond(0).withNano(0)
+            delay(maxOf(1_000L, Duration.between(ZonedDateTime.now(), next).toMillis()))
+            now = ZonedDateTime.now()
+        }
+    }
+    return now
+}
 
 /** 下部ナビの4タブ。「アラーム」以外は空画面(docs/SPEC.md「画面範囲」)。 */
 enum class TermAlarmTab { ALARM, CLOCK, TIMER, STOPWATCH }
@@ -77,6 +100,8 @@ fun AlarmListScreen(
     bottomBar: @Composable () -> Unit = {},
 ) {
     val alarms by viewModel.alarms.collectAsStateWithLifecycle()
+    // 残り時間と当日終了の可否は時刻で変わるため、1分ごとに更新される現在時刻を使う
+    val now = rememberCurrentMinute()
     var menuExpanded by rememberSaveable { mutableStateOf(false) }
     // 「今日はもう止める」の確認ダイアログ対象。skipGame=trueのアラームはダイアログを出さずSkipGame画面へ遷移させる
     var pendingSkipTarget by remember { mutableStateOf<AlarmSchedule?>(null) }
@@ -121,6 +146,7 @@ fun AlarmListScreen(
                     items(alarms, key = { it.id }) { schedule ->
                         AlarmCard(
                             schedule = schedule,
+                            now = now,
                             onToggleEnabled = { enabled -> viewModel.setEnabled(schedule.id, enabled) },
                             onClick = { onEditAlarm(schedule.id) },
                             onRequestEndTodaySession = {
@@ -166,6 +192,7 @@ private fun EmptyAlarmList(modifier: Modifier = Modifier) {
 @Composable
 private fun AlarmCard(
     schedule: AlarmSchedule,
+    now: ZonedDateTime,
     onToggleEnabled: (Boolean) -> Unit,
     onClick: () -> Unit,
     onRequestEndTodaySession: () -> Unit,
@@ -208,6 +235,16 @@ private fun AlarmCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                // 無効なアラームには次回予定が無いため出さない(remainingTimeUntilNextTriggerがnullを返す)
+                if (schedule.enabled) {
+                    remainingTimeUntilNextTrigger(schedule, now)?.let { remaining ->
+                        Text(
+                            text = remainingTimeText(remaining),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
             }
             Switch(checked = schedule.enabled, onCheckedChange = onToggleEnabled)
         }
@@ -239,7 +276,7 @@ private fun AlarmCard(
 
         // 押しても何も起きない状態で導線を出すと、アラーム自体を無効にするトグルとの
         // 違いが伝わらない。今日これから鳴る回が残っているときだけ出す
-        if (canEndTodaySession(schedule, ZonedDateTime.now())) {
+        if (canEndTodaySession(schedule, now)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 TextButton(onClick = onRequestEndTodaySession) {
                     Text(stringResource(R.string.ringing_skip_today))
@@ -247,6 +284,16 @@ private fun AlarmCard(
             }
         }
     }
+}
+
+// domainのRemainingTime(数値のみ)をstrings.xmlの文言へ変換する。粒度ごとに文字列リソースを切り替える
+@Composable
+private fun remainingTimeText(remaining: RemainingTime): String = when (remaining) {
+    is RemainingTime.LessThanOneMinute -> stringResource(R.string.remaining_time_less_than_minute)
+    is RemainingTime.Minutes -> stringResource(R.string.remaining_time_minutes, remaining.minutes)
+    is RemainingTime.HoursAndMinutes ->
+        stringResource(R.string.remaining_time_hours_minutes, remaining.hours, remaining.minutes)
+    is RemainingTime.Days -> stringResource(R.string.remaining_time_days, remaining.days)
 }
 
 // 曜日1文字ラベル(月火水木金土日)。DayOfWeekの並び(MONDAY始まり)がそのままモックの表示順と一致する
