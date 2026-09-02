@@ -1,0 +1,4 @@
+<resources>
+    <!-- Compose側のMaterial3テーマが読み込まれるまでの起動時背景用の最小テーマ -->
+    <style name="Theme.TermAlarm" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
