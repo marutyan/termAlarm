@@ -92,4 +92,18 @@ class GameTest {
             generateGameQuestion(Random(7), excludedTypes = GameType.entries.toSet())
         }
     }
+
+    // 回答用のテンキーに符号が無いため、引き算の答えは負になってはならない。
+    // 1問だけでは偶然通るので、多数のseedで不変条件が保たれることを確かめる。
+    @Test
+    fun `引き算の答えが負にならない`() {
+        repeat(500) { seed ->
+            val q = onlyType(GameType.ARITHMETIC, Random(seed)) as GameQuestion.Arithmetic
+            val answer = q.correctAnswer.toInt()
+            assertTrue("seed=$seed で答えが負になった: $q", answer >= 0)
+            if (!q.isAddition) {
+                assertTrue("seed=$seed で左辺が右辺より小さい: $q", q.left >= q.right)
+            }
+        }
+    }
 }
