@@ -1,11 +1,13 @@
 package com.marutyan.termalarm.ui.alarmedit
 
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.marutyan.termalarm.alarm.AlarmScheduler
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
 import com.marutyan.termalarm.domain.occurrenceCount
@@ -16,7 +18,11 @@ import kotlinx.coroutines.launch
 val INTERVAL_PRESETS_MINUTES = listOf(1, 5, 10, 15, 30)
 
 /** 保存を妨げる入力エラーの種類。文言はComposable側でstringResourceへ変換する(ViewModelに文字列を持たせない)。 */
-enum class AlarmEditValidationError { INTERVAL_NOT_POSITIVE, INTERVAL_TOO_LARGE, CUSTOM_INTERVAL_INVALID }
+enum class AlarmEditValidationError { INTERVAL_NOT_POSITIVE, INTERVAL_TOO_LARGE, CUSTOM_INTERVAL_INVALID, SNOOZE_OUT_OF_RANGE }
+
+// スヌーズ分数として許す範囲(1分〜60分)。0や負値、極端に長い値を保存できないようにする
+const val SNOOZE_MINUTES_MIN = 1
+const val SNOOZE_MINUTES_MAX = 60
 
 /**
  * アラーム編集画面の入力状態。新規作成(id=null)と既存編集(id!=null)の両方をこの1つの形で表す。
@@ -67,8 +73,12 @@ data class AlarmEditUiState(
  */
 class AlarmEditViewModel(
     private val repository: AlarmRepository,
+    context: Context,
     alarmId: Long?,
 ) : ViewModel() {
+
+    // PendingIntent発行やRoomアクセスにはApplication Contextで十分なため、生成時点で切り替えて保持する
+    private val appContext: Context = context.applicationContext
 
     var uiState by mutableStateOf(AlarmEditUiState(id = alarmId, isLoading = alarmId != null))
         private set
@@ -143,8 +153,8 @@ class AlarmEditViewModel(
     }
 
     fun setSkipGame(value: Boolean) { uiState = uiState.copy(skipGame = value) }
-    fun setSnoozeEnabled(value: Boolean) { uiState = uiState.copy(snoozeEnabled = value) }
-    fun setSnoozeMinutes(minutes: Int) { uiState = uiState.copy(snoozeMinutes = minutes) }
+    fun setSnoozeEnabled(value: Boolean) { uiState = revalidate(uiState.copy(snoozeEnabled = value)) }
+    fun setSnoozeMinutes(minutes: Int) { uiState = revalidate(uiState.copy(snoozeMinutes = minutes)) }
 
     // 保存前の入力検証。UI側で計算式を再実装しないよう、判定にはdomain.occurrenceCountを使う(SPEC「要約はdomainの関数を使う」の精神を検証にも適用)
     private fun revalidate(state: AlarmEditUiState): AlarmEditUiState {
@@ -152,6 +162,8 @@ class AlarmEditViewModel(
             state.intervalMinutes <= 0 -> AlarmEditValidationError.INTERVAL_NOT_POSITIVE
             state.startMinutes != state.endMinutes && occurrenceCount(state.toSchedule(null)) <= 1 ->
                 AlarmEditValidationError.INTERVAL_TOO_LARGE
+            state.snoozeEnabled && state.snoozeMinutes !in SNOOZE_MINUTES_MIN..SNOOZE_MINUTES_MAX ->
+                AlarmEditValidationError.SNOOZE_OUT_OF_RANGE
             else -> null
         }
         return state.copy(validationError = error)
@@ -163,7 +175,9 @@ class AlarmEditViewModel(
         if (validated.validationError != null) return
         viewModelScope.launch {
             val schedule = validated.toSchedule(loadedSkippedSessionStart)
-            if (validated.id == null) repository.add(schedule) else repository.update(schedule)
+            // 新規保存はadd()が採番したidを使う。保存前のid(null)のままではAlarmManagerへ登録できない
+            val savedId = if (validated.id == null) repository.add(schedule) else { repository.update(schedule); validated.id }
+            AlarmScheduler.reschedule(appContext, savedId)
             uiState = uiState.copy(isSaved = true)
         }
     }
@@ -172,6 +186,7 @@ class AlarmEditViewModel(
         val id = uiState.id ?: return
         viewModelScope.launch {
             repository.delete(uiState.toSchedule(loadedSkippedSessionStart).copy(id = id))
+            AlarmScheduler.cancel(appContext, id)
             uiState = uiState.copy(isDeleted = true)
         }
     }
@@ -180,8 +195,9 @@ class AlarmEditViewModel(
 // 依存注入フレームワークを使わないための手作りファクトリ
 class AlarmEditViewModelFactory(
     private val repository: AlarmRepository,
+    private val context: Context,
     private val alarmId: Long?,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T = AlarmEditViewModel(repository, alarmId) as T
+    override fun <T : ViewModel> create(modelClass: Class<T>): T = AlarmEditViewModel(repository, context, alarmId) as T
 }
