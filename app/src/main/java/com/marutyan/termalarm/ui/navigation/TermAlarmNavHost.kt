@@ -3,6 +3,7 @@ package com.marutyan.termalarm.ui.navigation
 import android.app.Activity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -20,6 +21,11 @@ import com.marutyan.termalarm.ui.alarmlist.AlarmListViewModel
 import com.marutyan.termalarm.ui.alarmlist.AlarmListViewModelFactory
 import com.marutyan.termalarm.ui.alarmlist.TermAlarmBottomBar
 import com.marutyan.termalarm.ui.alarmlist.TermAlarmTab
+import com.marutyan.termalarm.ui.clock.ClockScreen
+import com.marutyan.termalarm.ui.clock.ClockViewModel
+import com.marutyan.termalarm.ui.clock.ClockViewModelFactory
+import com.marutyan.termalarm.data.WorldClockRepository
+import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.ui.common.PlaceholderTabScreen
 import com.marutyan.termalarm.ui.permission.ExactAlarmPermissionBanner
 import com.marutyan.termalarm.ui.permission.NotificationPermissionBanner
@@ -92,7 +98,16 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             )
         }
         composable(ROUTE_CLOCK) {
-            PlaceholderTabScreen(stringResource(R.string.tab_clock)) { TermAlarmBottomBar(TermAlarmTab.CLOCK, ::goToTab) }
+            // AlarmDatabaseは共有シングルトンのため、ここでdaoを取り出してWorldClockRepositoryを組み立てる
+            // (MainActivityの配線は変えず、時計タブの行だけで完結させる)
+            val clockRepository = remember {
+                WorldClockRepository(
+                    AlarmDatabase.getInstance(context).worldClockCityDao(),
+                    AlarmDatabase.getInstance(context).clockSettingsDao(),
+                )
+            }
+            val viewModel: ClockViewModel = viewModel(factory = ClockViewModelFactory(clockRepository))
+            ClockScreen(viewModel = viewModel) { TermAlarmBottomBar(TermAlarmTab.CLOCK, ::goToTab) }
         }
         composable(ROUTE_TIMER) {
             PlaceholderTabScreen(stringResource(R.string.tab_timer)) { TermAlarmBottomBar(TermAlarmTab.TIMER, ::goToTab) }

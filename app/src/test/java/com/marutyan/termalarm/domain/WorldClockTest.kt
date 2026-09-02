@@ -67,6 +67,17 @@ class WorldClockTimeTest {
     }
 
     @Test
+    fun `日付変更線をまたぐと2日分ずれることがある`() {
+        // 端末はEtc/GMT+12(UTC-12)で現地1月1日23時。キリバス(UTC+14、26時間先)は既に1月3日1時
+        val instant = Instant.parse("2026-01-02T11:00:00Z")
+        val diff = timeDifference(ZoneId.of("Pacific/Kiritimati"), ZoneId.of("Etc/GMT+12"), instant)
+        assertTrue(diff.isAhead)
+        assertEquals(26, diff.hourPart)
+        assertEquals(0, diff.minutePart)
+        assertEquals(2, diff.dayOffset)
+    }
+
+    @Test
     fun `時差が無ければ0時間0分で当日になる`() {
         val instant = Instant.parse("2026-01-01T03:00:00Z")
         val diff = timeDifference(ZoneId.of("Europe/London"), ZoneId.of("UTC"), instant)
