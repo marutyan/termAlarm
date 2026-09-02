@@ -15,6 +15,9 @@
     <!-- 鳴動中にフォアグラウンドサービスで音を鳴らし続けるため -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- ストップウォッチの通知更新用フォアグラウンドサービス。media再生や位置情報など既存の
+         種別のどれにも当てはまらないため、Android 14+のポリシーに従いspecialUseで宣言する -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- 鳴動画面をロック画面の上に全画面インテントで起動するため -->
@@ -106,6 +109,25 @@
                 <action android:name="android.intent.action.TIME_SET" />
                 <action android:name="android.intent.action.LOCALE_CHANGED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 動作中(RUNNING)の間だけ生存するフォアグラウンドサービス。通知に経過時間を出す -->
+        <service
+            android:name=".stopwatch.StopwatchForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="stopwatch" />
+        </service>
+
+        <!-- 端末再起動後にストップウォッチの経過時間を復元する(alarm/AlarmRescheduleReceiverとは別の受信口) -->
+        <receiver
+            android:name=".stopwatch.StopwatchRescheduleReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
     </application>

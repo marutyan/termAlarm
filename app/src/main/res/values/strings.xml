@@ -102,4 +102,19 @@
     <string name="remaining_time_minutes">あと%1$d分</string>
     <string name="remaining_time_hours_minutes">あと%1$d時間%2$d分</string>
     <string name="remaining_time_days">あと%1$d日</string>
+
+    <!-- ストップウォッチタブ -->
+    <string name="stopwatch_start">開始</string>
+    <string name="stopwatch_pause">一時停止</string>
+    <string name="stopwatch_resume">再開</string>
+    <string name="stopwatch_reset">リセット</string>
+    <string name="stopwatch_lap">ラップ</string>
+    <string name="stopwatch_laps_empty">ラップを刻むとここに表示されます</string>
+    <!-- ラップ一覧の行: ラップ番号とその時点の合計 -->
+    <string name="stopwatch_lap_number">ラップ %1$d</string>
+    <string name="stopwatch_lap_total">合計 %1$s</string>
+    <!-- 動作中(RUNNING)の間だけ表示するフォアグラウンド通知 -->
+    <string name="stopwatch_notification_channel_name">ストップウォッチ計測中</string>
+    <string name="stopwatch_notification_title">ストップウォッチ</string>
+    <string name="stopwatch_notification_text">計測中 %1$s</string>
 </resources>
