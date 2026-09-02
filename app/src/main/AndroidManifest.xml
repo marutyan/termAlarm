@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 範囲＋間隔アラームを時刻ぴったりに鳴らすための正確なアラーム権限。
+         USE_EXACT_ALARMはAPI33以降でのみ有効なため、API31/32(Android 12/12L)向けに
+         SCHEDULE_EXACT_ALARMも宣言する。maxSdkVersion=32でAPI33以降には出さない
+         （両方を宣言するとPlay審査で不要な権限として扱われうるため） -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- 鳴動通知・全画面インテント表示に必要な実行時権限 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 端末再起動後に予約済みアラームを復元するため -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- 鳴動中にフォアグラウンドサービスで音を鳴らし続けるため -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- 鳴動画面をロック画面の上に全画面インテントで起動するため -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
+    <application
+        android:allowBackup="true"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.TermAlarm">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.TermAlarm">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            鳴動画面。ロック画面の上に全画面インテントで起動される。
+            ロック画面表示自体はRingingActivity側でAPIレベルに応じてsetShowWhenLocked()または
+            WindowManagerフラグを使い分けて行う（android:showOnLockScreenは意味の異なる非推奨属性のため使わない）
+        -->
+        <activity
+            android:name=".alarm.RingingActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.TermAlarm" />
+
+        <!-- 鳴動中だけ生存するフォアグラウンドサービス。音とバイブを鳴らす -->
+        <service
+            android:name=".alarm.RingingService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <!-- AlarmManagerが発火時に呼ぶ受信口。自アプリ内のPendingIntent経由でのみ呼ばれる -->
+        <receiver
+            android:name=".alarm.AlarmTriggerReceiver"
+            android:exported="false" />
+
+        <!-- 端末再起動・タイムゾーン変更・時刻変更・ロケール変更で全アラームの予約を再計算する -->
+        <receiver
+            android:name=".alarm.AlarmRescheduleReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+            </intent-filter>
+        </receiver>
+    </application>
+
+</manifest>
