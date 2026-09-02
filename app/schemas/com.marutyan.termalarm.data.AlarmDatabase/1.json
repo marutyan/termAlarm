@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "5d0a2d10be8a89c3ef2afd78b3325924",
+    "identityHash": "5e9f44c67bb34f78c03646747e906186",
     "entities": [
       {
         "tableName": "alarm_schedule",
@@ -90,11 +90,65 @@
             "id"
           ]
         }
+      },
+      {
+        "tableName": "timer_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `label` TEXT NOT NULL, `totalMillis` INTEGER NOT NULL, `remainingMillisAtAnchor` INTEGER NOT NULL, `anchorElapsedRealtime` INTEGER NOT NULL, `anchorWallClockMillis` INTEGER NOT NULL, `runState` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalMillis",
+            "columnName": "totalMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "remainingMillisAtAnchor",
+            "columnName": "remainingMillisAtAnchor",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "anchorElapsedRealtime",
+            "columnName": "anchorElapsedRealtime",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "anchorWallClockMillis",
+            "columnName": "anchorWallClockMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "runState",
+            "columnName": "runState",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5d0a2d10be8a89c3ef2afd78b3325924')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5e9f44c67bb34f78c03646747e906186')"
     ]
   }
 }
