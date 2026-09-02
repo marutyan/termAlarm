@@ -6,7 +6,7 @@ import com.marutyan.termalarm.domain.ClockDisplayMode
 
 /**
  * 時計タブの表示設定(アナログ/デジタル)を保存する単一行のテーブル。idは常に0固定にして
- * 1行しか存在しないことを保証し、Insert(REPLACE)でupsertする(WorldClockDao.setDisplayMode参照)。
+ * 1行しか存在しないことを保証し、Insert(REPLACE)でupsertする(ClockSettingsRepository.setDisplayMode参照)。
  */
 @Entity(tableName = "clock_settings")
 data class ClockSettingsEntity(

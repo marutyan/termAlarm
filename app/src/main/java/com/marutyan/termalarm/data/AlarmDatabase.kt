@@ -9,7 +9,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
- * アプリ唯一のRoomデータベース。アラーム、タイマー、ストップウォッチ、世界時計の状態を持つ。
+ * アプリ唯一のRoomデータベース。アラーム、タイマー、ストップウォッチ、時計タブの表示設定の状態を持つ。
  *
  * タイマーのテーブルを足すときにバージョンを1のまま据え置いたところ、既にアプリが入っていた端末で
  * テーブルが作られず、タイマーがまったく動かなかった。未リリースでも開発端末には前の版のDBが
@@ -27,10 +27,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         TimerEntity::class,
         StopwatchStateEntity::class,
         StopwatchLapEntity::class,
-        WorldClockCityEntity::class,
         ClockSettingsEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -38,7 +37,6 @@ abstract class AlarmDatabase : RoomDatabase() {
     abstract fun alarmDao(): AlarmDao
     abstract fun timerDao(): TimerDao
     abstract fun stopwatchDao(): StopwatchDao
-    abstract fun worldClockCityDao(): WorldClockCityDao
     abstract fun clockSettingsDao(): ClockSettingsDao
 
     companion object {
@@ -97,6 +95,16 @@ abstract class AlarmDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * 世界時計をやめて大きな時計1つに作り直したため、都市一覧のテーブルが不要になった。
+         * 表示設定(clock_settings)は引き続き使うため残す。DROPだけなのでデータの移行先は無い。
+         */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS `world_clock_city`")
+            }
+        }
+
         @Volatile
         private var instance: AlarmDatabase? = null
 
@@ -107,7 +115,7 @@ abstract class AlarmDatabase : RoomDatabase() {
                     context.applicationContext,
                     AlarmDatabase::class.java,
                     "alarm_schedule.db",
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build().also { instance = it }
             }
     }

@@ -18,7 +18,6 @@ import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.StopwatchRepository
 import com.marutyan.termalarm.data.TimerRepository
-import com.marutyan.termalarm.data.WorldClockRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditScreen
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditViewModel
@@ -65,18 +64,6 @@ internal fun createTestStopwatchRepository(): Pair<AlarmDatabase, StopwatchRepos
         .fallbackToDestructiveMigration(true)
         .build()
     return db to StopwatchRepository(db.stopwatchDao())
-}
-
-/**
- * 時計(世界時計)UIテスト専用のインメモリRoomDB+WorldClockRepositoryを作る。都市一覧と表示設定の
- * 2つのDAOを同じインメモリDBから渡す(本物のWorldClockRepositoryの構築方法と同じ)。
- */
-internal fun createTestWorldClockRepository(): Pair<AlarmDatabase, WorldClockRepository> {
-    val context = InstrumentationRegistry.getInstrumentation().targetContext
-    val db = Room.inMemoryDatabaseBuilder(context, AlarmDatabase::class.java)
-        .fallbackToDestructiveMigration(true)
-        .build()
-    return db to WorldClockRepository(db.worldClockCityDao(), db.clockSettingsDao())
 }
 
 /**
