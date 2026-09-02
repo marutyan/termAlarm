@@ -3,6 +3,7 @@ package com.marutyan.termalarm.ui.navigation
 import android.app.Activity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -26,6 +27,11 @@ import com.marutyan.termalarm.ui.permission.NotificationPermissionBanner
 import com.marutyan.termalarm.ui.skipgame.SkipGameScreen
 import com.marutyan.termalarm.ui.skipgame.SkipGameViewModel
 import com.marutyan.termalarm.ui.skipgame.SkipGameViewModelFactory
+import com.marutyan.termalarm.ui.timer.TimerScreen
+import com.marutyan.termalarm.ui.timer.TimerViewModel
+import com.marutyan.termalarm.ui.timer.TimerViewModelFactory
+import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.TimerRepository
 import androidx.compose.ui.res.stringResource
 import com.marutyan.termalarm.R
 
@@ -95,7 +101,12 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             PlaceholderTabScreen(stringResource(R.string.tab_clock)) { TermAlarmBottomBar(TermAlarmTab.CLOCK, ::goToTab) }
         }
         composable(ROUTE_TIMER) {
-            PlaceholderTabScreen(stringResource(R.string.tab_timer)) { TermAlarmBottomBar(TermAlarmTab.TIMER, ::goToTab) }
+            val timerRepository = remember { TimerRepository(AlarmDatabase.getInstance(context).timerDao()) }
+            val viewModel: TimerViewModel = viewModel(factory = TimerViewModelFactory(timerRepository, context))
+            TimerScreen(
+                viewModel = viewModel,
+                bottomBar = { TermAlarmBottomBar(TermAlarmTab.TIMER, ::goToTab) },
+            )
         }
         composable(ROUTE_STOPWATCH) {
             PlaceholderTabScreen(stringResource(R.string.tab_stopwatch)) { TermAlarmBottomBar(TermAlarmTab.STOPWATCH, ::goToTab) }

@@ -16,6 +16,7 @@ import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
+import com.marutyan.termalarm.data.TimerRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditScreen
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditViewModel
@@ -39,6 +40,18 @@ internal fun createTestRepository(): Pair<AlarmDatabase, AlarmRepository> {
 
 // AlarmEditViewModel/AlarmListViewModel/SkipGameViewModelが要求するContext。ApplicationContextで足りる
 internal fun testAppContext(): Context = InstrumentationRegistry.getInstrumentation().targetContext
+
+/**
+ * タイマーUIテスト専用のインメモリRoomDB+TimerRepositoryを作る。createTestRepository()と同じDB
+ * クラス(AlarmDatabase)を使うが、テストごとに新しいインメモリDBを作るためアラームのテストとは独立する。
+ */
+internal fun createTestTimerRepository(): Pair<AlarmDatabase, TimerRepository> {
+    val context = InstrumentationRegistry.getInstrumentation().targetContext
+    val db = Room.inMemoryDatabaseBuilder(context, AlarmDatabase::class.java)
+        .fallbackToDestructiveMigration(true)
+        .build()
+    return db to TimerRepository(db.timerDao())
+}
 
 /**
  * テストで使う既定値のアラーム。docs/SPEC.mdの既定値(7:00〜9:00・5分間隔・skipRequiresApp=true等)と

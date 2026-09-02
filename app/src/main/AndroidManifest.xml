@@ -108,6 +108,27 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <!-- 動作中/完了のタイマーが1件でもある間だけ生存するフォアグラウンドサービス。通知に残り時間を出し、
+             完了時にUSAGE_ALARMで鳴らす -->
+        <service
+            android:name=".timer.TimerForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <!-- TimerScheduler.setExactAndAllowWhileIdle()の発火先。自アプリ内のPendingIntent経由でのみ呼ばれる -->
+        <receiver
+            android:name=".timer.TimerTriggerReceiver"
+            android:exported="false" />
+
+        <!-- 端末再起動後にタイマーの経過時間を復元する(alarm/AlarmRescheduleReceiverとは別の受信口) -->
+        <receiver
+            android:name=".timer.TimerRescheduleReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
