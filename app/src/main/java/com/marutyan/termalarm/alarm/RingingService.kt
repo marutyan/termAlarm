@@ -6,7 +6,6 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
@@ -20,6 +19,7 @@ import androidx.core.app.ServiceCompat
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
+import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +27,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
@@ -83,17 +84,21 @@ class RingingService : Service() {
                 stopSelf()
                 return@launch
             }
+            // 鳴動セッション開始時に一度だけ設定を読む。鳴動中に設定画面から値が変わることは想定しないため、
+            // 都度DBへ問い合わせず、この時点の値をセッション終了まで使い続ける
+            val settings = settingsRepository().observe().first()
             startForegroundNotification()
-            playSound(schedule)
+            playSound(schedule, settings.alarmFadeInSeconds)
             if (schedule.vibrate) startVibration()
-            scheduleAutoStop()
+            scheduleAutoStop(settings.autoStopMinutes)
         }
     }
 
-    // 一定時間(既定10分)操作が無ければ、無視されたものとして「停止」と同じ扱いにする（docs/SPEC.md「無視（放置）」）
-    private fun scheduleAutoStop() {
+    // 一定時間(設定「消音までの時間」、既定10分)操作が無ければ、無視されたものとして
+    // 「停止」と同じ扱いにする（docs/SPEC.md「無視（放置）」）
+    private fun scheduleAutoStop(autoStopMinutes: Int) {
         timeoutJob = scope.launch {
-            delay(RINGING_AUTO_STOP_TIMEOUT_MILLIS)
+            delay(autoStopMinutes * 60_000L)
             stopRinging { id -> AlarmScheduler.onStopped(this@RingingService, id) }
         }
     }
@@ -130,7 +135,7 @@ class RingingService : Service() {
         }
     }
 
-    private fun playSound(schedule: AlarmSchedule) {
+    private fun playSound(schedule: AlarmSchedule, fadeInSeconds: Int) {
         val uri: Uri = schedule.soundUri?.let(Uri::parse)
             ?: RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM)
             ?: return
@@ -138,12 +143,7 @@ class RingingService : Service() {
         mediaPlayer = player
         player.apply {
             // マナーモードでも鳴る必要があるため、通知/メディアではなくALARM用途を明示する（docs/SPEC.md「鳴動」節）
-            setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build(),
-            )
+            setAudioAttributes(SoundFadeIn.alarmAudioAttributes())
             isLooping = true
             // フェードイン開始時点の音量。鳴り始めから聞こえる必要があるため0にはしない
             setVolume(SoundFadeIn.START_VOLUME, SoundFadeIn.START_VOLUME)
@@ -152,12 +152,18 @@ class RingingService : Service() {
             player.setDataSource(this@RingingService, uri)
             player.prepare()
             player.start()
-        }.onSuccess { startFadeIn(player) }
+        }.onSuccess { startFadeIn(player, fadeInSeconds) }
     }
 
-    // 寝ている人を起こすため、5秒かけてゆっくり音量を上げる
-    private fun startFadeIn(player: MediaPlayer) {
-        fadeInJob = SoundFadeIn.start(scope, player, FADE_IN_DURATION_MILLIS)
+    // 寝ている人を起こすため、設定「徐々に音量を上げる」の秒数(既定5秒)かけてゆっくり音量を上げる。
+    // 0秒(なし)なら最初から最大音量にする
+    private fun startFadeIn(player: MediaPlayer, fadeInSeconds: Int) {
+        val duration = SoundFadeIn.durationMillisOrNull(fadeInSeconds)
+        if (duration == null) {
+            player.setVolume(1f, 1f)
+            return
+        }
+        fadeInJob = SoundFadeIn.start(scope, player, duration)
     }
 
     private fun startVibration() {
@@ -212,6 +218,8 @@ class RingingService : Service() {
 
     private fun repository(): AlarmRepository = AlarmRepository(AlarmDatabase.getInstance(this).alarmDao())
 
+    private fun settingsRepository(): SettingsRepository = SettingsRepository(AlarmDatabase.getInstance(this).appSettingsDao())
+
     override fun onDestroy() {
         super.onDestroy()
         timeoutJob?.cancel()
@@ -224,10 +232,6 @@ class RingingService : Service() {
     companion object {
         private const val CHANNEL_ID = "ringing"
         private const val NOTIFICATION_ID = 1001
-
-        // フェードインの開始音量比率(0〜1)。0だと鳴り始めが無音になり気づけないため、わずかに聞こえる値にする
-        // 通常音量まで上げきる時間。純正時計アプリの既定(約5秒)に合わせる
-        private const val FADE_IN_DURATION_MILLIS = 5000L
 
         const val ACTION_STOP = "com.marutyan.termalarm.alarm.action.STOP"
         const val ACTION_SNOOZE = "com.marutyan.termalarm.alarm.action.SNOOZE"

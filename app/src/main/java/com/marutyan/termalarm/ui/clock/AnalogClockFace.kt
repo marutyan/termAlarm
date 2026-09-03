@@ -36,7 +36,7 @@ private val NUMERAL_HOURS = listOf(12, 3, 6, 9)
  * 針の角度を決めるため、どのタイムゾーンの時刻を渡してもそのまま「その場所の今の時刻」を表す文字盤になる。
  */
 @Composable
-fun AnalogClockFace(time: ZonedDateTime, modifier: Modifier = Modifier) {
+fun AnalogClockFace(time: ZonedDateTime, showSeconds: Boolean = true, modifier: Modifier = Modifier) {
     val faceColor = MaterialTheme.colorScheme.outline
     val numeralColor = MaterialTheme.colorScheme.onSurfaceVariant
     val hourHandColor = MaterialTheme.colorScheme.onSurface
@@ -69,7 +69,9 @@ fun AnalogClockFace(time: ZonedDateTime, modifier: Modifier = Modifier) {
 
         drawHand(center, radius * 0.5f, angles.hourDegrees, hourHandColor, radius * 0.045f)
         drawHand(center, radius * 0.72f, angles.minuteDegrees, minuteHandColor, radius * 0.03f)
-        drawHand(center, radius * 0.82f, angles.secondDegrees, secondHandColor, radius * 0.012f)
+        if (showSeconds) {
+            drawHand(center, radius * 0.82f, angles.secondDegrees, secondHandColor, radius * 0.012f)
+        }
         drawCircle(color = centerColor, radius = radius * 0.04f, center = center)
     }
 }

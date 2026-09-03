@@ -63,8 +63,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.marutyan.termalarm.R
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.marutyan.termalarm.domain.AlarmSchedule
+import com.marutyan.termalarm.domain.WeekStart
 import com.marutyan.termalarm.domain.occurrenceCount
+import com.marutyan.termalarm.ui.alarmlist.orderedDaysOfWeek
 import com.marutyan.termalarm.ui.common.formatClockMinutes
 import java.time.DayOfWeek
 
@@ -79,6 +82,7 @@ fun AlarmEditScreen(
     onClose: () -> Unit,
 ) {
     val uiState = viewModel.uiState
+    val weekStart by viewModel.weekStart.collectAsStateWithLifecycle()
 
     // 保存・削除が完了したら呼び出し側(NavHost)に画面を閉じてもらう
     LaunchedEffect(uiState.isSaved, uiState.isDeleted) {
@@ -166,7 +170,7 @@ fun AlarmEditScreen(
                 )
             }
 
-            RepeatDaysSection(selectedDays = uiState.repeatDays, onToggleDay = viewModel::toggleDay)
+            RepeatDaysSection(selectedDays = uiState.repeatDays, weekStart = weekStart, onToggleDay = viewModel::toggleDay)
 
             GeneralSettingsSection(
                 label = uiState.label,
@@ -365,7 +369,7 @@ private fun PreviewBanner(startMinutes: Int, endMinutes: Int, intervalMinutes: I
 
 // 繰り返す曜日の選択。design/AlarmEdit.dc.htmlと同じ真円のチップに合わせるため、ToggleButtonではなく直接描画する
 @Composable
-private fun RepeatDaysSection(selectedDays: Set<DayOfWeek>, onToggleDay: (DayOfWeek) -> Unit) {
+private fun RepeatDaysSection(selectedDays: Set<DayOfWeek>, weekStart: WeekStart, onToggleDay: (DayOfWeek) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(stringResource(R.string.repeat_section_title), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         // 固定間隔で並べると7つが左へ寄って右に余白ができるため、幅いっぱいに均等配置する
@@ -373,7 +377,7 @@ private fun RepeatDaysSection(selectedDays: Set<DayOfWeek>, onToggleDay: (DayOfW
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            DayOfWeek.entries.forEach { day ->
+            orderedDaysOfWeek(weekStart).forEach { day ->
                 val selected = day in selectedDays
                 Box(
                     modifier = Modifier

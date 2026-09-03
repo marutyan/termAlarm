@@ -8,10 +8,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.marutyan.termalarm.alarm.AlarmScheduler
+import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
+import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
+import com.marutyan.termalarm.domain.WeekStart
 import com.marutyan.termalarm.domain.occurrenceCount
 import java.time.DayOfWeek
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 // 間隔選択チップに並べる既定値。これ以外の値は「その他」を選んだ扱いにする。
@@ -24,6 +32,11 @@ enum class AlarmEditValidationError { INTERVAL_NOT_POSITIVE, INTERVAL_TOO_LARGE,
 // スヌーズ分数として許す範囲(1分〜60分)。0や負値、極端に長い値を保存できないようにする
 const val SNOOZE_MINUTES_MIN = 1
 const val SNOOZE_MINUTES_MAX = 60
+
+// スヌーズを有効にしたときの初期値を決める。既存アラームに保存済みの値があればそれを使い、
+// 新規作成(null)なら設定画面「スヌーズの長さ」の既定値を使う
+internal fun resolveSnoozeMinutes(scheduleSnoozeMinutes: Int?, defaultSnoozeMinutes: Int): Int =
+    scheduleSnoozeMinutes ?: defaultSnoozeMinutes
 
 /**
  * アラーム編集画面の入力状態。新規作成(id=null)と既存編集(id!=null)の両方をこの1つの形で表す。
@@ -81,18 +94,29 @@ class AlarmEditViewModel(
     // PendingIntent発行やRoomアクセスにはApplication Contextで十分なため、生成時点で切り替えて保持する
     private val appContext: Context = context.applicationContext
 
+    // 全体設定の読み出し用。新規アラームのスヌーズ初期値(defaultSnoozeMinutes)と
+    // 曜日チップの並び順(weekStart)に使う。NavHostを変更せずに済むよう、ここでcontextから組み立てる
+    private val settingsRepository = SettingsRepository(AlarmDatabase.getInstance(appContext).appSettingsDao())
+
     var uiState by mutableStateOf(AlarmEditUiState(id = alarmId, isLoading = alarmId != null))
         private set
+
+    // 曜日チップの並び順に使う。この画面はアラームごとに作り直されるため、都度DBを見に行かず1回読みで足りる
+    val weekStart: StateFlow<WeekStart> = settingsRepository.observe().map { it.weekStart }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeekStart.SUNDAY)
 
     // 保存時にskippedSessionStartを保つため、読み込んだ既存スケジュールを保持しておく
     private var loadedSkippedSessionStart: java.time.LocalDate? = null
 
     init {
         val id = alarmId
-        if (id != null) {
-            viewModelScope.launch {
-                val schedule = repository.getById(id)
-                uiState = if (schedule != null) {
+        viewModelScope.launch {
+            // スヌーズの初期値は新規・既存どちらの読み込みにも使うため、先にまとめて読んでおく
+            val defaultSnoozeMinutes = settingsRepository.observe().first().defaultSnoozeMinutes
+            val schedule = id?.let { repository.getById(it) }
+            uiState = when {
+                id == null -> uiState.copy(snoozeMinutes = defaultSnoozeMinutes)
+                schedule != null -> {
                     loadedSkippedSessionStart = schedule.skippedSessionStart
                     AlarmEditUiState(
                         id = schedule.id,
@@ -109,12 +133,11 @@ class AlarmEditViewModel(
                         skipRequiresApp = schedule.skipRequiresApp,
                         skipGame = schedule.skipGame,
                         snoozeEnabled = schedule.snoozeMinutes != null,
-                        snoozeMinutes = schedule.snoozeMinutes ?: 10,
+                        snoozeMinutes = resolveSnoozeMinutes(schedule.snoozeMinutes, defaultSnoozeMinutes),
                         isLoading = false,
                     )
-                } else {
-                    uiState.copy(isLoading = false)
                 }
+                else -> uiState.copy(isLoading = false)
             }
         }
     }

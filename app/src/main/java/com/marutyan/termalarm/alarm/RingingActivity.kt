@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -44,14 +45,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.lifecycleScope
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
+import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
+import com.marutyan.termalarm.domain.AppSettings
+import com.marutyan.termalarm.domain.VolumeButtonAction
 import com.marutyan.termalarm.domain.nextTrigger
 import com.marutyan.termalarm.domain.remainingOccurrenceCount
 import com.marutyan.termalarm.ui.theme.TermAlarmTheme
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -65,6 +72,10 @@ import java.util.Locale
  */
 class RingingActivity : ComponentActivity() {
 
+    // 鳴動セッション開始時に一度だけ読み込む設定値。鳴動中に設定画面から値が変わることは想定しないため、
+    // 起動時の1回読みで十分とする(RingingServiceと同じ方針)。読み込み前はAppSettings()の既定値で表示する
+    private var settings by mutableStateOf(AppSettings())
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setupLockScreenDisplay()
@@ -72,17 +83,49 @@ class RingingActivity : ComponentActivity() {
         val alarmId = intent.getLongExtra(EXTRA_ALARM_ID, -1L)
         val triggerAtMillis = intent.getLongExtra(EXTRA_TRIGGER_AT_MILLIS, System.currentTimeMillis())
 
+        lifecycleScope.launch {
+            settings = SettingsRepository(AlarmDatabase.getInstance(this@RingingActivity).appSettingsDao())
+                .observe().first()
+        }
+
         setContent {
             TermAlarmTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     RingingScreen(
                         alarmId = alarmId,
                         triggerAtMillis = triggerAtMillis,
+                        autoStopMinutes = settings.autoStopMinutes,
                         onFinish = { finish() },
                     )
                 }
             }
         }
+    }
+
+    /**
+     * 鳴動中に音量ボタンを押したときの動作。設定「アラーム時の音量ボタン」に従う。
+     * ADJUST_VOLUME(既定)はここでは何もせず、システム標準の音量調整に任せる
+     * (STREAM_ALARMで再生中のため、素通しするだけでアラーム音量が変わる)。
+     */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            when (settings.volumeButtonAction) {
+                VolumeButtonAction.SNOOZE -> {
+                    // 分数を指定せず送ることで、RingingService側にそのアラームのsnoozeMinutesを解決させる
+                    // (スヌーズ無効なアラームなら停止と同じ扱いになる。RingingService.snoozeOrStop参照)
+                    startService(RingingService.snoozeIntent(this, -1))
+                    finish()
+                    return true
+                }
+                VolumeButtonAction.DISMISS -> {
+                    startService(RingingService.stopIntent(this))
+                    finish()
+                    return true
+                }
+                VolumeButtonAction.ADJUST_VOLUME -> Unit
+            }
+        }
+        return super.onKeyDown(keyCode, event)
     }
 
     // ロック画面の上に鳴動画面を表示するためのウィンドウ設定。
@@ -127,7 +170,7 @@ class RingingActivity : ComponentActivity() {
 }
 
 @Composable
-private fun RingingScreen(alarmId: Long, triggerAtMillis: Long, onFinish: () -> Unit) {
+private fun RingingScreen(alarmId: Long, triggerAtMillis: Long, autoStopMinutes: Int, onFinish: () -> Unit) {
     val context = LocalContext.current
 
     // 鳴動中のoccurrenceの実時刻。予約時に意図していた時刻を使うことで、サービス起動の遅延に影響されない
@@ -149,9 +192,10 @@ private fun RingingScreen(alarmId: Long, triggerAtMillis: Long, onFinish: () -> 
         }
     }
 
-    // サービス側の無操作タイムアウトと同じ時間で画面も閉じる（サービス自体の停止・次回予約はサービス側が行う）
-    LaunchedEffect(Unit) {
-        delay(RINGING_AUTO_STOP_TIMEOUT_MILLIS)
+    // サービス側の無操作タイムアウト(設定「消音までの時間」)と同じ時間で画面も閉じる
+    // （サービス自体の停止・次回予約はサービス側が行う）。設定の読み込み完了で値が変わったら数え直す
+    LaunchedEffect(autoStopMinutes) {
+        delay(autoStopMinutes * 60_000L)
         onFinish()
     }
 

@@ -5,11 +5,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.marutyan.termalarm.alarm.AlarmScheduler
+import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
+import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
+import com.marutyan.termalarm.domain.WeekStart
 import java.time.ZonedDateTime
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -26,6 +30,11 @@ class AlarmListViewModel(private val repository: AlarmRepository, context: Conte
     // DBの変更が自動的に反映される一覧。画面が破棄されてもしばらく購読を維持し、再表示時の再読込を避ける
     val alarms: StateFlow<List<AlarmSchedule>> = repository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    // 曜日チップの並び順(設定「週の始まり」)。NavHostを変更せずに済むよう、ここでcontextから組み立てる
+    val weekStart: StateFlow<WeekStart> =
+        SettingsRepository(AlarmDatabase.getInstance(appContext).appSettingsDao()).observe().map { it.weekStart }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeekStart.SUNDAY)
 
     fun setEnabled(id: Long, enabled: Boolean) {
         viewModelScope.launch {

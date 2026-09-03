@@ -8,18 +8,24 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.RingtoneManager
+import android.net.Uri
+import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.marutyan.termalarm.MainActivity
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.data.TimerRepository
+import com.marutyan.termalarm.domain.AppSettings
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
 import com.marutyan.termalarm.domain.finishTimer
@@ -43,10 +49,9 @@ import kotlinx.coroutines.launch
  * 画面を閉じても動き続ける要件(docs/SPEC.md「タイマータブ」)を満たす部分はこのループが担う。
  *
  * 完了時の音はalarm/RingingServiceと同じくUSAGE_ALARMのMediaPlayerで鳴らす(docs/SPEC.md
- * 「アラームと同じUSAGE_ALARMを使い、マナーモードでも鳴らす」)。ただしRingingServiceはalarm/配下で
- * 書き込み範囲外のため、共通化のための抽象化層を新設せず、この程度の量(AudioAttributes設定のみ)は
- * timer側に独立して持つ。フェードイン(鳴り始めに音量を徐々に上げる)は既存のRingingServiceには無い
- * 演出だが、鳴った瞬間の驚きを抑えるため独自に追加した。
+ * 「アラームと同じUSAGE_ALARMを使い、マナーモードでも鳴らす」)。AudioAttributesの組み立ては
+ * alarm/SoundFadeIn.alarmAudioAttributes()を共有する。フェードイン(鳴り始めに音量を徐々に上げる)の
+ * 秒数はアラームより短い設定既定値を使う(起きている人へ知らせるだけのため)。
  */
 class TimerForegroundService : Service() {
 
@@ -56,6 +61,13 @@ class TimerForegroundService : Service() {
     // 鳴動中(FINISHED)のタイマーidごとのMediaPlayer。複数のタイマーが同時に完了しても個別に鳴らし続けられる
     private val ringingPlayers = mutableMapOf<Long, MediaPlayer>()
 
+    // 鳴動中の全タイマーで共有する単一のVibrator。端末のバイブは1つしか無く、タイマーごとに分けられないため
+    private var vibrator: Vibrator? = null
+
+    // サービス起動時に一度だけ読み込む設定値。このサービスは鳴動中/動作中のタイマーが無くなると自ら停止し、
+    // 次のタイマー開始時に作り直される(ensureRunning参照)ため、都度DBを見に行かずonCreateの1回読みで足りる
+    private var settings = AppSettings()
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -64,6 +76,8 @@ class TimerForegroundService : Service() {
         // 内容が確定する最初のtick()を待たずここで一旦空の通知を出す
         updateNotification(emptyList(), SystemClock.elapsedRealtime(), System.currentTimeMillis())
         loopJob = scope.launch {
+            settings = SettingsRepository(AlarmDatabase.getInstance(this@TimerForegroundService).appSettingsDao())
+                .observe().first()
             while (isActive) {
                 tick()
                 delay(1000)
@@ -104,15 +118,13 @@ class TimerForegroundService : Service() {
     }
 
     private fun startRingingFor(id: Long) {
-        val uri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM) ?: return
+        // 設定「タイマーの音」で選んだ音を使う。未設定(null)なら既定のアラーム音にする
+        val uri = settings.timerSoundUri?.let(Uri::parse)
+            ?: RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM)
+            ?: return
         val player = MediaPlayer().apply {
             // マナーモードでも鳴らすため、通知/メディアではなくALARM用途を明示する(docs/SPEC.md「タイマータブ」)
-            setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build(),
-            )
+            setAudioAttributes(SoundFadeIn.alarmAudioAttributes())
             isLooping = true
             setVolume(0f, 0f)
             runCatching {
@@ -124,17 +136,43 @@ class TimerForegroundService : Service() {
         }
         ringingPlayers[id] = player
         fadeIn(player)
+        if (settings.timerVibration) startVibrationIfNeeded()
     }
 
-    // 起きている人へ知らせるだけなので、アラームより短い1.5秒で上げきる
+    // 設定「徐々に音量を上げる」の秒数(既定1.5秒、起きている人へ知らせるだけなのでアラームより短い)で上げきる。
+    // 0秒(なし)なら最初から最大音量にする
     private fun fadeIn(player: MediaPlayer) {
-        SoundFadeIn.start(scope, player, FADE_IN_DURATION_MILLIS)
+        val duration = SoundFadeIn.durationMillisOrNull(settings.timerFadeInSeconds)
+        if (duration == null) {
+            player.setVolume(1f, 1f)
+            return
+        }
+        SoundFadeIn.start(scope, player, duration)
+    }
+
+    // 鳴動中のタイマーが1つも無い状態からバイブを始める。既に鳴動中のタイマーがあれば重ねて始めない
+    private fun startVibrationIfNeeded() {
+        if (vibrator != null) return
+        val pattern = longArrayOf(0, 1000, 1000)
+        val v = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            getSystemService(VibratorManager::class.java).defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+        v.vibrate(VibrationEffect.createWaveform(pattern, 1))
+        vibrator = v
     }
 
     private fun stopRingingFor(id: Long) {
         ringingPlayers.remove(id)?.let { player ->
             runCatching { player.stop() }
             player.release()
+        }
+        // 鳴動中のタイマーが無くなったらバイブも止める(複数タイマーが同時に鳴っている間は止めない)
+        if (ringingPlayers.isEmpty()) {
+            vibrator?.cancel()
+            vibrator = null
         }
     }
 
@@ -201,13 +239,12 @@ class TimerForegroundService : Service() {
         loopJob?.cancel()
         ringingPlayers.values.forEach { player -> runCatching { player.stop() }; player.release() }
         ringingPlayers.clear()
+        vibrator?.cancel()
+        vibrator = null
         scope.cancel()
     }
 
     companion object {
-        // 起きている人へ知らせるだけなので、アラームの5秒より短くする
-        private const val FADE_IN_DURATION_MILLIS = 1500L
-
         /**
          * 動作中/完了のタイマーが1件でもあるかもしれないタイミングで呼ぶ。サービス自身が不要になったら
          * 自分で止まる設計なので、呼び出し側(ui/timer, TimerTriggerReceiver, TimerRescheduleReceiver)は

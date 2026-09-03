@@ -1,5 +1,6 @@
 package com.marutyan.termalarm.alarm
 
+import android.media.AudioAttributes
 import android.media.MediaPlayer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -21,6 +22,22 @@ object SoundFadeIn {
 
     /** 音量を変える間隔。これより細かくしても聞き分けられない */
     private const val STEP_MILLIS = 100L
+
+    /**
+     * 設定画面で選べる秒数(0は「なし」)からフェードインの所要ミリ秒を求める。
+     * 0以下ならnullを返し、呼び出し側はフェードインせず即座に最大音量にする合図とする。
+     */
+    internal fun durationMillisOrNull(seconds: Number): Long? =
+        (seconds.toDouble() * 1000).toLong().takeIf { it > 0 }
+
+    /**
+     * マナーモードでも鳴らす必要がある音(アラーム本体・タイマー完了音・音量スライダーの試聴音)に
+     * 共通するAudioAttributes。USAGE_ALARMを明示することで、通知/メディアの音量設定に影響されない。
+     */
+    fun alarmAudioAttributes(): AudioAttributes = AudioAttributes.Builder()
+        .setUsage(AudioAttributes.USAGE_ALARM)
+        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+        .build()
 
     /**
      * playerの音量をSTART_VOLUMEから最大までdurationMillisかけて上げる。
