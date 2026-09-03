@@ -67,7 +67,7 @@ class EndTodaySessionTest {
     // skipGame=falseのアラームは、一覧から「今日はもう止める」→確認ダイアログの承認だけでゲーム無しに完了することを保証する
     @Test
     fun skipGameがオフなら確認だけで当日終了する() {
-        val id = runBlocking { repository.add(defaultTestSchedule(skipGame = false)) }
+        val id = runBlocking { repository.add(defaultTestSchedule(skipGame = false, startMinutes = 0, endMinutes = 23 * 60 + 59)) }
         var navigatedToSkipGame = false
         composeTestRule.setContent {
             AlarmListScreen(
@@ -75,6 +75,7 @@ class EndTodaySessionTest {
                 onAddAlarm = {},
                 onEditAlarm = {},
                 onOpenAbout = {},
+                onOpenSettings = {},
                 onNavigateToSkipGame = { navigatedToSkipGame = true },
                 exactAlarmBanner = {},
                 notificationPermissionBanner = {},
@@ -91,7 +92,7 @@ class EndTodaySessionTest {
     // skipGame=trueのアラームは、一覧の「今日はもう止める」から確認ダイアログを経ずゲーム画面へ遷移することを保証する
     @Test
     fun skipGameがオンならゲーム画面へ遷移する() {
-        runBlocking { repository.add(defaultTestSchedule(skipGame = true)) }
+        runBlocking { repository.add(defaultTestSchedule(skipGame = true, startMinutes = 0, endMinutes = 23 * 60 + 59)) }
         var navigatedId: Long? = null
         composeTestRule.setContent {
             AlarmListScreen(
@@ -99,6 +100,7 @@ class EndTodaySessionTest {
                 onAddAlarm = {},
                 onEditAlarm = {},
                 onOpenAbout = {},
+                onOpenSettings = {},
                 onNavigateToSkipGame = { id -> navigatedId = id },
                 exactAlarmBanner = {},
                 notificationPermissionBanner = {},
@@ -113,7 +115,7 @@ class EndTodaySessionTest {
     // ゲームに正解すると当日終了(skippedSessionStartの書き込み)が実行されることを保証する
     @Test
     fun ゲームに正解すると当日終了が実行される() {
-        val id = runBlocking { repository.add(defaultTestSchedule(skipGame = true)) }
+        val id = runBlocking { repository.add(defaultTestSchedule(skipGame = true, startMinutes = 0, endMinutes = 23 * 60 + 59)) }
         lateinit var viewModel: SkipGameViewModel
         composeTestRule.setContent {
             viewModel = remember { SkipGameViewModel(repository, testAppContext(), id, hasShakeSensor = false, random = Random(0)) }
@@ -130,7 +132,7 @@ class EndTodaySessionTest {
     // ゲームに不正解のときは、当日終了が実行されないことを保証する
     @Test
     fun ゲームに不正解では当日終了が実行されない() {
-        val id = runBlocking { repository.add(defaultTestSchedule(skipGame = true)) }
+        val id = runBlocking { repository.add(defaultTestSchedule(skipGame = true, startMinutes = 0, endMinutes = 23 * 60 + 59)) }
         lateinit var viewModel: SkipGameViewModel
         composeTestRule.setContent {
             viewModel = remember { SkipGameViewModel(repository, testAppContext(), id, hasShakeSensor = false) }

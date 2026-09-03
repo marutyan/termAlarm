@@ -160,7 +160,8 @@ class AlarmEditScreenTest {
 
         val savedSchedule = runBlocking { repository.observeAll().first().first() }
         assertEquals(true, savedSchedule.skipGame)
-        assertEquals(10, savedSchedule.snoozeMinutes)
+        // スヌーズの分数は、設定画面の既定値がそのまま入る
+        assertEquals(5, savedSchedule.snoozeMinutes)
 
         composeTestRule.runOnIdle { reopenId.value = savedSchedule.id }
         composeTestRule.waitUntilAtLeastOneExists(hasText(string(R.string.edit_title_existing)), 5_000)

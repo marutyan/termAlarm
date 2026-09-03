@@ -19,6 +19,7 @@ import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.StopwatchRepository
 import com.marutyan.termalarm.data.TimerRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
+import java.time.DayOfWeek
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditScreen
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditViewModel
 import com.marutyan.termalarm.ui.alarmlist.AlarmListScreen
@@ -73,6 +74,7 @@ internal fun createTestStopwatchRepository(): Pair<AlarmDatabase, StopwatchRepos
 internal fun defaultTestSchedule(
     startMinutes: Int = 7 * 60,
     endMinutes: Int = 9 * 60,
+    repeatDays: Set<DayOfWeek> = emptySet(),
     intervalMinutes: Int = 5,
     label: String = "",
     skipRequiresApp: Boolean = true,
@@ -83,7 +85,7 @@ internal fun defaultTestSchedule(
     startMinutes = startMinutes,
     endMinutes = endMinutes,
     intervalMinutes = intervalMinutes,
-    repeatDays = emptySet(),
+    repeatDays = repeatDays,
     label = label,
     soundUri = null,
     vibrate = true,
@@ -113,6 +115,7 @@ internal fun ListEditHost(repository: AlarmRepository) {
             onAddAlarm = { screen = ListEditScreen.Edit(null) },
             onEditAlarm = { id -> screen = ListEditScreen.Edit(id) },
             onOpenAbout = {},
+                onOpenSettings = {},
             onNavigateToSkipGame = {},
             exactAlarmBanner = {},
             notificationPermissionBanner = {},
