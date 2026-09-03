@@ -182,6 +182,8 @@
     <string name="settings_dismiss_method_title">アラーム解除の操作</string>
     <string name="settings_dismiss_method_tap">タップ</string>
     <string name="settings_dismiss_method_swipe">スワイプ</string>
+    <!-- スワイプでの解除は未実装のため、選択肢に添える注記(SettingsScreen.ktのDISMISS_METHODダイアログ専用) -->
+    <string name="settings_dismiss_method_swipe_unavailable">スワイプ（未対応）</string>
     <string name="settings_auto_stop_title">消音までの時間</string>
     <string name="settings_snooze_length_title">スヌーズの長さ</string>
     <string name="settings_volume_title">アラームの音量</string>

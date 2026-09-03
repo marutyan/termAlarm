@@ -58,8 +58,16 @@ import com.marutyan.termalarm.domain.canEndTodaySession
 import java.time.ZonedDateTime
 import com.marutyan.termalarm.domain.remainingTimeUntilNextTrigger
 import com.marutyan.termalarm.domain.scheduleSummary
+import com.marutyan.termalarm.domain.WeekStart
 import com.marutyan.termalarm.ui.common.formatClockMinutes
 import java.time.DayOfWeek
+
+// 週の始まり(設定「週の始まり」)に合わせて曜日チップの並び順を決める。DayOfWeek.entriesは月曜始まりの
+// 固定順のため、日曜始まりのときだけ日曜を先頭に回転させる。ui/alarmedit/AlarmEditScreen.ktからも使う
+internal fun orderedDaysOfWeek(weekStart: WeekStart): List<DayOfWeek> = when (weekStart) {
+    WeekStart.MONDAY -> DayOfWeek.entries
+    WeekStart.SUNDAY -> listOf(DayOfWeek.SUNDAY) + DayOfWeek.entries.filter { it != DayOfWeek.SUNDAY }
+}
 
 /**
  * 1分ごとに更新される現在時刻を返す。
@@ -101,6 +109,7 @@ fun AlarmListScreen(
     bottomBar: @Composable () -> Unit = {},
 ) {
     val alarms by viewModel.alarms.collectAsStateWithLifecycle()
+    val weekStart by viewModel.weekStart.collectAsStateWithLifecycle()
     // 残り時間と当日終了の可否は時刻で変わるため、1分ごとに更新される現在時刻を使う
     val now = rememberCurrentMinute()
     var menuExpanded by rememberSaveable { mutableStateOf(false) }
@@ -152,6 +161,7 @@ fun AlarmListScreen(
                         AlarmCard(
                             schedule = schedule,
                             now = now,
+                            weekStart = weekStart,
                             onToggleEnabled = { enabled -> viewModel.setEnabled(schedule.id, enabled) },
                             onClick = { onEditAlarm(schedule.id) },
                             onRequestEndTodaySession = {
@@ -198,6 +208,7 @@ private fun EmptyAlarmList(modifier: Modifier = Modifier) {
 private fun AlarmCard(
     schedule: AlarmSchedule,
     now: ZonedDateTime,
+    weekStart: WeekStart,
     onToggleEnabled: (Boolean) -> Unit,
     onClick: () -> Unit,
     onRequestEndTodaySession: () -> Unit,
@@ -260,7 +271,7 @@ private fun AlarmCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                DayOfWeek.entries.forEach { day ->
+                orderedDaysOfWeek(weekStart).forEach { day ->
                     val on = day in schedule.repeatDays
                     Box(
                         modifier = Modifier

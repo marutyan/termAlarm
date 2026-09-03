@@ -16,12 +16,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.marutyan.termalarm.R
+import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.SettingsRepository
+import com.marutyan.termalarm.domain.AppSettings
 import com.marutyan.termalarm.domain.ClockDisplayMode
 import com.marutyan.termalarm.ui.theme.tabularNums
 import java.time.ZonedDateTime
@@ -45,6 +50,12 @@ fun ClockScreen(viewModel: ClockViewModel, bottomBar: @Composable () -> Unit) {
     // アナログの秒針・デジタルの秒表示のどちらも1秒ごとに動かす(要件「1秒ごとの更新」)
     val now = rememberCurrentSecond()
 
+    // 設定「時刻に秒を表示」。ClockViewModelはClockSettingsRepositoryしか持たないため、
+    // NavHostを変更せずに済むよう、ここでcontextから直接AppSettingsを読む
+    val context = LocalContext.current
+    val settingsRepository = remember { SettingsRepository(AlarmDatabase.getInstance(context).appSettingsDao()) }
+    val appSettings by settingsRepository.observe().collectAsStateWithLifecycle(initialValue = AppSettings())
+
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_clock), style = MaterialTheme.typography.headlineMedium) }) },
         bottomBar = bottomBar,
@@ -54,7 +65,7 @@ fun ClockScreen(viewModel: ClockViewModel, bottomBar: @Composable () -> Unit) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            MainClock(mode = displayMode, time = now)
+            MainClock(mode = displayMode, time = now, showSeconds = appSettings.showClockSeconds)
             Text(
                 text = now.format(DATE_FORMATTER),
                 style = MaterialTheme.typography.titleMedium,
@@ -66,28 +77,31 @@ fun ClockScreen(viewModel: ClockViewModel, bottomBar: @Composable () -> Unit) {
     }
 }
 
-// 端末の現在時刻を、設定どおりアナログ(Canvas描画)またはデジタル(等幅数字)で大きく表示する
+// 端末の現在時刻を、設定どおりアナログ(Canvas描画)またはデジタル(等幅数字)で大きく表示する。
+// showSecondsは設定「時刻に秒を表示」(デジタルは秒の文字、アナログは秒針の表示可否に反映する)
 @Composable
-private fun MainClock(mode: ClockDisplayMode, time: ZonedDateTime) {
+private fun MainClock(mode: ClockDisplayMode, time: ZonedDateTime, showSeconds: Boolean) {
     when (mode) {
-        ClockDisplayMode.ANALOG -> AnalogClockFace(time = time, modifier = Modifier.size(280.dp))
-        ClockDisplayMode.DIGITAL -> DigitalClockFace(time = time)
+        ClockDisplayMode.ANALOG -> AnalogClockFace(time = time, showSeconds = showSeconds, modifier = Modifier.size(280.dp))
+        ClockDisplayMode.DIGITAL -> DigitalClockFace(time = time, showSeconds = showSeconds)
     }
 }
 
 // デジタル時計。時:分を大きく、秒はひと回り小さく添える(design/tabs/ClockDigital.dc.html)
 @Composable
-private fun DigitalClockFace(time: ZonedDateTime) {
+private fun DigitalClockFace(time: ZonedDateTime, showSeconds: Boolean) {
     Row(verticalAlignment = Alignment.Bottom) {
         Text(
             text = time.format(HOUR_MINUTE_FORMATTER),
             style = MaterialTheme.typography.displayLarge.tabularNums(),
         )
-        Text(
-            text = ":" + time.format(SECOND_FORMATTER),
-            style = MaterialTheme.typography.headlineLarge.tabularNums(),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (showSeconds) {
+            Text(
+                text = ":" + time.format(SECOND_FORMATTER),
+                style = MaterialTheme.typography.headlineLarge.tabularNums(),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

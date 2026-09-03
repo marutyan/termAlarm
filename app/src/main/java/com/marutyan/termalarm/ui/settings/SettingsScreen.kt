@@ -3,6 +3,7 @@ package com.marutyan.termalarm.ui.settings
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
+import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
 import android.provider.Settings as AndroidSettings
@@ -35,22 +36,30 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.marutyan.termalarm.R
+import com.marutyan.termalarm.alarm.SoundFadeIn
 import com.marutyan.termalarm.domain.AlarmDismissMethod
 import com.marutyan.termalarm.domain.ClockDisplayMode
 import com.marutyan.termalarm.domain.VolumeButtonAction
 import com.marutyan.termalarm.domain.WeekStart
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 // 消音までの時間・スヌーズの長さで選べる分数の候補(AlarmEditScreenのスヌーズ入力(1〜60分)より粗い、
@@ -200,6 +209,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
             selected = settings.dismissMethod,
             onSelect = { viewModel.setDismissMethod(it); closeDialog() },
             onDismiss = ::closeDialog,
+            // スワイプでの解除(鳴動画面のジェスチャー)は未実装のため、選べないまま表示する
+            disabledOptions = setOf(AlarmDismissMethod.SWIPE),
         )
         SettingsDialog.AUTO_STOP -> ChoiceDialog(
             title = stringResource(R.string.settings_auto_stop_title),
@@ -313,12 +324,19 @@ private fun SettingsToggleRow(label: String, checked: Boolean, onCheckedChange: 
 // アラームの音量スライダー。アプリ側に値を持たず、端末のSTREAM_ALARMを直接読み書きする
 // (docs/OFFICIAL_SETTINGS.md「アラームの音量」)。ハードウェアの音量ボタンによる変更は
 // この画面を開き直すまで反映されない(簡易な実装として許容する)。
+//
+// 純正と同じく、指を離した時点でその音量の試聴音を鳴らす。数字だけでは大きさが分からないため
+// (docs/OFFICIAL_SETTINGS.md「追記: 音量スライダーの挙動」)。動かすたびに鳴らすと騒がしいので
+// onValueChangeFinished(ドラッグ終了時)だけで鳴らし、画面を離れたら止める。
 @Composable
 private fun AlarmVolumeRow() {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     val maxVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM).toFloat() }
     var volume by remember { mutableFloatStateOf(audioManager.getStreamVolume(AudioManager.STREAM_ALARM).toFloat()) }
+    val previewPlayer = remember { AlarmVolumePreviewPlayer(context) }
+    DisposableEffect(Unit) { onDispose { previewPlayer.stop() } }
 
     Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
         Text(
@@ -334,11 +352,50 @@ private fun AlarmVolumeRow() {
                 volume = newValue
                 audioManager.setStreamVolume(AudioManager.STREAM_ALARM, newValue.roundToInt(), 0)
             },
+            onValueChangeFinished = { previewPlayer.play(scope) },
         )
     }
 }
 
-// 単一選択のダイアログ。ダイアログの種類ごとにAlertDialogを書き分けないための共通実装
+// アラーム音量スライダーの試聴音再生。USAGE_ALARMで鳴らすことで、端末のアラーム音量(直前にAudioManagerで
+// 変えた値)がそのまま反映される。短く鳴らして自動的に止める使い切りのMediaPlayerを、呼ぶたびに作り直す。
+private class AlarmVolumePreviewPlayer(private val context: Context) {
+    private var player: MediaPlayer? = null
+    private var stopJob: Job? = null
+
+    fun play(scope: CoroutineScope) {
+        stop()
+        val uri = RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_ALARM) ?: return
+        val newPlayer = MediaPlayer()
+        runCatching {
+            newPlayer.setAudioAttributes(SoundFadeIn.alarmAudioAttributes())
+            newPlayer.setDataSource(context, uri)
+            newPlayer.prepare()
+            newPlayer.start()
+        }.onSuccess {
+            player = newPlayer
+            stopJob = scope.launch {
+                delay(PREVIEW_DURATION_MILLIS)
+                stop()
+            }
+        }.onFailure { newPlayer.release() }
+    }
+
+    fun stop() {
+        stopJob?.cancel()
+        stopJob = null
+        player?.let { runCatching { it.stop() }; it.release() }
+        player = null
+    }
+
+    companion object {
+        // 大きさが分かれば十分な長さ。純正のスライダーも一瞬だけ鳴る
+        private const val PREVIEW_DURATION_MILLIS = 1200L
+    }
+}
+
+// 単一選択のダイアログ。ダイアログの種類ごとにAlertDialogを書き分けないための共通実装。
+// disabledOptionsは、まだ実装していない選択肢を選べないまま表示する(DISMISS_METHODの「スワイプ」用)。
 @Composable
 private fun <T> ChoiceDialog(
     title: String,
@@ -346,6 +403,7 @@ private fun <T> ChoiceDialog(
     selected: T,
     onSelect: (T) -> Unit,
     onDismiss: () -> Unit,
+    disabledOptions: Set<T> = emptySet(),
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -353,15 +411,20 @@ private fun <T> ChoiceDialog(
         text = {
             Column {
                 options.forEach { (value, label) ->
+                    val enabled = value !in disabledOptions
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 48.dp)
-                            .clickable { onSelect(value) },
+                            .clickable(enabled = enabled) { onSelect(value) },
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        RadioButton(selected = value == selected, onClick = { onSelect(value) })
-                        Text(text = label, modifier = Modifier.padding(vertical = 12.dp))
+                        RadioButton(selected = value == selected, onClick = { onSelect(value) }, enabled = enabled)
+                        Text(
+                            text = label,
+                            modifier = Modifier.padding(vertical = 12.dp),
+                            color = if (enabled) Color.Unspecified else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -373,7 +436,8 @@ private fun <T> ChoiceDialog(
 @Composable
 private fun dismissMethodLabel(method: AlarmDismissMethod): String = when (method) {
     AlarmDismissMethod.TAP -> stringResource(R.string.settings_dismiss_method_tap)
-    AlarmDismissMethod.SWIPE -> stringResource(R.string.settings_dismiss_method_swipe)
+    // 鳴動画面のスワイプ操作は未実装のため、選んでも何も変わらないことが伝わる表記にする
+    AlarmDismissMethod.SWIPE -> stringResource(R.string.settings_dismiss_method_swipe_unavailable)
 }
 
 @Composable
