@@ -12,6 +12,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.marutyan.termalarm.data.AlarmRepository
+import com.marutyan.termalarm.data.SettingsRepository
+import com.marutyan.termalarm.ui.settings.SettingsScreen
+import com.marutyan.termalarm.ui.settings.SettingsViewModel
+import com.marutyan.termalarm.ui.settings.SettingsViewModelFactory
 import com.marutyan.termalarm.ui.about.AboutScreen
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditScreen
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditViewModel
@@ -47,6 +51,7 @@ private const val ROUTE_LIST = "list"
 private const val ROUTE_EDIT = "edit"
 private const val ROUTE_SKIP_GAME = "skipGame"
 private const val ROUTE_ABOUT = "about"
+private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_CLOCK = "clock"
 private const val ROUTE_TIMER = "timer"
 private const val ROUTE_STOPWATCH = "stopwatch"
@@ -99,6 +104,7 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
                 onAddAlarm = { navController.navigate(ROUTE_EDIT) },
                 onEditAlarm = { id -> navController.navigate("$ROUTE_EDIT?$ARG_ALARM_ID=$id") },
                 onOpenAbout = { navController.navigate(ROUTE_ABOUT) },
+                onOpenSettings = { navController.navigate(ROUTE_SETTINGS) },
                 onNavigateToSkipGame = { id -> navController.navigate("$ROUTE_SKIP_GAME/$id") },
                 exactAlarmBanner = { ExactAlarmPermissionBanner() },
                 notificationPermissionBanner = { NotificationPermissionBanner() },
@@ -146,6 +152,19 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             val alarmId = backStackEntry.arguments?.getLong(ARG_ALARM_ID) ?: return@composable
             val viewModel: SkipGameViewModel = viewModel(factory = SkipGameViewModelFactory(repository, context, alarmId, hasShakeSensor))
             SkipGameScreen(viewModel = viewModel, onClose = { navController.popBackStack() })
+        }
+        composable(ROUTE_SETTINGS) {
+            // 設定は全体で1つなので、ここでRepositoryを組み立てて渡す
+            val settingsRepository = remember {
+                SettingsRepository(AlarmDatabase.getInstance(context).appSettingsDao())
+            }
+            val clockRepository = remember {
+                ClockSettingsRepository(AlarmDatabase.getInstance(context).clockSettingsDao())
+            }
+            val viewModel: SettingsViewModel = viewModel(
+                factory = SettingsViewModelFactory(settingsRepository, clockRepository),
+            )
+            SettingsScreen(viewModel = viewModel, onBack = { navController.popBackStack() })
         }
         composable(ROUTE_ABOUT) {
             AboutScreen(onBack = { navController.popBackStack() })

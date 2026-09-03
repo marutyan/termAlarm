@@ -145,4 +145,56 @@
     <!-- 時計タブ -->
     <string name="clock_display_mode_analog">アナログ</string>
     <string name="clock_display_mode_digital">デジタル</string>
+    <string name="clock_world_clock_title">世界時計</string>
+    <string name="clock_city_list_empty">都市が登録されていません。右下の+から追加してください</string>
+    <string name="clock_add_city">都市を追加</string>
+    <string name="clock_add_city_title">都市を追加</string>
+    <string name="clock_search_city">都市を検索</string>
+    <string name="clock_move_up">上へ移動</string>
+    <string name="clock_move_down">下へ移動</string>
+    <string name="clock_delete_city">この都市を削除</string>
+    <!-- 都市と端末との時差。符号(+/-)は記号のためコード側でプレースホルダへ渡す -->
+    <string name="clock_diff_same_time">同じ時刻</string>
+    <string name="clock_diff_hours">%1$s%2$d時間</string>
+    <string name="clock_diff_minutes">%1$s%2$d分</string>
+    <string name="clock_diff_hours_minutes">%1$s%2$d時間%3$d分</string>
+    <string name="clock_diff_day_before">前日</string>
+    <string name="clock_diff_day_after">翌日</string>
+    <!-- 日付変更線をまたいで2日以上ずれる地域向け(例: キリバスとベーカー島の組み合わせ) -->
+    <string name="clock_diff_days_before">%1$d日前</string>
+    <string name="clock_diff_days_after">%1$d日後</string>
+
+    <!-- 設定画面。各タブの「その他のメニュー」から開く(docs/OFFICIAL_SETTINGS.md) -->
+    <string name="menu_settings">設定</string>
+    <string name="settings_title">設定</string>
+    <string name="settings_section_alarm">アラーム</string>
+    <string name="settings_section_clock">時計</string>
+    <string name="settings_section_timer">タイマー</string>
+
+    <!-- アラーム -->
+    <string name="settings_dismiss_method_title">アラーム解除の操作</string>
+    <string name="settings_dismiss_method_tap">タップ</string>
+    <string name="settings_dismiss_method_swipe">スワイプ</string>
+    <string name="settings_auto_stop_title">消音までの時間</string>
+    <string name="settings_snooze_length_title">スヌーズの長さ</string>
+    <string name="settings_volume_title">アラームの音量</string>
+    <string name="settings_fade_in_title">徐々に音量を上げる</string>
+    <string name="settings_seconds_format">%1$s秒</string>
+    <string name="settings_fade_in_off">なし</string>
+    <string name="settings_volume_button_title">アラーム時の音量ボタン</string>
+    <string name="settings_volume_button_adjust">音量の調整</string>
+    <string name="settings_volume_button_snooze">スヌーズ</string>
+    <string name="settings_volume_button_dismiss">アラームを止める</string>
+    <string name="settings_week_start_title">週の始まり</string>
+    <string name="settings_week_start_sunday">日曜日</string>
+    <string name="settings_week_start_monday">月曜日</string>
+
+    <!-- 時計 -->
+    <string name="settings_clock_style_title">スタイル</string>
+    <string name="settings_show_seconds_title">時刻に秒を表示</string>
+    <string name="settings_date_time_title">日付と時刻の変更</string>
+
+    <!-- タイマー -->
+    <string name="settings_timer_sound_title">タイマーの音</string>
+    <string name="settings_timer_vibration_title">タイマーのバイブレーション</string>
 </resources>

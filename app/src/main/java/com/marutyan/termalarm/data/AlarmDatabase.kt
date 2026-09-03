@@ -28,8 +28,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         StopwatchStateEntity::class,
         StopwatchLapEntity::class,
         ClockSettingsEntity::class,
+        AppSettingsEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -38,6 +39,7 @@ abstract class AlarmDatabase : RoomDatabase() {
     abstract fun timerDao(): TimerDao
     abstract fun stopwatchDao(): StopwatchDao
     abstract fun clockSettingsDao(): ClockSettingsDao
+    abstract fun appSettingsDao(): AppSettingsDao
 
     companion object {
         /** タイマーのテーブルを追加する */
@@ -95,13 +97,30 @@ abstract class AlarmDatabase : RoomDatabase() {
             }
         }
 
-        /**
-         * 世界時計をやめて大きな時計1つに作り直したため、都市一覧のテーブルが不要になった。
-         * 表示設定(clock_settings)は引き続き使うため残す。DROPだけなのでデータの移行先は無い。
-         */
+        /** 世界時計をやめたので、都市の一覧を消す */
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("DROP TABLE IF EXISTS `world_clock_city`")
+            }
+        }
+
+        /** アプリ全体の設定を保存するテーブルを追加する */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `app_settings` (" +
+                        "`id` INTEGER PRIMARY KEY NOT NULL, " +
+                        "`dismissMethod` TEXT NOT NULL, " +
+                        "`autoStopMinutes` INTEGER NOT NULL, " +
+                        "`defaultSnoozeMinutes` INTEGER NOT NULL, " +
+                        "`alarmFadeInSeconds` INTEGER NOT NULL, " +
+                        "`volumeButtonAction` TEXT NOT NULL, " +
+                        "`weekStart` TEXT NOT NULL, " +
+                        "`showClockSeconds` INTEGER NOT NULL, " +
+                        "`timerSoundUri` TEXT, " +
+                        "`timerFadeInSeconds` REAL NOT NULL, " +
+                        "`timerVibration` INTEGER NOT NULL)",
+                )
             }
         }
 
@@ -115,7 +134,7 @@ abstract class AlarmDatabase : RoomDatabase() {
                     context.applicationContext,
                     AlarmDatabase::class.java,
                     "alarm_schedule.db",
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .build().also { instance = it }
             }
     }

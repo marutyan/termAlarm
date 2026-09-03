@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 5,
-    "identityHash": "078e95230bb66bda86c91d72a189ad14",
+    "version": 6,
+    "identityHash": "d976358b626174129b6a1a9496075025",
     "entities": [
       {
         "tableName": "alarm_schedule",
@@ -246,11 +246,88 @@
             "id"
           ]
         }
+      },
+      {
+        "tableName": "app_settings",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `dismissMethod` TEXT NOT NULL, `autoStopMinutes` INTEGER NOT NULL, `defaultSnoozeMinutes` INTEGER NOT NULL, `alarmFadeInSeconds` INTEGER NOT NULL, `volumeButtonAction` TEXT NOT NULL, `weekStart` TEXT NOT NULL, `showClockSeconds` INTEGER NOT NULL, `timerSoundUri` TEXT, `timerFadeInSeconds` REAL NOT NULL, `timerVibration` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dismissMethod",
+            "columnName": "dismissMethod",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "autoStopMinutes",
+            "columnName": "autoStopMinutes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "defaultSnoozeMinutes",
+            "columnName": "defaultSnoozeMinutes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "alarmFadeInSeconds",
+            "columnName": "alarmFadeInSeconds",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "volumeButtonAction",
+            "columnName": "volumeButtonAction",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "weekStart",
+            "columnName": "weekStart",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "showClockSeconds",
+            "columnName": "showClockSeconds",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timerSoundUri",
+            "columnName": "timerSoundUri",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "timerFadeInSeconds",
+            "columnName": "timerFadeInSeconds",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timerVibration",
+            "columnName": "timerVibration",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '078e95230bb66bda86c91d72a189ad14')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd976358b626174129b6a1a9496075025')"
     ]
   }
 }

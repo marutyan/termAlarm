@@ -94,6 +94,7 @@ fun AlarmListScreen(
     onAddAlarm: () -> Unit,
     onEditAlarm: (Long) -> Unit,
     onOpenAbout: () -> Unit,
+    onOpenSettings: () -> Unit,
     onNavigateToSkipGame: (Long) -> Unit,
     exactAlarmBanner: @Composable () -> Unit,
     notificationPermissionBanner: @Composable () -> Unit,
@@ -116,6 +117,10 @@ fun AlarmListScreen(
                             Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.menu_more))
                         }
                         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_settings)) },
+                                onClick = { menuExpanded = false; onOpenSettings() },
+                            )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_about_license)) },
                                 onClick = { menuExpanded = false; onOpenAbout() },
