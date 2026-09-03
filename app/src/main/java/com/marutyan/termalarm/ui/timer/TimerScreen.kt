@@ -1,49 +1,57 @@
 package com.marutyan.termalarm.ui.timer
 
 import android.os.SystemClock
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.marutyan.termalarm.R
@@ -54,58 +62,66 @@ import com.marutyan.termalarm.timer.formatDuration
 import com.marutyan.termalarm.ui.theme.tabularNums
 import kotlinx.coroutines.delay
 
+// タイマーカードに描く円形リングの直径と線の太さ。純正の実測値そのまま(docs/OFFICIAL_UI.md「タイマー」)
+private val RING_DIAMETER = 311.dp
+private val RING_STROKE_WIDTH = 11.dp
+
 /**
- * タイマータブの画面。時分秒を指定して開始する入力と、動作中のタイマー一覧(複数同時表示)を持つ
- * (docs/SPEC.md「タイマータブ」)。残り時間の表示は1秒ごとに更新する。
+ * タイマータブの画面。動作中のタイマー一覧(複数同時表示)を円形リングのカードとして並べる
+ * (docs/OFFICIAL_UI.md「タイマー」)。時分秒の入力は画面上から無くし、右下のFABから
+ * 開くTimerAddScreenへ追い出した。Add画面はNavHostのルートではなくこの画面内のローカルな
+ * 状態切り替えとして表示する(NavHostは変更禁止のため、経路を増やさずに完結させる)。
+ * 残り時間の表示は1秒ごとに更新する。
  */
 @Composable
 fun TimerScreen(viewModel: TimerViewModel, bottomBar: @Composable () -> Unit) {
+    var showAddScreen by rememberSaveable { mutableStateOf(false) }
+
+    if (showAddScreen) {
+        TimerAddScreen(
+            onStart = { h, m, s -> viewModel.start(h, m, s); showAddScreen = false },
+            onClose = { showAddScreen = false },
+        )
+        return
+    }
+
     val timers by viewModel.timers.collectAsStateWithLifecycle()
     val (nowElapsed, nowWall) = rememberTickingNow()
 
-    var hours by rememberSaveable { mutableIntStateOf(0) }
-    var minutes by rememberSaveable { mutableIntStateOf(5) }
-    var seconds by rememberSaveable { mutableIntStateOf(0) }
-
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_timer), style = MaterialTheme.typography.headlineMedium) }) },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showAddScreen = true }) {
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.timer_add))
+            }
+        },
         bottomBar = bottomBar,
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            TimerInputRow(
-                hours = hours,
-                minutes = minutes,
-                seconds = seconds,
-                onHoursChange = { hours = it },
-                onMinutesChange = { minutes = it },
-                onSecondsChange = { seconds = it },
-                onStart = { viewModel.start(hours, minutes, seconds) },
-            )
-            if (timers.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = stringResource(R.string.timer_list_empty),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        if (timers.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Text(
+                    text = stringResource(R.string.timer_list_empty),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.padding(padding),
+                contentPadding = PaddingValues(horizontal = 13.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                items(timers, key = { it.id }) { timer ->
+                    TimerCard(
+                        timer = timer,
+                        nowElapsed = nowElapsed,
+                        nowWall = nowWall,
+                        onPause = { viewModel.pause(timer.id) },
+                        onResume = { viewModel.resume(timer.id) },
+                        onReset = { viewModel.reset(timer.id) },
+                        onExtend = { viewModel.extendOneMinute(timer.id) },
+                        onDelete = { viewModel.delete(timer.id) },
                     )
-                }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(timers, key = { it.id }) { timer ->
-                        TimerCard(
-                            timer = timer,
-                            nowElapsed = nowElapsed,
-                            nowWall = nowWall,
-                            onPause = { viewModel.pause(timer.id) },
-                            onResume = { viewModel.resume(timer.id) },
-                            onReset = { viewModel.reset(timer.id) },
-                            onExtend = { viewModel.extendOneMinute(timer.id) },
-                            onDelete = { viewModel.delete(timer.id) },
-                        )
-                    }
                 }
             }
         }
@@ -131,64 +147,10 @@ private fun rememberTickingNow(): Pair<Long, Long> {
     return nowElapsed to nowWall
 }
 
-@Composable
-private fun TimerInputRow(
-    hours: Int,
-    minutes: Int,
-    seconds: Int,
-    onHoursChange: (Int) -> Unit,
-    onMinutesChange: (Int) -> Unit,
-    onSecondsChange: (Int) -> Unit,
-    onStart: () -> Unit,
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            NumberStepper(stringResource(R.string.timer_input_hours), hours, 0..23, onHoursChange)
-            NumberStepper(stringResource(R.string.timer_input_minutes), minutes, 0..59, onMinutesChange)
-            NumberStepper(stringResource(R.string.timer_input_seconds), seconds, 0..59, onSecondsChange)
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        Button(
-            onClick = onStart,
-            enabled = hours > 0 || minutes > 0 || seconds > 0,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.timer_start))
-        }
-    }
-}
-
-// 時/分/秒それぞれの入力用ステッパー。IMEを出さずタップだけで完結させる
-@Composable
-private fun NumberStepper(label: String, value: Int, range: IntRange, onChange: (Int) -> Unit) {
-    val decreaseDescription = stringResource(R.string.timer_decrease)
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { if (value > range.first) onChange(value - 1) }, modifier = Modifier.size(48.dp)) {
-                // Icons.Filled.Removeはmaterial-icons-coreに含まれないため、Textでマイナス記号を出す
-                Text(
-                    text = "－",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.semantics { contentDescription = decreaseDescription },
-                )
-            }
-            Text(
-                text = value.toString().padStart(2, '0'),
-                style = MaterialTheme.typography.headlineSmall.tabularNums(),
-                modifier = Modifier.width(40.dp),
-                textAlign = TextAlign.Center,
-            )
-            IconButton(onClick = { if (value < range.last) onChange(value + 1) }, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.timer_increase))
-            }
-        }
-    }
-}
-
+/**
+ * タイマー1件のカード。design/tabs/Timer.dc.htmlを再現する。左右余白13dp・角丸28dpの大きなカードに、
+ * 直径311dp/線11dpの円形リングと残り時間を中央に置き、操作を右寄せの行で並べる。
+ */
 @Composable
 private fun TimerCard(
     timer: TimerState,
@@ -202,54 +164,130 @@ private fun TimerCard(
 ) {
     val remaining = remainingMillis(timer, nowElapsed, nowWall)
     val isFinished = timer.runState == TimerRunState.FINISHED
+    val isRunning = timer.runState == TimerRunState.RUNNING
+    // 残っている割合。リングの色付き部分の長さに使う(合計0はゼロ除算になるため0f扱い)
+    val progress = if (timer.totalMillis > 0) (remaining.toFloat() / timer.totalMillis.toFloat()).coerceIn(0f, 1f) else 0f
+
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isFinished) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = if (isFinished) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainer,
         ),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(top = 20.dp, start = 20.dp, end = 20.dp, bottom = 24.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.timer_card_title, timer.label),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // ×(close)は削除に直結する。domain/TimerState.ktの契約通り「停止=削除」のため、
+                // 完了(鳴動中)のときはtimer_stop、それ以外はtimer_delete を説明に使い分ける
+                IconButton(
+                    onClick = onDelete,
+                    colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                ) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = stringResource(if (isFinished) R.string.timer_stop else R.string.timer_delete),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+                TimerRing(
+                    progress = progress,
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    progressColor = if (isFinished) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = formatDuration(remaining),
+                    style = MaterialTheme.typography.displayMedium.tabularNums(),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+
+            if (!isFinished) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // リセットは純正のモックには無いが、既存の「動作中に最初の時間へ戻す」機能を
+                    // 消すわけにいかないため、+1分の隣に文字ボタンとして残す(仕様の穴。報告に記載)
+                    TextButton(onClick = onReset) { Text(stringResource(R.string.timer_reset)) }
+                    ExtendChip(onClick = onExtend)
+                    PlayPauseButton(isRunning = isRunning, onClick = if (isRunning) onPause else onResume)
+                }
+            }
+        }
+    }
+}
+
+// 円形の進捗リング。Canvasへ背景の全周弧(track)と残り時間の弧(progress)を重ねて描くだけの
+// シンプルな実装で、アニメーションや汎用化はしない(呼び出し箇所がTimerCard内の1箇所のみのため)。
+@Composable
+private fun TimerRing(progress: Float, trackColor: Color, progressColor: Color) {
+    val strokeWidthPx = with(LocalDensity.current) { RING_STROKE_WIDTH.toPx() }
+    Canvas(modifier = Modifier.size(RING_DIAMETER)) {
+        val stroke = Stroke(width = strokeWidthPx, cap = StrokeCap.Round)
+        // ストロークが円の外へはみ出さないよう、半径分だけ内側に収めたサイズで弧を描く
+        val arcSize = Size(size.width - strokeWidthPx, size.height - strokeWidthPx)
+        val topLeft = Offset(strokeWidthPx / 2, strokeWidthPx / 2)
+        drawArc(color = trackColor, startAngle = -90f, sweepAngle = 360f, useCenter = false, topLeft = topLeft, size = arcSize, style = stroke)
+        drawArc(color = progressColor, startAngle = -90f, sweepAngle = 360f * progress, useCenter = false, topLeft = topLeft, size = arcSize, style = stroke)
+    }
+}
+
+// 「+1分」チップ。カード地より少し明るいsurfaceContainerHighを使い、円形リング下の操作行に置く
+@Composable
+private fun ExtendChip(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(32.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Box(modifier = Modifier.height(56.dp).padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
             Text(
-                text = timer.label,
+                text = stringResource(R.string.timer_extend_one_minute),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(
-                text = formatDuration(remaining),
-                style = MaterialTheme.typography.displaySmall.tabularNums(),
-            )
-            if (!isFinished) {
-                LinearProgressIndicator(
-                    progress = { if (timer.totalMillis > 0) remaining / timer.totalMillis.toFloat() else 0f },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (isFinished) {
-                    // 完了(鳴動中)は「停止」だけを出す。停止=タイマー自体の削除(domain/TimerState.ktの契約)
-                    Button(onClick = onDelete, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text(stringResource(R.string.timer_stop))
-                    }
-                } else {
-                    if (timer.runState == TimerRunState.RUNNING) {
-                        OutlinedButton(onClick = onPause, modifier = Modifier.heightIn(min = 48.dp)) {
-                            Text(stringResource(R.string.timer_pause))
-                        }
-                    } else {
-                        OutlinedButton(onClick = onResume, modifier = Modifier.heightIn(min = 48.dp)) {
-                            Text(stringResource(R.string.timer_resume))
-                        }
-                    }
-                    OutlinedButton(onClick = onExtend, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text(stringResource(R.string.timer_extend_one_minute))
-                    }
-                    OutlinedButton(onClick = onReset, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text(stringResource(R.string.timer_reset))
-                    }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.timer_delete))
+        }
+    }
+}
+
+// 一時停止/再開を切り替える横長の丸ボタン。「主要な操作ボタン」としてprimaryContainerを使う
+// (docs/OFFICIAL_UI.md「共通」の色対応表)。Pauseアイコンはmaterial-icons-coreに無いため、
+// 2本の縦棒をBoxで手描きする(mockのSVGと同じ表現)。
+@Composable
+private fun PlayPauseButton(isRunning: Boolean, onClick: () -> Unit) {
+    val description = stringResource(if (isRunning) R.string.timer_pause else R.string.timer_resume)
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.width(112.dp).height(56.dp).semantics { contentDescription = description },
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            if (isRunning) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    repeat(2) {
+                        Box(
+                            modifier = Modifier
+                                .size(width = 5.dp, height = 20.dp)
+                                .background(MaterialTheme.colorScheme.onPrimaryContainer, RoundedCornerShape(2.dp)),
+                        )
                     }
                 }
+            } else {
+                Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
             }
         }
     }
