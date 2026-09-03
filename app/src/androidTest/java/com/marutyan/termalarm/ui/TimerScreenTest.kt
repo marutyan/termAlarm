@@ -72,10 +72,12 @@ class TimerScreenTest {
         composeTestRule.onNodeWithText(string(R.string.timer_list_empty)).assertExists()
     }
 
-    // 既定値(5分)のまま「開始」を押すと、一覧に1件現れ空表示が消えることを保証する
+    // 既定値(5分)のまま「開始」を押すと、一覧に1件現れ空表示が消えることを保証する。
+    // 時分秒の入力は右下のFABから開く別画面(TimerAddScreen)へ移ったため、まずFABを押してから開始する
     @Test
     fun 開始すると一覧に1件現れる() {
         setScreen()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).performClick()
         composeTestRule.onNodeWithText(string(R.string.timer_start)).performClick()
 
         composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().size == 1 } }
@@ -91,12 +93,16 @@ class TimerScreenTest {
     fun 複数開始すると両方一覧に出てそれぞれ独立している() {
         setScreen()
         val decrease = string(R.string.timer_decrease)
+        val addDescription = string(R.string.timer_add)
 
+        composeTestRule.onNodeWithContentDescription(addDescription).performClick()
         composeTestRule.onNodeWithText(string(R.string.timer_start)).performClick()
         composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().size == 1 } }
 
-        // 2件目は分数を3分に変えてから開始し、1件目と別の合計時間にする
+        // 2件目は分数を3分に変えてから開始し、1件目と別の合計時間にする。Add画面はFABを押すたびに
+        // 新しく開くため入力値は既定値(0時間5分0秒)へ戻っている
         // (時/分/秒の3つのステッパーはcontentDescriptionが共通のため、並び順のindex=1で分のステッパーを指す)
+        composeTestRule.onNodeWithContentDescription(addDescription).performClick()
         repeat(2) { composeTestRule.onAllNodesWithContentDescription(decrease)[1].performClick() }
         composeTestRule.onNodeWithText(string(R.string.timer_start)).performClick()
         composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().size == 2 } }
@@ -105,8 +111,9 @@ class TimerScreenTest {
         assertEquals(setOf(300_000L, 180_000L), all.map { it.totalMillis }.toSet())
         assertTrue(all.all { it.runState == TimerRunState.RUNNING })
 
-        // 一方だけ一時停止しても、他方はRUNNINGのままであることを確認する(独立した状態を持つ証拠)
-        composeTestRule.onAllNodesWithText(string(R.string.timer_pause))[0].performClick()
+        // 一方だけ一時停止しても、他方はRUNNINGのままであることを確認する(独立した状態を持つ証拠)。
+        // 一時停止/再開ボタンは新デザインではアイコンのみのため、文言ではなくcontentDescriptionで探す
+        composeTestRule.onAllNodesWithContentDescription(string(R.string.timer_pause))[0].performClick()
         composeTestRule.waitUntil(5_000) {
             runBlocking { repository.observeAll().first().count { it.runState == TimerRunState.PAUSED } == 1 }
         }
@@ -115,7 +122,8 @@ class TimerScreenTest {
         assertEquals(1, afterPause.count { it.runState == TimerRunState.PAUSED })
     }
 
-    // 一時停止するとPAUSEDになりボタンが「再開」に変わること、再開するとRUNNINGへ戻ることを保証する
+    // 一時停止するとPAUSEDになりボタンが「再開」に変わること、再開するとRUNNINGへ戻ることを保証する。
+    // 一時停止/再開ボタンは新デザインではアイコンのみのため、文言ではなくcontentDescriptionで探す
     @Test
     fun 一時停止と再開() {
         val id = runBlocking {
@@ -123,13 +131,13 @@ class TimerScreenTest {
         }
         setScreen()
 
-        composeTestRule.onNodeWithText(string(R.string.timer_pause)).performClick()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_pause)).performClick()
         composeTestRule.waitUntil(5_000) { runBlocking { repository.getById(id)?.runState == TimerRunState.PAUSED } }
-        composeTestRule.onNodeWithText(string(R.string.timer_resume)).assertExists()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_resume)).assertExists()
 
-        composeTestRule.onNodeWithText(string(R.string.timer_resume)).performClick()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_resume)).performClick()
         composeTestRule.waitUntil(5_000) { runBlocking { repository.getById(id)?.runState == TimerRunState.RUNNING } }
-        composeTestRule.onNodeWithText(string(R.string.timer_pause)).assertExists()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_pause)).assertExists()
     }
 
     // 「+1分」を押すと合計時間・残り時間の両方が60秒(60000ms)増えることを保証する

@@ -114,6 +114,10 @@
     <string name="timer_delete">削除</string>
     <!-- タイマー画面: 完了(鳴動中)のタイマーを止めるボタン。停止するとそのタイマー自体を削除する -->
     <string name="timer_stop">停止</string>
+    <!-- タイマー画面: 右下のFAB(新規追加)。押すと時分秒を入力する別画面を開く。同じ文言を追加画面のタイトルにも使う -->
+    <string name="timer_add">タイマーを追加</string>
+    <!-- タイマー画面: カード左上のラベル。%1$sには開始時に指定した時間("5:00"等)が入る -->
+    <string name="timer_card_title">タイマー（%1$s）</string>
 
     <!-- タイマーのフォアグラウンド通知 -->
     <string name="timer_notification_channel_name">タイマー</string>
@@ -138,6 +142,9 @@
     <!-- ラップ一覧の行: ラップ番号とその時点の合計 -->
     <string name="stopwatch_lap_number">ラップ %1$d</string>
     <string name="stopwatch_lap_total">合計 %1$s</string>
+    <!-- ラップ一覧(横並びカード)の左右送りボタン -->
+    <string name="stopwatch_lap_scroll_previous">前のラップへ</string>
+    <string name="stopwatch_lap_scroll_next">次のラップへ</string>
     <!-- 動作中(RUNNING)の間だけ表示するフォアグラウンド通知 -->
     <string name="stopwatch_notification_channel_name">ストップウォッチ計測中</string>
     <string name="stopwatch_notification_title">ストップウォッチ</string>
