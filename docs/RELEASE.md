@@ -93,6 +93,31 @@ TermAlarmは、鳴らす時刻をひとつ指定するのではなく、時刻�
 | 権限 | 使っていない権限が残っていないか |
 | フォントのライセンス | 確認済み。本文は公式のOFL 1.1と完全一致、著作権行もフォント内の表記と一致 |
 
+### 2026年9月5日の点検結果
+
+公開前設定の点検を行い、以下を確認した。
+
+| 項目 | 確認内容 | 結果 |
+|---|---|---|
+| バージョン | `versionCode` が 1、`versionName` が "1.0" と初回リリースとして妥当か | 確認済み（変更なし） |
+| 権限 | `AndroidManifest.xml` の全10件の権限がコード内で実際に使われており、不要な権限が残っていないか | 確認済み（全10件利用中、不要権限なし） |
+| アプリ情報 | アプリ名（`@string/app_name`）、アイコン（`ic_launcher` / `ic_launcher_round`）、テーマ（`@style/Theme.TermAlarm`）の指定・リソースが存在するか | 確認済み（指定・リソースとも揃っている） |
+| SDKバージョン | `compileSdk` (37) と `targetSdk` (37) が Google Play の要件を満たしているか | 確認済み（要件を満たしている） |
+| リリースビルド | `./gradlew assembleRelease` が警告なく成功するか | 成功（警告なし） |
+
+#### 権限の使用状況
+
+- `SCHEDULE_EXACT_ALARM` (maxSdkVersion=32): Android 12/12L向けの正確なアラーム予約（`AlarmScheduler`）
+- `USE_EXACT_ALARM`: Android 13以降向けの正確なアラーム予約（`AlarmScheduler`）
+- `POST_NOTIFICATIONS`: 鳴動通知、タイマー/ストップウォッチの通知表示（`NotificationPermission`, 各通知生成処理）
+- `RECEIVE_BOOT_COMPLETED`: 端末再起動時のアラーム・タイマー・ストップウォッチの復元（各RescheduleReceiver）
+- `FOREGROUND_SERVICE`: フォアグラウンドサービスの実行（`RingingService`, `TimerForegroundService`, `StopwatchForegroundService`）
+- `FOREGROUND_SERVICE_MEDIA_PLAYBACK`: 音声再生を行うフォアグラウンドサービス用（`RingingService`, `TimerForegroundService`）
+- `FOREGROUND_SERVICE_SPECIAL_USE`: ストップウォッチ用フォアグラウンドサービス（`StopwatchForegroundService`）
+- `VIBRATE`: アラームおよびタイマー鳴動時のバイブレーション（`RingingService`, `TimerForegroundService`）
+- `WAKE_LOCK`: アラームおよびタイマー発火時の端末スリープ解除（`AlarmTriggerReceiver`, `TimerTriggerReceiver`）
+- `USE_FULL_SCREEN_INTENT`: ロック画面上での鳴動画面表示用全画面インテント（`RingingService`）
+
 ## 6. コードの圧縮についての注意
 
 リリースビルドでは未使用のコードとリソースを削る。debug版15MBに対し1.6MBまで縮む。
