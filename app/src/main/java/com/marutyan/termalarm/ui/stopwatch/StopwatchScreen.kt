@@ -44,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.StopwatchLap
 import com.marutyan.termalarm.domain.StopwatchRunState
@@ -69,7 +70,13 @@ private val SCREEN_HORIZONTAL_PADDING = 13.dp
  * 更新し、一時停止中/未開始は再描画しない。
  */
 @Composable
-fun StopwatchScreen(viewModel: StopwatchViewModel, bottomBar: @Composable () -> Unit) {
+fun StopwatchScreen(
+    viewModel: StopwatchViewModel,
+    onOpenSettings: () -> Unit = {},
+    onOpenPrivacyPolicy: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
+    bottomBar: @Composable () -> Unit,
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val laps by viewModel.laps.collectAsStateWithLifecycle()
     val isRunning = state.runState == StopwatchRunState.RUNNING
@@ -77,7 +84,18 @@ fun StopwatchScreen(viewModel: StopwatchViewModel, bottomBar: @Composable () -> 
     val elapsed = elapsedMillis(state, nowElapsed, nowWall)
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_stopwatch), style = MaterialTheme.typography.headlineMedium) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.tab_stopwatch), style = MaterialTheme.typography.headlineMedium) },
+                actions = {
+                    TermAlarmOverflowMenu(
+                        onOpenSettings = onOpenSettings,
+                        onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                        onOpenAbout = onOpenAbout,
+                    )
+                },
+            )
+        },
         bottomBar = bottomBar,
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {

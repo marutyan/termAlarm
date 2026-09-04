@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.SettingsRepository
@@ -45,7 +46,13 @@ private val SECOND_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("s
  * 1つの時計に作り直した。表示モードの切り替えは画面下部のトグルで行い、設定として永続化する。
  */
 @Composable
-fun ClockScreen(viewModel: ClockViewModel, bottomBar: @Composable () -> Unit) {
+fun ClockScreen(
+    viewModel: ClockViewModel,
+    onOpenSettings: () -> Unit = {},
+    onOpenPrivacyPolicy: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
+    bottomBar: @Composable () -> Unit,
+) {
     val displayMode by viewModel.displayMode.collectAsStateWithLifecycle()
     // アナログの秒針・デジタルの秒表示のどちらも1秒ごとに動かす(要件「1秒ごとの更新」)
     val now = rememberCurrentSecond()
@@ -57,7 +64,18 @@ fun ClockScreen(viewModel: ClockViewModel, bottomBar: @Composable () -> Unit) {
     val appSettings by settingsRepository.observe().collectAsStateWithLifecycle(initialValue = AppSettings())
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_clock), style = MaterialTheme.typography.headlineMedium) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.tab_clock), style = MaterialTheme.typography.headlineMedium) },
+                actions = {
+                    TermAlarmOverflowMenu(
+                        onOpenSettings = onOpenSettings,
+                        onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                        onOpenAbout = onOpenAbout,
+                    )
+                },
+            )
+        },
         bottomBar = bottomBar,
     ) { padding ->
         Column(

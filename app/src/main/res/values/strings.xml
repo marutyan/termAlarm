@@ -206,4 +206,8 @@
     <!-- タイマー -->
     <string name="settings_timer_sound_title">タイマーの音</string>
     <string name="settings_timer_vibration_title">タイマーのバイブレーション</string>
+    <!-- メニュー: プライバシー ポリシーとライセンス -->
+    <string name="menu_privacy_policy">プライバシー ポリシー</string>
+    <string name="menu_license">ライセンス</string>
+    <string name="privacy_policy_title">プライバシー ポリシー</string>
 </resources>

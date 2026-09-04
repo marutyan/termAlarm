@@ -17,6 +17,7 @@ import com.marutyan.termalarm.ui.settings.SettingsScreen
 import com.marutyan.termalarm.ui.settings.SettingsViewModel
 import com.marutyan.termalarm.ui.settings.SettingsViewModelFactory
 import com.marutyan.termalarm.ui.about.AboutScreen
+import com.marutyan.termalarm.ui.privacy.PrivacyScreen
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditScreen
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditViewModel
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditViewModelFactory
@@ -51,6 +52,8 @@ private const val ROUTE_LIST = "list"
 private const val ROUTE_EDIT = "edit"
 private const val ROUTE_SKIP_GAME = "skipGame"
 private const val ROUTE_ABOUT = "about"
+// プライバシーポリシー画面への遷移ルート。各タブ右上の「⋮」メニューから開く画面を識別するために定義する。
+private const val ROUTE_PRIVACY = "privacy"
 private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_CLOCK = "clock"
 private const val ROUTE_TIMER = "timer"
@@ -104,6 +107,7 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
                 onAddAlarm = { navController.navigate(ROUTE_EDIT) },
                 onEditAlarm = { id -> navController.navigate("$ROUTE_EDIT?$ARG_ALARM_ID=$id") },
                 onOpenAbout = { navController.navigate(ROUTE_ABOUT) },
+                onOpenPrivacyPolicy = { navController.navigate(ROUTE_PRIVACY) },
                 onOpenSettings = { navController.navigate(ROUTE_SETTINGS) },
                 onNavigateToSkipGame = { id -> navController.navigate("$ROUTE_SKIP_GAME/$id") },
                 exactAlarmBanner = { ExactAlarmPermissionBanner() },
@@ -118,13 +122,22 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
                 ClockSettingsRepository(AlarmDatabase.getInstance(context).clockSettingsDao())
             }
             val viewModel: ClockViewModel = viewModel(factory = ClockViewModelFactory(clockRepository))
-            ClockScreen(viewModel = viewModel) { TermAlarmBottomBar(TermAlarmTab.CLOCK, ::goToTab) }
+            ClockScreen(
+                viewModel = viewModel,
+                onOpenSettings = { navController.navigate(ROUTE_SETTINGS) },
+                onOpenPrivacyPolicy = { navController.navigate(ROUTE_PRIVACY) },
+                onOpenAbout = { navController.navigate(ROUTE_ABOUT) },
+                bottomBar = { TermAlarmBottomBar(TermAlarmTab.CLOCK, ::goToTab) },
+            )
         }
         composable(ROUTE_TIMER) {
             val timerRepository = remember { TimerRepository(AlarmDatabase.getInstance(context).timerDao()) }
             val viewModel: TimerViewModel = viewModel(factory = TimerViewModelFactory(timerRepository, context))
             TimerScreen(
                 viewModel = viewModel,
+                onOpenSettings = { navController.navigate(ROUTE_SETTINGS) },
+                onOpenPrivacyPolicy = { navController.navigate(ROUTE_PRIVACY) },
+                onOpenAbout = { navController.navigate(ROUTE_ABOUT) },
                 bottomBar = { TermAlarmBottomBar(TermAlarmTab.TIMER, ::goToTab) },
             )
         }
@@ -133,6 +146,9 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             val viewModel: StopwatchViewModel = viewModel(factory = StopwatchViewModelFactory(stopwatchRepository, context))
             StopwatchScreen(
                 viewModel = viewModel,
+                onOpenSettings = { navController.navigate(ROUTE_SETTINGS) },
+                onOpenPrivacyPolicy = { navController.navigate(ROUTE_PRIVACY) },
+                onOpenAbout = { navController.navigate(ROUTE_ABOUT) },
                 bottomBar = { TermAlarmBottomBar(TermAlarmTab.STOPWATCH, ::goToTab) },
             )
         }
@@ -168,6 +184,9 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
         }
         composable(ROUTE_ABOUT) {
             AboutScreen(onBack = { navController.popBackStack() })
+        }
+        composable(ROUTE_PRIVACY) {
+            PrivacyScreen(onBack = { navController.popBackStack() })
         }
     }
 }

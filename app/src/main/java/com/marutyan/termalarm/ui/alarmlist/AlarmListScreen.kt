@@ -17,15 +17,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarItem
@@ -107,12 +105,12 @@ fun AlarmListScreen(
     exactAlarmBanner: @Composable () -> Unit,
     notificationPermissionBanner: @Composable () -> Unit,
     bottomBar: @Composable () -> Unit = {},
+    onOpenPrivacyPolicy: () -> Unit = {},
 ) {
     val alarms by viewModel.alarms.collectAsStateWithLifecycle()
     val weekStart by viewModel.weekStart.collectAsStateWithLifecycle()
     // 残り時間と当日終了の可否は時刻で変わるため、1分ごとに更新される現在時刻を使う
     val now = rememberCurrentMinute()
-    var menuExpanded by rememberSaveable { mutableStateOf(false) }
     // 「今日はもう止める」の確認ダイアログ対象。skipGame=trueのアラームはダイアログを出さずSkipGame画面へ遷移させる
     var pendingSkipTarget by remember { mutableStateOf<AlarmSchedule?>(null) }
 
@@ -121,21 +119,11 @@ fun AlarmListScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.alarm_list_title), style = MaterialTheme.typography.headlineMedium) },
                 actions = {
-                    Box {
-                        IconButton(onClick = { menuExpanded = true }) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.menu_more))
-                        }
-                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_settings)) },
-                                onClick = { menuExpanded = false; onOpenSettings() },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_about_license)) },
-                                onClick = { menuExpanded = false; onOpenAbout() },
-                            )
-                        }
-                    }
+                    TermAlarmOverflowMenu(
+                        onOpenSettings = onOpenSettings,
+                        onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                        onOpenAbout = onOpenAbout,
+                    )
                 },
             )
         },

@@ -54,6 +54,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
@@ -74,7 +75,13 @@ private val RING_STROKE_WIDTH = 11.dp
  * 残り時間の表示は1秒ごとに更新する。
  */
 @Composable
-fun TimerScreen(viewModel: TimerViewModel, bottomBar: @Composable () -> Unit) {
+fun TimerScreen(
+    viewModel: TimerViewModel,
+    onOpenSettings: () -> Unit = {},
+    onOpenPrivacyPolicy: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
+    bottomBar: @Composable () -> Unit,
+) {
     var showAddScreen by rememberSaveable { mutableStateOf(false) }
 
     if (showAddScreen) {
@@ -89,7 +96,18 @@ fun TimerScreen(viewModel: TimerViewModel, bottomBar: @Composable () -> Unit) {
     val (nowElapsed, nowWall) = rememberTickingNow()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_timer), style = MaterialTheme.typography.headlineMedium) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.tab_timer), style = MaterialTheme.typography.headlineMedium) },
+                actions = {
+                    TermAlarmOverflowMenu(
+                        onOpenSettings = onOpenSettings,
+                        onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                        onOpenAbout = onOpenAbout,
+                    )
+                },
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddScreen = true }) {
                 Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.timer_add))
