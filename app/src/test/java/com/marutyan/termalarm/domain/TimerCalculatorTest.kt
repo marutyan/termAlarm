@@ -90,9 +90,12 @@ class TimerCalculatorTest {
         assertFalse(isDue(running, nowElapsedRealtime = 9_999L, nowWallClockMillis = 9_999L))
         assertTrue(isDue(running, nowElapsedRealtime = 10_000L, nowWallClockMillis = 10_000L))
 
-        val finished = finishTimer(running)
+        val finished = finishTimer(running, nowElapsedRealtime = 10_000L, nowWallClockMillis = 10_000L)
         assertEquals(TimerRunState.FINISHED, finished.runState)
         assertEquals(0L, finished.remainingMillisAtAnchor)
+        // 鳴り始めてからの経過を数えられる(純正はタイムアップ後もマイナスで数え続ける)
+        assertEquals(0L, overdueMillis(finished, nowElapsedRealtime = 10_000L, nowWallClockMillis = 10_000L))
+        assertEquals(7_000L, overdueMillis(finished, nowElapsedRealtime = 17_000L, nowWallClockMillis = 17_000L))
         // FINISHED中はisDueが常にfalse(RUNNINGのみが対象)
         assertFalse(isDue(finished, nowElapsedRealtime = 999_999L, nowWallClockMillis = 999_999L))
     }
