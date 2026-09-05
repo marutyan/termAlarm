@@ -1,32 +1,17 @@
 package com.marutyan.termalarm.ui.theme
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.text
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.IntOffset
 
 // タブ間を切り替える画面遷移のアニメーション時間(ミリ秒)。滑らかな横スライドを実現するために定義する。
@@ -34,9 +19,6 @@ const val TAB_TRANSITION_DURATION_MS = 300
 
 // タイマー新規追加画面の表示・非表示アニメーション時間(ミリ秒)。下からの出現と上への消去に合わせるために定義する。
 const val TIMER_ADD_TRANSITION_DURATION_MS = 300
-
-// 残り時間や経過時間の数字が入れ替わるアニメーション時間(ミリ秒)。1秒ごとの変化を落ち着いて見せるために定義する。
-const val DIGIT_TRANSITION_DURATION_MS = 250
 
 // ボタンを押下した際の縮小倍率。指の接触に応じた適度な押し込み感を出すために定義する。
 const val BUTTON_PRESS_SCALE = 0.92f
@@ -86,15 +68,6 @@ fun timerAddSlideSpec(): TweenSpec<IntOffset> = tween(
  */
 fun timerAddFadeSpec(): TweenSpec<Float> = tween(
     durationMillis = TIMER_ADD_TRANSITION_DURATION_MS,
-    easing = FastOutSlowInEasing,
-)
-
-/**
- * 数字の各桁が上下にスライドして入れ替わる際のAnimationSpecを生成する。
- * 減速曲線を用いて、桁上がりや秒刻みの更新をスムーズに見せる。
- */
-fun digitSlideSpec(): TweenSpec<IntOffset> = tween(
-    durationMillis = DIGIT_TRANSITION_DURATION_MS,
     easing = FastOutSlowInEasing,
 )
 
@@ -149,61 +122,5 @@ fun Modifier.pressScaleEffect(interactionSource: MutableInteractionSource): Modi
     return this.graphicsLayer {
         scaleX = scale
         scaleY = scale
-    }
-}
-
-/**
- * 数字が変わった桁だけが上へ流れて入れ替わるアニメーションテキスト表示コンポーネント。
- * 全体の一括切り替えによる視覚的な煩わしさを防ぎ、変化した桁のみを滑らかに更新する。
- */
-@Composable
-fun SlideAnimatedDigits(
-    text: String,
-    modifier: Modifier = Modifier,
-    staticSuffix: String = "",
-    style: TextStyle = TextStyle.Default,
-    color: Color = Color.Unspecified,
-) {
-    val fullText = text + staticSuffix
-    Row(
-        modifier = modifier.semantics {
-            this.text = AnnotatedString(fullText)
-        },
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        text.forEachIndexed { index, char ->
-            if (char.isDigit()) {
-                AnimatedContent(
-                    targetState = char,
-                    transitionSpec = {
-                        (slideInVertically(animationSpec = digitSlideSpec()) { it } + fadeIn())
-                            .togetherWith(slideOutVertically(animationSpec = digitSlideSpec()) { -it } + fadeOut())
-                    },
-                    label = "DigitAnimation_$index",
-                    modifier = Modifier.clearAndSetSemantics {},
-                ) { targetChar ->
-                    Text(
-                        text = targetChar.toString(),
-                        style = style,
-                        color = color,
-                    )
-                }
-            } else {
-                Text(
-                    text = char.toString(),
-                    style = style,
-                    color = color,
-                    modifier = Modifier.clearAndSetSemantics {},
-                )
-            }
-        }
-        if (staticSuffix.isNotEmpty()) {
-            Text(
-                text = staticSuffix,
-                style = style,
-                color = color,
-                modifier = Modifier.clearAndSetSemantics {},
-            )
-        }
     }
 }

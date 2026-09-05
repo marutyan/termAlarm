@@ -43,7 +43,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
-import com.marutyan.termalarm.ui.theme.SlideAnimatedDigits
 import com.marutyan.termalarm.ui.theme.clockModeAnimationSpec
 import com.marutyan.termalarm.ui.theme.tabularNums
 import java.time.ZonedDateTime
@@ -149,10 +148,14 @@ private fun DigitalClockFace(time: ZonedDateTime, showSeconds: Boolean) {
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
-        SlideAnimatedDigits(
+        // 秒が変わるたびに文字を動かさない。純正も時刻の数字は動かさず、静かに入れ替える。
+        // 1秒ごとに動くと目が休まらず、読み取りにくい
+        Text(
             text = text,
             style = MaterialTheme.typography.displayLarge.fittingClock(maxWidth, text.length),
             color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            softWrap = false,
         )
     }
 }

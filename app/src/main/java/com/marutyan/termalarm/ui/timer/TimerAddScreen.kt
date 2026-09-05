@@ -1,6 +1,8 @@
 package com.marutyan.termalarm.ui.timer
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,7 +58,11 @@ private val KEY_SPACING = 3.dp
  * システムの戻る操作にはBackHandlerで対応する。
  */
 @Composable
-fun TimerAddScreen(onStart: (hours: Int, minutes: Int, seconds: Int) -> Unit, onClose: () -> Unit) {
+fun TimerAddScreen(
+    onStart: (hours: Int, minutes: Int, seconds: Int) -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     BackHandler(onBack = onClose)
 
     // 入力された数字列（最大6桁）。電子レンジと同様に右から順に詰まる。
@@ -70,67 +76,68 @@ fun TimerAddScreen(onStart: (hours: Int, minutes: Int, seconds: Int) -> Unit, on
 
     val isStartEnabled = inputDigits.isNotEmpty() && (hours > 0 || minutes > 0 || seconds > 0)
 
-    Scaffold { padding ->
-        Column(
+    // 画面の枠(Scaffold)は呼び出し側が持つ。ここで自前の枠を作ると下部ナビが隠れる。
+    // 純正もテンキーを出している間、下部ナビは見えたままになっている。
+    // 縦が足りない端末や分割画面でも押せるよう、縦へはみ出したらスクロールできるようにする
+    Column(
+    modifier = modifier
+        .fillMaxSize()
+        .verticalScroll(rememberScrollState())
+        .padding(horizontal = 12.dp, vertical = 16.dp),
+    horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        // 上部の入力中時間表示。純正は画面の上の方へ大きく出す
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 12.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .fillMaxWidth()
+                .weight(1f),
+            contentAlignment = Alignment.Center,
         ) {
-            // 上部の入力中時間表示。純正は画面の上の方へ大きく出す
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center,
-            ) {
-                TimerDisplay(
-                    hours = hours,
-                    minutes = minutes,
-                    seconds = seconds,
-                    padded = padded,
-                    inputLength = inputDigits.length,
-                )
-            }
+            TimerDisplay(
+                hours = hours,
+                minutes = minutes,
+                seconds = seconds,
+                padded = padded,
+                inputLength = inputDigits.length,
+            )
+        }
 
-            // 中央の3列×4行テンキー
-            TimerKeypad(
-                onDigit = { digit ->
-                    if (inputDigits.length < 6) {
-                        inputDigits = if (inputDigits == "0") digit.toString() else inputDigits + digit
-                    }
-                },
-                onZero = {
+        // 中央の3列×4行テンキー
+        TimerKeypad(
+            onDigit = { digit ->
+                if (inputDigits.length < 6) {
+                    inputDigits = if (inputDigits == "0") digit.toString() else inputDigits + digit
+                }
+            },
+            onZero = {
+                if (inputDigits.isNotEmpty() && inputDigits != "0" && inputDigits.length < 6) {
+                    inputDigits += '0'
+                }
+            },
+            onDoubleZero = {
+                repeat(2) {
                     if (inputDigits.isNotEmpty() && inputDigits != "0" && inputDigits.length < 6) {
                         inputDigits += '0'
                     }
-                },
-                onDoubleZero = {
-                    repeat(2) {
-                        if (inputDigits.isNotEmpty() && inputDigits != "0" && inputDigits.length < 6) {
-                            inputDigits += '0'
-                        }
-                    }
-                },
-                onBackspace = {
-                    if (inputDigits.isNotEmpty()) {
-                        inputDigits = inputDigits.dropLast(1)
-                    }
-                },
-            )
+                }
+            },
+            onBackspace = {
+                if (inputDigits.isNotEmpty()) {
+                    inputDigits = inputDigits.dropLast(1)
+                }
+            },
+        )
 
-            Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-            // 下部の取り消し（×）と開始（▶）
-            TimerActionRow(
-                isStartEnabled = isStartEnabled,
-                onClose = onClose,
-                onStart = { onStart(hours, minutes, seconds) },
-            )
+        // 下部の取り消し（×）と開始（▶）
+        TimerActionRow(
+            isStartEnabled = isStartEnabled,
+            onClose = onClose,
+            onStart = { onStart(hours, minutes, seconds) },
+        )
 
-            Spacer(modifier = Modifier.height(16.dp))
-        }
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 

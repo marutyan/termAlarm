@@ -68,7 +68,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import com.marutyan.termalarm.ui.theme.SlideAnimatedDigits
 import com.marutyan.termalarm.ui.theme.pressScaleEffect
 import com.marutyan.termalarm.ui.theme.subHeroClock
 import com.marutyan.termalarm.ui.theme.timerAddFadeSpec
@@ -106,88 +105,88 @@ fun TimerScreen(
     val timers by viewModel.timers.collectAsStateWithLifecycle()
     // 通知に出る秒と画面の秒を合わせる。詳しくはrememberTickingNowを参照
     val tickingNow = rememberTickingNow(timers)
+    val (nowElapsed, nowWall) = tickingNow
+    val sortedTimers = remember(timers, nowElapsed, nowWall) {
+        sortTimers(timers, nowElapsed, nowWall)
+    }
 
-    AnimatedContent(
-        targetState = showAddScreen,
-        transitionSpec = {
-            if (targetState) {
-                (slideInVertically(animationSpec = timerAddSlideSpec()) { it } + fadeIn(animationSpec = timerAddFadeSpec()))
-                    .togetherWith(fadeOut(animationSpec = timerAddFadeSpec()))
-            } else {
-                fadeIn(animationSpec = timerAddFadeSpec())
-                    .togetherWith(slideOutVertically(animationSpec = timerAddSlideSpec()) { -it } + fadeOut(animationSpec = timerAddFadeSpec()))
-            }
-        },
-        label = "TimerAddScreenTransition",
-    ) { isAddScreen ->
-        if (isAddScreen) {
-            TimerAddScreen(
-                onStart = { h, m, s -> viewModel.start(h, m, s); showAddScreen = false },
-                onClose = { showAddScreen = false },
-            )
-        } else {
-            val timers by viewModel.timers.collectAsStateWithLifecycle()
-            val (nowElapsed, nowWall) = tickingNow
-            val sortedTimers = remember(timers, nowElapsed, nowWall) {
-                sortTimers(timers, nowElapsed, nowWall)
-            }
-
-            Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = { Text(stringResource(R.string.tab_timer), style = MaterialTheme.typography.headlineMedium) },
-                        actions = {
-                            TermAlarmOverflowMenu(
-                                onOpenSettings = onOpenSettings,
-                                onOpenPrivacyPolicy = onOpenPrivacyPolicy,
-                                onOpenAbout = onOpenAbout,
-                            )
-                        },
+    // 枠は1つだけ持ち、中身を入れ替える。追加画面のときも下部ナビを見せたままにするため
+    // (純正も同じで、テンキーを出している間ナビは消えない)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.tab_timer), style = MaterialTheme.typography.headlineMedium) },
+                actions = {
+                    TermAlarmOverflowMenu(
+                        onOpenSettings = onOpenSettings,
+                        onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                        onOpenAbout = onOpenAbout,
                     )
                 },
-                floatingActionButton = {
-                    // アラーム一覧と同じく、純正に合わせて明るい色にする
-                    FloatingActionButton(
-                        onClick = { showAddScreen = true },
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        // 純正を実測すると65dp。既定のままでは45dpしかなく、押す場所として小さい
-                        modifier = Modifier.size(FAB_SIZE),
-                    ) {
-                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.timer_add))
-                    }
-                },
-                bottomBar = bottomBar,
-            ) { padding ->
-                if (sortedTimers.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = stringResource(R.string.timer_list_empty),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+            )
+        },
+        floatingActionButton = {
+            // 追加画面を出している間は、追加ボタンを隠す
+            if (!showAddScreen) {
+                FloatingActionButton(
+                    onClick = { showAddScreen = true },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    // 純正を実測すると65dp。既定のままでは45dpしかなく、押す場所として小さい
+                    modifier = Modifier.size(FAB_SIZE),
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.timer_add))
+                }
+            }
+        },
+        bottomBar = bottomBar,
+    ) { padding ->
+        AnimatedContent(
+            targetState = showAddScreen,
+            transitionSpec = {
+                if (targetState) {
+                    (slideInVertically(animationSpec = timerAddSlideSpec()) { it } + fadeIn(animationSpec = timerAddFadeSpec()))
+                        .togetherWith(fadeOut(animationSpec = timerAddFadeSpec()))
                 } else {
-                    LazyColumn(
-                        modifier = Modifier.padding(padding),
-                        // 下を厚くしておかないと、最後のカードが右下の追加ボタンに隠れる
-                        contentPadding = PaddingValues(start = 13.dp, end = 13.dp, top = 16.dp, bottom = 96.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        items(sortedTimers, key = { it.id }) { timer ->
-                            TimerCard(
-                                timer = timer,
-                                nowElapsed = nowElapsed,
-                                nowWall = nowWall,
-                                onPause = { viewModel.pause(timer.id) },
-                                onResume = { viewModel.resume(timer.id) },
-                                onReset = { viewModel.reset(timer.id) },
-                                onExtend = { viewModel.extendOneMinute(timer.id) },
-                                onDelete = { viewModel.delete(timer.id) },
-                                // 残り時間が縮んで並び順が変わったとき、その場で飛ばず動いて入れ替わるようにする
-                                modifier = Modifier.animateItem(),
-                            )
-                        }
+                    fadeIn(animationSpec = timerAddFadeSpec())
+                        .togetherWith(slideOutVertically(animationSpec = timerAddSlideSpec()) { -it } + fadeOut(animationSpec = timerAddFadeSpec()))
+                }
+            },
+            label = "TimerAddScreenTransition",
+            modifier = Modifier.padding(padding),
+        ) { isAddScreen ->
+            if (isAddScreen) {
+                TimerAddScreen(
+                    onStart = { h, m, s -> viewModel.start(h, m, s); showAddScreen = false },
+                    onClose = { showAddScreen = false },
+                )
+            } else if (sortedTimers.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = stringResource(R.string.timer_list_empty),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                LazyColumn(
+                    // 下を厚くしておかないと、最後のカードが右下の追加ボタンに隠れる
+                    contentPadding = PaddingValues(start = 13.dp, end = 13.dp, top = 16.dp, bottom = 96.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    items(sortedTimers, key = { it.id }) { timer ->
+                        TimerCard(
+                            timer = timer,
+                            nowElapsed = nowElapsed,
+                            nowWall = nowWall,
+                            onPause = { viewModel.pause(timer.id) },
+                            onResume = { viewModel.resume(timer.id) },
+                            onReset = { viewModel.reset(timer.id) },
+                            onExtend = { viewModel.extendOneMinute(timer.id) },
+                            onDelete = { viewModel.delete(timer.id) },
+                            // 残り時間が縮んで並び順が変わったとき、その場で飛ばず動いて入れ替わるようにする
+                            modifier = Modifier.animateItem(),
+                        )
                     }
                 }
             }

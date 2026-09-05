@@ -68,7 +68,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import com.marutyan.termalarm.ui.theme.SlideAnimatedDigits
 import com.marutyan.termalarm.ui.theme.pressScaleEffect
 import com.marutyan.termalarm.ui.theme.subHeroClock
 import com.marutyan.termalarm.ui.theme.timerAddFadeSpec
@@ -84,12 +83,30 @@ import com.marutyan.termalarm.domain.remainingMillis
 import com.marutyan.termalarm.ui.theme.tabularNums
 import kotlinx.coroutines.delay
 
-// タイマーカードに描く円形リングの直径と線の太さ。純正の実測値(docs/OFFICIAL_UI.md「タイマー」)は
-// 直径311dp/線11dpだが、リングの右側に2つの操作ボタンを横並びで収めるため、画面幅に合わせて直径を200dpへ縮小した。
+/**
+ * タイマーカードに描く進捗リングの線の太さ。
+ * 純正アプリの実測値（docs/OFFICIAL_UI.md）に合わせて11dpとする。
+ */
 private val RING_STROKE_WIDTH = 11.dp
-// 輪の右へ置くボタンの幅と、輪との間隔。輪の大きさをここから逆算する
-private val SIDE_BUTTON_WIDTH = 80.dp
-private val SIDE_BUTTON_GAP = 12.dp
+
+/**
+ * 輪の下に横並びで配置する操作ボタンの高さ（88dp）。
+ * 純正アプリの実測値（docs/OFFICIAL_UI.md）に合わせて指定する。
+ */
+private val ACTION_BUTTON_HEIGHT = 88.dp
+
+/**
+ * 輪の下に横並びで配置する操作ボタンの角丸（40dp）。
+ * 高さに近い丸みを持たせる純正デザインに合わせて指定する。
+ */
+private val ACTION_BUTTON_CORNER_SHAPE = RoundedCornerShape(40.dp)
+
+/**
+ * 輪の下に横並びで配置する操作ボタン同士の間隔（18dp）。
+ * 純正アプリの実測値（docs/OFFICIAL_UI.md）に合わせて指定する。
+ */
+private val ACTION_BUTTON_GAP = 18.dp
+
 /**
  * 純正のタイマーは輪の直径311dp、中の数字の高さ40dpだった。
  * 画面の幅は端末によって違うので、輪は使える幅いっぱいまで広げ、
@@ -145,9 +162,12 @@ fun TimerCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    // 名前を付けていないタイマーは、括弧だけが残らないよう「タイマー」と出す
+                    // 名前を付けていないタイマーは純正に合わせて「タイマー（7秒）」のように設定時間を添える
                     text = if (timer.label.isBlank()) {
-                        stringResource(R.string.timer_card_title_unnamed)
+                        stringResource(
+                            R.string.timer_card_title_unnamed_with_duration,
+                            formatTimerDuration(timer.totalMillis),
+                        )
                     } else {
                         stringResource(R.string.timer_card_title, timer.label)
                     },
@@ -168,50 +188,40 @@ fun TimerCard(
                 }
             }
 
-            if (isFinished) {
-                // 鳴動中はボタンを出さず、リングと残り時間を中央に表示する
-                BoxWithConstraints(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                    // 鳴動中はボタンを出さないので、幅いっぱいを輪に使える
-                    val ringDiameter = maxWidth
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        TimerRing(
-                            diameter = ringDiameter,
-                            progress = progress,
-                            trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            progressColor = MaterialTheme.colorScheme.error,
-                        )
+            // 輪はカードの内側の幅いっぱいに広げる（決め打ちにせず利用可能なmaxWidthから決定）
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = if (isFinished) 0.dp else 24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                val ringDiameter = maxWidth
+                Box(modifier = Modifier.size(ringDiameter), contentAlignment = Alignment.Center) {
+                    TimerRing(
+                        diameter = ringDiameter,
+                        progress = progress,
+                        trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        progressColor = if (isFinished) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                    )
+                    if (isFinished) {
                         // 純正はタイムアップの後、0で止めずにマイナスへ数え続ける
                         val overdue = overdueMillis(timer, nowElapsed, nowWall)
-                        SlideAnimatedDigits(
+                        // 数字は動かさない。純正も残り時間の数字は動かさず、静かに入れ替える。
+                        // 1秒ごとに動くと読み取りにくく、桁が動く途中の形も崩れて見える
+                        Text(
                             text = "\u2212" + formatTimerRemaining(overdue),
                             style = MaterialTheme.typography.displayLarge
                                 .clockSizeFor(ringDiameter, overdue)
                                 .tabularNums(),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
-                    }
-                }
-            } else {
-                BoxWithConstraints(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                    // 右のボタンを引いた残りが輪に使える幅。端末の幅に関わらず目一杯まで広げる
-                    val ringDiameter = maxWidth - SIDE_BUTTON_WIDTH - SIDE_BUTTON_GAP
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                    Box(modifier = Modifier.size(ringDiameter), contentAlignment = Alignment.Center) {
-                        TimerRing(
-                            diameter = ringDiameter,
-                            progress = progress,
-                            trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            progressColor = MaterialTheme.colorScheme.primary,
-                        )
+                    } else {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
-                            SlideAnimatedDigits(
+                            // 数字は動かさない。純正も残り時間の数字は動かさず、静かに入れ替える
+                            Text(
                                 text = formatTimerRemaining(remaining),
                                 style = MaterialTheme.typography.displayLarge
                                     .clockSizeFor(ringDiameter, remaining)
@@ -232,15 +242,28 @@ fun TimerCard(
                             }
                         }
                     }
+                }
+            }
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        ExtendChip(onClick = onExtend)
-                        PlayPauseButton(isRunning = isRunning, onClick = if (isRunning) onPause else onResume)
-                    }
-                    }
+            // 動作中・一時停止中の操作ボタンは輪の下に横並びで配置する（鳴動中はボタン非表示）
+            if (!isFinished) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(ACTION_BUTTON_GAP),
+                ) {
+                    ExtendChip(
+                        onClick = onExtend,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(ACTION_BUTTON_HEIGHT),
+                    )
+                    PlayPauseButton(
+                        isRunning = isRunning,
+                        onClick = if (isRunning) onPause else onResume,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(ACTION_BUTTON_HEIGHT),
+                    )
                 }
             }
         }
@@ -300,26 +323,22 @@ fun TimerRing(diameter: Dp, progress: Float, trackColor: Color, progressColor: C
 
 /**
  * タイマーを1分延長するボタン。
- * 純正の仕様に合わせて枠線のみのピル型とし、リングの右側上部に配置する。
+ * 純正の仕様に合わせて輪の下の左側に配置し、暗い背景（surfaceContainerHigh）で表示する。
  */
 @Composable
-fun ExtendChip(onClick: () -> Unit) {
+fun ExtendChip(onClick: () -> Unit, modifier: Modifier = Modifier) {
     val interactionSource = remember { MutableInteractionSource() }
     Surface(
         onClick = onClick,
         interactionSource = interactionSource,
-        modifier = Modifier
-            .width(80.dp)
-            .height(56.dp)
-            .pressScaleEffect(interactionSource),
-        shape = RoundedCornerShape(28.dp),
-        color = Color.Transparent,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        modifier = modifier.pressScaleEffect(interactionSource),
+        shape = ACTION_BUTTON_CORNER_SHAPE,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             Text(
                 text = stringResource(R.string.timer_extend_one_minute_button),
-                style = MaterialTheme.typography.labelLarge.tabularNums(),
+                style = MaterialTheme.typography.titleLarge.tabularNums(),
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
@@ -327,38 +346,41 @@ fun ExtendChip(onClick: () -> Unit) {
 }
 
 /**
- * タイマーの一時停止と再開を切り替える塗りつぶしボタン。
- * 主要操作ボタンとしてprimaryContainerを使い、ExtendChipの下に配置する。
+ * タイマーの一時停止と再開を切り替える主要操作ボタン。
+ * 純正の仕様に合わせて輪の下の右側に配置し、明るい背景（primary）で目立たせる。
  */
 @Composable
-fun PlayPauseButton(isRunning: Boolean, onClick: () -> Unit) {
+fun PlayPauseButton(isRunning: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val description = stringResource(if (isRunning) R.string.timer_pause else R.string.timer_resume)
     val interactionSource = remember { MutableInteractionSource() }
     Surface(
         onClick = onClick,
         interactionSource = interactionSource,
-        modifier = Modifier
-            .width(80.dp)
-            .height(56.dp)
+        modifier = modifier
             .semantics { contentDescription = description }
             .pressScaleEffect(interactionSource),
-        shape = RoundedCornerShape(28.dp),
+        shape = ACTION_BUTTON_CORNER_SHAPE,
         // 暗い画面ではprimaryが明るい側の色になる。ここは主要な操作なので目立たせる
         color = MaterialTheme.colorScheme.primary,
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             if (isRunning) {
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     repeat(2) {
                         Box(
                             modifier = Modifier
-                                .size(width = 5.dp, height = 20.dp)
-                                .background(MaterialTheme.colorScheme.onPrimary, RoundedCornerShape(2.dp)),
+                                .size(width = 6.dp, height = 24.dp)
+                                .background(MaterialTheme.colorScheme.onPrimary, RoundedCornerShape(3.dp)),
                         )
                     }
                 }
             } else {
-                Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(36.dp),
+                )
             }
         }
     }
@@ -390,5 +412,29 @@ private fun formatTimerRemaining(millis: Long): String {
         hours > 0 -> "%d:%02d:%02d".format(hours, minutes, seconds)
         minutes > 0 -> "%d:%02d".format(minutes, seconds)
         else -> "%d".format(seconds)
+    }
+}
+
+/**
+ * タイマーの設定時間（ミリ秒）を「7秒」「1分30秒」「1時間」のような日本語表記に整形する。
+ * 純正アプリに合わせて、名前のないタイマーの見出しに設定時間を添えるために使用する。
+ */
+@Composable
+private fun formatTimerDuration(millis: Long): String {
+    val totalSeconds = (millis / 1000).coerceAtLeast(0L)
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+
+    return buildString {
+        if (hours > 0) {
+            append(stringResource(R.string.timer_duration_hours, hours))
+        }
+        if (minutes > 0) {
+            append(stringResource(R.string.timer_duration_minutes, minutes))
+        }
+        if (seconds > 0 || (hours == 0L && minutes == 0L)) {
+            append(stringResource(R.string.timer_duration_seconds, seconds))
+        }
     }
 }

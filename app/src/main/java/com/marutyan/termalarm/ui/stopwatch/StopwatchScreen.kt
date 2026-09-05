@@ -57,7 +57,6 @@ import com.marutyan.termalarm.domain.StopwatchRunState
 import com.marutyan.termalarm.domain.elapsedMillis
 import com.marutyan.termalarm.stopwatch.formatElapsed
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import com.marutyan.termalarm.ui.theme.SlideAnimatedDigits
 import com.marutyan.termalarm.ui.theme.pressScaleEffect
 import com.marutyan.termalarm.ui.theme.tabularNums
 import kotlinx.coroutines.delay
@@ -125,9 +124,9 @@ fun StopwatchScreen(
                     .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                SlideAnimatedDigits(
-                    text = mainPart,
-                    staticSuffix = centisPart,
+                // 数字は動かさない。純正も経過時間の数字は動かさず、静かに入れ替える
+                Text(
+                    text = mainPart + centisPart,
                     style = MaterialTheme.typography.displayLarge.heroClock(),
                     // まだ計測していないときは地に近い色にして、動いていないことを見て分かるようにする
                     color = if (state.runState == StopwatchRunState.IDLE) {

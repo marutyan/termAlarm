@@ -133,6 +133,12 @@
     <!-- タイマー画面: カード左上のラベル。%1$sには開始時に指定した時間("5:00"等)が入る -->
     <string name="timer_card_title">%1$s</string>
     <string name="timer_card_title_unnamed">タイマー</string>
+    <!-- タイマー画面: 元の時間の日本語表記用単位 -->
+    <string name="timer_duration_hours">%1$d時間</string>
+    <string name="timer_duration_minutes">%1$d分</string>
+    <string name="timer_duration_seconds">%1$d秒</string>
+    <!-- タイマー画面: 名前のないタイマーのカード見出し（例: タイマー（7秒）） -->
+    <string name="timer_card_title_unnamed_with_duration">タイマー（%1$s）</string>
 
     <!-- タイマーのフォアグラウンド通知 -->
     <string name="timer_notification_channel_name">タイマー</string>
