@@ -164,6 +164,7 @@ fun AlarmListScreen(
                             now = now,
                             weekStart = weekStart,
                             onToggleEnabled = { enabled -> viewModel.setEnabled(schedule.id, enabled) },
+                            onToggleDay = { day -> viewModel.toggleDay(schedule, day) },
                             onClick = { onEditAlarm(schedule.id) },
                             onRequestEndTodaySession = {
                                 // skipGameがtrueならその場でゲーム画面へ遷移し、falseなら確認ダイアログを出す
@@ -213,6 +214,7 @@ private fun AlarmCard(
     now: ZonedDateTime,
     weekStart: WeekStart,
     onToggleEnabled: (Boolean) -> Unit,
+    onToggleDay: (DayOfWeek) -> Unit,
     onClick: () -> Unit,
     onRequestEndTodaySession: () -> Unit,
     modifier: Modifier = Modifier,
@@ -289,27 +291,28 @@ private fun AlarmCard(
             Switch(checked = schedule.enabled, onCheckedChange = onToggleEnabled)
         }
 
-        if (schedule.repeatDays.isNotEmpty()) {
-            // 固定間隔で並べると7つが左へ寄って右に余白ができるため、幅いっぱいに均等配置する
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                orderedDaysOfWeek(weekStart).forEach { day ->
-                    val on = day in schedule.repeatDays
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(if (on) MaterialTheme.colorScheme.primary else Color.Transparent),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = dayLabel(day),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+        // 曜日はここで直に切り替えられる。編集画面を開かずに
+        // 「今週は水曜だけ外す」といった調整ができるようにするため。
+        // 繰り返しを設定していないアラームでも並べて、そのまま選べるようにする
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            orderedDaysOfWeek(weekStart).forEach { day ->
+                val on = day in schedule.repeatDays
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(if (on) MaterialTheme.colorScheme.primary else Color.Transparent)
+                        .clickable { onToggleDay(day) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = dayLabel(day),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }

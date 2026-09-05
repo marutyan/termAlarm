@@ -152,7 +152,26 @@ fun scheduleSummary(schedule: AlarmSchedule): String {
  */
 fun canEndTodaySession(schedule: AlarmSchedule, now: ZonedDateTime): Boolean {
     if (!schedule.enabled) return false
+    // まだ始まっていないタームは終了できない。
+    // 7:00〜9:00のアラームなら、6:00の時点で終わらせるものが無い。
+    // 鳴らしたくないだけならスイッチで切ればよく、ここを出すと役目が紛らわしくなる
+    if (!hasSessionStarted(schedule, now)) return false
     val next = nextTrigger(schedule, now) ?: return false
     // 次に鳴るのが別のセッションなら、今日の分はもう残っていない
     return sessionStartDate(schedule, next) == sessionStartDate(schedule, now)
+}
+
+/**
+ * 今日のタームがもう始まっているか。
+ * 日をまたぐターム(22:00〜翌2:00など)では、開始時刻を過ぎた日と、
+ * 日付が変わった後の終了時刻までの両方を「始まっている」とみなす。
+ */
+private fun hasSessionStarted(schedule: AlarmSchedule, now: ZonedDateTime): Boolean {
+    val minuteOfDay = now.hour * 60 + now.minute
+    return if (crossesMidnight(schedule)) {
+        // 日をまたぐ場合、開始以降か、終了までの間なら始まっている
+        minuteOfDay >= schedule.startMinutes || minuteOfDay <= schedule.endMinutes
+    } else {
+        minuteOfDay >= schedule.startMinutes
+    }
 }

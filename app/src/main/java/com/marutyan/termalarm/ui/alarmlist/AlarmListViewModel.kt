@@ -9,6 +9,7 @@ import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
+import java.time.DayOfWeek
 import com.marutyan.termalarm.domain.WeekStart
 import java.time.ZonedDateTime
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,6 +41,22 @@ class AlarmListViewModel(private val repository: AlarmRepository, context: Conte
         viewModelScope.launch {
             repository.setEnabled(id, enabled)
             AlarmScheduler.reschedule(appContext, id)
+        }
+    }
+
+    /**
+     * 一覧のカードから曜日を切り替える。
+     * 編集画面を開かずに「今週は水曜だけ外す」といった調整ができるようにするため。
+     */
+    fun toggleDay(schedule: AlarmSchedule, day: DayOfWeek) {
+        viewModelScope.launch {
+            val days = if (day in schedule.repeatDays) {
+                schedule.repeatDays - day
+            } else {
+                schedule.repeatDays + day
+            }
+            repository.update(schedule.copy(repeatDays = days))
+            AlarmScheduler.reschedule(appContext, schedule.id)
         }
     }
 

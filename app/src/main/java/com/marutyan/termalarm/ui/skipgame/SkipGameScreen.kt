@@ -82,6 +82,8 @@ fun SkipGameScreen(viewModel: SkipGameViewModel, onClose: () -> Unit) {
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
+        // 案内は上に固定し、問題の部分だけをスクロールさせる。
+        // どちらも画面いっぱいを取ろうとすると、押し合ってボタンが重なる
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
             SkipGameInfoBanner(
                 startMinutes = uiState.startMinutes,
@@ -89,7 +91,10 @@ fun SkipGameScreen(viewModel: SkipGameViewModel, onClose: () -> Unit) {
                 totalOccurrences = uiState.totalOccurrences,
             )
             Column(
-                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 val question = uiState.question

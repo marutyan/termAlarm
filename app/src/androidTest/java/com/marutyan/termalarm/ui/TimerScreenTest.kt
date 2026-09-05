@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.marutyan.termalarm.R
@@ -88,6 +89,8 @@ class TimerScreenTest {
     fun 開始すると一覧に1件現れる() {
         setScreen()
         composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).performClick()
+        // 追加画面は下から現れるため、キーが押せる状態になるまで待つ
+        composeTestRule.waitUntilAtLeastOneExists(hasText("5"), 5_000)
         composeTestRule.onNodeWithText("5").performClick()
         composeTestRule.onNodeWithText("0").performClick()
         composeTestRule.onNodeWithText("0").performClick()
@@ -149,7 +152,8 @@ class TimerScreenTest {
             repository.add(startTimer(0L, "5:00", 300_000L, SystemClock.elapsedRealtime(), System.currentTimeMillis()))
         }
         setScreen()
-        composeTestRule.mainClock.advanceTimeBy(500)
+        // 一覧は薄く現れる。その分を跨いでから操作する
+        composeTestRule.mainClock.advanceTimeBy(1_000)
 
         composeTestRule.onNodeWithContentDescription(string(R.string.timer_pause)).performClick()
         // 保存はコルーチンで進むため、Composeのクロックを進めるだけでは終わらない。

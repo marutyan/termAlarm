@@ -15,8 +15,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 
-// タブ間を切り替える画面遷移のアニメーション時間(ミリ秒)。滑らかな横スライドを実現するために定義する。
-const val TAB_TRANSITION_DURATION_MS = 300
+// 画面が入れ替わるときの時間(ミリ秒)。
+// 薄く消えて薄く現れるだけなので短くてよい。長いと閉じたのに残っているように見える。
+const val TAB_TRANSITION_DURATION_MS = 150
 
 // タイマー新規追加画面の表示・非表示アニメーション時間(ミリ秒)。下からの出現と上への消去に合わせるために定義する。
 const val TIMER_ADD_TRANSITION_DURATION_MS = 300
@@ -45,7 +46,7 @@ const val ALARM_COLOR_TRANSITION_DURATION_MS = 250
  */
 fun tabFadeSpec(): TweenSpec<Float> = tween(
     durationMillis = TAB_TRANSITION_DURATION_MS,
-    easing = FastOutSlowInEasing,
+    easing = LinearEasing,
 )
 
 /**
