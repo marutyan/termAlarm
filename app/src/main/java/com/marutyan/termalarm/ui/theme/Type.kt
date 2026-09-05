@@ -2,6 +2,7 @@ package com.marutyan.termalarm.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
@@ -62,3 +63,26 @@ val AppTypography = Typography(
  * 桁数が変わるたびに文字幅が動いてアラーム一覧・編集画面の時刻表示がちらつくのを防ぐ(docs/SPEC.md「フォント」)。
  */
 fun TextStyle.tabularNums(): TextStyle = copy(fontFeatureSettings = "tnum")
+
+/**
+ * 画面の主役になる時刻の文字。
+ *
+ * 純正の時計アプリを実機で撮って数字の高さを測ったところ、世界時計とストップウォッチが44dp、
+ * タイマーの残り時間が40dpだった。Material 3で最も大きいdisplayLarge(57sp)でも数字は41dp
+ * にしかならず、displayMedium(45sp)では32dpと純正の3/4以下になる。実測に合わせて専用の
+ * 大きさを持つ。
+ *
+ * 数字の高さは文字サイズのおよそ0.72倍になるため、44dpには61sp、40dpには56spが要る。
+ */
+fun TextStyle.heroClock(): TextStyle = copy(
+    fontSize = 61.sp,
+    lineHeight = 68.sp,
+    fontFeatureSettings = "tnum",
+)
+
+/** 主役の時刻より一段小さい表示。タイマーの残り時間など */
+fun TextStyle.subHeroClock(): TextStyle = copy(
+    fontSize = 56.sp,
+    lineHeight = 62.sp,
+    fontFeatureSettings = "tnum",
+)

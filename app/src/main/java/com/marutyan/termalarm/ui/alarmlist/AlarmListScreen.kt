@@ -23,6 +23,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import com.marutyan.termalarm.ui.theme.heroClock
 import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ShortNavigationBar
@@ -217,13 +218,13 @@ private fun AlarmCard(
                 if (isSingle) {
                     Text(
                         text = formatClockMinutes(schedule.startMinutes),
-                        style = MaterialTheme.typography.displayMedium,
+                        style = MaterialTheme.typography.displayLarge.heroClock(),
                     )
                 } else {
                     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(text = formatClockMinutes(schedule.startMinutes), style = MaterialTheme.typography.displayMedium)
+                        Text(text = formatClockMinutes(schedule.startMinutes), style = MaterialTheme.typography.displayLarge.heroClock())
                         Text(text = "–", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(text = formatClockMinutes(schedule.endMinutes), style = MaterialTheme.typography.displayMedium)
+                        Text(text = formatClockMinutes(schedule.endMinutes), style = MaterialTheme.typography.displayLarge.heroClock())
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

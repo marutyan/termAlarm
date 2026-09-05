@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.theme.heroClock
 import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmDatabase
@@ -112,7 +113,7 @@ private fun DigitalClockFace(time: ZonedDateTime, showSeconds: Boolean) {
     Row(verticalAlignment = Alignment.Bottom) {
         Text(
             text = time.format(HOUR_MINUTE_FORMATTER),
-            style = MaterialTheme.typography.displayLarge.tabularNums(),
+            style = MaterialTheme.typography.displayLarge.heroClock(),
         )
         if (showSeconds) {
             Text(

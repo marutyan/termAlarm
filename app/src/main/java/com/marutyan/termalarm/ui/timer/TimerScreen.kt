@@ -54,6 +54,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.theme.subHeroClock
 import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.TimerRunState
@@ -226,7 +227,7 @@ private fun TimerCard(
                 )
                 Text(
                     text = formatDuration(remaining),
-                    style = MaterialTheme.typography.displayMedium.tabularNums(),
+                    style = MaterialTheme.typography.displayLarge.subHeroClock(),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }

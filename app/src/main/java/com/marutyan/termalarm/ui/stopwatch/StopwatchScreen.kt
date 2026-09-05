@@ -44,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.theme.heroClock
 import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.StopwatchLap
@@ -101,7 +102,7 @@ fun StopwatchScreen(
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             Text(
                 text = formatElapsed(elapsed, includeCentiseconds = true),
-                style = MaterialTheme.typography.displayLarge.tabularNums(),
+                style = MaterialTheme.typography.displayLarge.heroClock(),
                 modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
                 textAlign = TextAlign.Center,
             )
