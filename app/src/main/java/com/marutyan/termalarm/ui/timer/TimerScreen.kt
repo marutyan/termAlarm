@@ -109,6 +109,9 @@ fun TimerScreen(
     val sortedTimers = remember(timers, nowElapsed, nowWall) {
         sortTimers(timers, nowElapsed, nowWall)
     }
+    // 純正はタイマーが1件も無いとき、案内文ではなくテンキーをそのまま出す。
+    // 追加ボタンを押したときも同じテンキーなので、どちらの理由でも同じ画面を使う
+    val showKeypad = showAddScreen || sortedTimers.isEmpty()
 
     // 枠は1つだけ持ち、中身を入れ替える。追加画面のときも下部ナビを見せたままにするため
     // (純正も同じで、テンキーを出している間ナビは消えない)
@@ -126,8 +129,8 @@ fun TimerScreen(
             )
         },
         floatingActionButton = {
-            // 追加画面を出している間は、追加ボタンを隠す
-            if (!showAddScreen) {
+            // テンキーを出している間は、追加ボタンを隠す
+            if (!showKeypad) {
                 FloatingActionButton(
                     onClick = { showAddScreen = true },
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -142,7 +145,7 @@ fun TimerScreen(
         bottomBar = bottomBar,
     ) { padding ->
         AnimatedContent(
-            targetState = showAddScreen,
+            targetState = showKeypad,
             transitionSpec = {
                 if (targetState) {
                     (slideInVertically(animationSpec = timerAddSlideSpec()) { it } + fadeIn(animationSpec = timerAddFadeSpec()))
@@ -154,20 +157,13 @@ fun TimerScreen(
             },
             label = "TimerAddScreenTransition",
             modifier = Modifier.padding(padding),
-        ) { isAddScreen ->
-            if (isAddScreen) {
+        ) { isKeypad ->
+            if (isKeypad) {
                 TimerAddScreen(
                     onStart = { h, m, s -> viewModel.start(h, m, s); showAddScreen = false },
-                    onClose = { showAddScreen = false },
+                    // 1件も無いときはテンキーがタブそのものの中身なので、戻る先が無い
+                    onClose = if (sortedTimers.isEmpty()) null else ({ showAddScreen = false }),
                 )
-            } else if (sortedTimers.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = stringResource(R.string.timer_list_empty),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             } else {
                 LazyColumn(
                     // 下を厚くしておかないと、最後のカードが右下の追加ボタンに隠れる

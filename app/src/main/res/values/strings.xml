@@ -127,7 +127,6 @@
     <string name="timer_backspace">削除</string>
     <string name="timer_cancel">取り消し</string>
     <!-- タイマー画面: 一覧が空のときの案内 -->
-    <string name="timer_list_empty">動作中のタイマーがありません</string>
     <!-- タイマー画面: 各カードの操作 -->
     <string name="timer_pause">一時停止</string>
     <string name="timer_resume">再開</string>

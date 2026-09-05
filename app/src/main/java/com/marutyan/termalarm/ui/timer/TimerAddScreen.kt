@@ -48,29 +48,35 @@ import com.marutyan.termalarm.ui.theme.keypadInput
 import com.marutyan.termalarm.ui.theme.pressScaleEffect
 import com.marutyan.termalarm.ui.theme.tabularNums
 
-// テンキーのキー直径。純正を実機で測ると82dpだった（uiautomatorで測定）。
-// 3列と間隔2つで 82*3 + 3*2 = 252dp。画面幅の64%に収まり、左右に余白が残る。
-private val KEY_SIZE = 82.dp
+// テンキーのキー直径。純正を実機で測ると101dpだった（docs/OFFICIAL_UI.md「テンキー画面」）。
+// 3列と間隔2つで 101*3 + 4*2 = 311dp。画面幅の64%に収まり、左右に余白が残る。
+private val KEY_SIZE = 101.dp
 
-// キーどうしの間隔。純正は中心の間隔が85dpで、キーが82dpなので隙間は3dpしかない
-private val KEY_SPACING = 3.dp
+// キーどうしの間隔。純正は中心の間隔が105dpで、キーが101dpなので隙間は4dpしかない
+private val KEY_SPACING = 4.dp
 
-// 開始ボタンの直径。純正を実機で測ると78dpだった（docs/OFFICIAL_UI.md「テンキー画面」）
-private val START_BUTTON_SIZE = 78.dp
+// 開始ボタンの直径。純正を実機で測ると96dpだった（docs/OFFICIAL_UI.md「テンキー画面」）
+private val START_BUTTON_SIZE = 96.dp
+
+// 入力中の時間を置く帯の高さ。純正は209dpあり、この広さがテンキーの位置を決めている
+private val DISPLAY_BAND_HEIGHT = 209.dp
 
 /**
  * タイマー新規追加画面。純正の時計アプリと同じく、3列×4行の円形テンキーで右から数字を詰めて
  * 時分秒を入力する(docs/OFFICIAL_UI.md「タイマー / 追加画面はテンキー」)。
  * NavHostのルートではなくTimerScreen内のローカルな状態切り替えとして表示するため、
  * システムの戻る操作にはBackHandlerで対応する。
+ *
+ * @param onClose 入力をやめて元の一覧へ戻る操作。タイマーが1件も無いときはこの画面がタブの
+ *   そのものの中身になり、戻る先が無いためnullを渡す。そのとき取り消し(×)も戻る操作も出さない。
  */
 @Composable
 fun TimerAddScreen(
     onStart: (hours: Int, minutes: Int, seconds: Int) -> Unit,
-    onClose: () -> Unit,
+    onClose: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
-    BackHandler(onBack = onClose)
+    if (onClose != null) BackHandler(onBack = onClose)
 
     // 入力された数字列（最大6桁）。電子レンジと同様に右から順に詰まる。
     var inputDigits by rememberSaveable { mutableStateOf("") }
@@ -95,24 +101,23 @@ fun TimerAddScreen(
         contentAlignment = Alignment.TopCenter,
     ) {
         val isCompact = maxHeight < COMPACT_SCREEN_HEIGHT_THRESHOLD
+        // 入力中の時間を置く帯の高さ。純正はここを広く取り、数字の上下にたっぷり余白を残している
+        val displayBandHeight = if (isCompact) 96.dp else DISPLAY_BAND_HEIGHT
         // 入力中の時間とテンキーの間隔。狭い画面では詰める
-        val displayToKeypadSpacing = if (isCompact) 8.dp else 16.dp
-        // 中央寄せにしたうえで、上へ少しだけ余白を置く。
-        // 純正もテンキーが画面の中ほどに来る
-        val topSpacerHeight = if (isCompact) 4.dp else 16.dp
-        val keypadToActionSpacing = if (isCompact) 12.dp else 20.dp
-        val bottomSpacerHeight = if (isCompact) 8.dp else 16.dp
+        val displayToKeypadSpacing = if (isCompact) 8.dp else 44.dp
+        val keypadToActionSpacing = if (isCompact) 12.dp else 37.dp
+        val bottomSpacerHeight = if (isCompact) 8.dp else 35.dp
 
         Column(
-            // 縦に余りがあるときは中身を中央へ寄せる。上に詰めると下が大きく空いて落ち着かない。
-            // 縦が足りないときは上から詰めて、スクロールで下まで届くようにする
+            // 純正と同じ位置に並べるため、上から順に積む。縦が足りないときはスクロールで下まで届く
             modifier = Modifier.fillMaxWidth().heightIn(min = maxHeight),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
         ) {
-            Spacer(modifier = Modifier.height(topSpacerHeight))
-
-            // 入力中時間表示。純正と同じくテンキーのすぐ上に詰めて配置する
+            // 入力中時間表示。純正はこの帯の高さが209dpあり、テンキーはその下に来る
+            Box(
+                modifier = Modifier.height(displayBandHeight),
+                contentAlignment = Alignment.Center,
+            ) {
             TimerDisplay(
                 hours = hours,
                 minutes = minutes,
@@ -121,6 +126,7 @@ fun TimerAddScreen(
                 inputLength = inputDigits.length,
                 isCompact = isCompact,
             )
+            }
 
             Spacer(modifier = Modifier.height(displayToKeypadSpacing))
 
@@ -351,11 +357,12 @@ private fun KeypadButton(
 /**
  * テンキーの下に配置する操作ボタン行（取り消しと開始）。
  * テンキーの列に合わせ、×は左列の中心、▶は画面の中央（中央列の中心）へ直径78dpで配置する。
+ * onCloseがnullのときは×を置かず、▶だけを同じ位置のまま出す。
  */
 @Composable
 private fun TimerActionRow(
     isStartEnabled: Boolean,
-    onClose: () -> Unit,
+    onClose: (() -> Unit)?,
     onStart: () -> Unit,
 ) {
     // テンキー全体の幅（KEY_SIZE * 3 + KEY_SPACING * 2）に合わせて配置する
@@ -368,12 +375,12 @@ private fun TimerActionRow(
         horizontalArrangement = Arrangement.spacedBy(KEY_SPACING),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 取り消し（×）: テンキーの左列中心に配置
+        // 取り消し（×）: テンキーの左列中心に配置。戻る先が無いときは場所だけ空けておく
         Box(
             modifier = Modifier.size(KEY_SIZE),
             contentAlignment = Alignment.Center,
         ) {
-            Surface(
+            if (onClose != null) Surface(
                 onClick = onClose,
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,

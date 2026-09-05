@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -76,20 +77,22 @@ class TimerScreenTest {
         }
     }
 
-    // 動作中のタイマーが1件も無いとき、案内文が表示されることを保証する
+    // 動作中のタイマーが1件も無いとき、純正と同じくテンキーがそのまま出ることを保証する。
+    // 戻る先が無いので取り消し(×)は出さない
     @Test
-    fun タイマーが無いとき案内文が表示される() {
+    fun タイマーが無いときテンキーが出る() {
         setScreen()
-        composeTestRule.onNodeWithText(string(R.string.timer_list_empty)).assertExists()
+        composeTestRule.waitUntilAtLeastOneExists(hasText("5"), 5_000)
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_start)).assertExists()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_cancel)).assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).assertDoesNotExist()
     }
 
-    // テンキーで5分00秒(5 → 0 → 0)を入力して開始すると、一覧に1件現れ空表示が消えることを保証する。
-    // 時分秒の入力は右下のFABから開くテンキー画面(TimerAddScreen)で行う。
+    // テンキーで5分00秒(5 → 0 → 0)を入力して開始すると、一覧に1件現れることを保証する。
+    // 1件も無い間はテンキーがそのまま出ているため、追加ボタンを押す手順は要らない。
     @Test
     fun 開始すると一覧に1件現れる() {
         setScreen()
-        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).performClick()
-        // 追加画面は下から現れるため、キーが押せる状態になるまで待つ
         composeTestRule.waitUntilAtLeastOneExists(hasText("5"), 5_000)
         composeTestRule.onNodeWithText("5").performClick()
         composeTestRule.onNodeWithText("0").performClick()
@@ -97,7 +100,7 @@ class TimerScreenTest {
         composeTestRule.onNodeWithContentDescription(string(R.string.timer_start)).performClick()
 
         composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().size == 1 } }
-        composeTestRule.onNodeWithText(string(R.string.timer_list_empty)).assertDoesNotExist()
+        composeTestRule.waitUntilAtLeastOneExists(hasContentDescription(string(R.string.timer_add)), 5_000)
 
         val saved = runBlocking { repository.observeAll().first().single() }
         assertEquals(300_000L, saved.totalMillis) // 5分0秒 = 300,000ms
@@ -111,16 +114,18 @@ class TimerScreenTest {
         val addDescription = string(R.string.timer_add)
         val startDescription = string(R.string.timer_start)
 
-        // 1件目はテンキーで 5分00秒 (5 → 0 → 0) を入力して開始する
-        composeTestRule.onNodeWithContentDescription(addDescription).performClick()
+        // 1件目は、1件も無いときにそのまま出ているテンキーで 5分00秒 (5 → 0 → 0) を入力して開始する
+        composeTestRule.waitUntilAtLeastOneExists(hasText("5"), 5_000)
         composeTestRule.onNodeWithText("5").performClick()
         composeTestRule.onNodeWithText("0").performClick()
         composeTestRule.onNodeWithText("0").performClick()
         composeTestRule.onNodeWithContentDescription(startDescription).performClick()
         composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().size == 1 } }
 
-        // 2件目はテンキーで 3分00秒 (3 → 0 → 0) を入力して開始する
+        // 2件目は一覧へ戻っているので、追加ボタンからテンキーを開いて 3分00秒 を入力する
+        composeTestRule.waitUntilAtLeastOneExists(hasContentDescription(addDescription), 5_000)
         composeTestRule.onNodeWithContentDescription(addDescription).performClick()
+        composeTestRule.waitUntilAtLeastOneExists(hasText("3"), 5_000)
         composeTestRule.onNodeWithText("3").performClick()
         composeTestRule.onNodeWithText("0").performClick()
         composeTestRule.onNodeWithText("0").performClick()
@@ -231,7 +236,8 @@ class TimerScreenTest {
         composeTestRule.onNodeWithContentDescription(string(R.string.timer_delete)).performClick()
 
         composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().isEmpty() } }
-        composeTestRule.onNodeWithText(string(R.string.timer_list_empty)).assertExists()
+        // 最後の1件を消すと、純正と同じくテンキーへ戻る
+        composeTestRule.waitUntilAtLeastOneExists(hasText("5"), 5_000)
     }
 
     /**

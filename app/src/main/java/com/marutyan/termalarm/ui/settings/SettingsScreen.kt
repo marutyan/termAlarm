@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -46,9 +47,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -149,6 +152,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         onClick = { openDialog = SettingsDialog.SNOOZE_LENGTH },
                         isCompact = isCompact,
                     )
+                    // 純正はスヌーズの長さの次に音量スライダーを置く
+                    AlarmVolumeRow(isCompact = isCompact)
                     SettingsValueRow(
                         label = stringResource(R.string.settings_fade_in_title),
                         value = formatSeconds(settings.alarmFadeInSeconds),
@@ -167,7 +172,6 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         onClick = { openDialog = SettingsDialog.WEEK_START },
                         isCompact = isCompact,
                     )
-                    AlarmVolumeRow(isCompact = isCompact)
                 }
 
                 SettingsSection(title = stringResource(R.string.settings_section_clock), isCompact = isCompact) {
@@ -366,22 +370,37 @@ private fun AlarmVolumeRow(isCompact: Boolean = false) {
     DisposableEffect(Unit) { onDispose { previewPlayer.stop() } }
     val verticalPadding = if (isCompact) 4.dp else 8.dp
 
-    Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = verticalPadding)) {
-        Text(
-            text = stringResource(R.string.settings_volume_title),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+    Row(
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = verticalPadding),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        // 純正はスライダーの左にアラームのアイコンを置き、何の音量かを一目で分かるようにしている
+        Icon(
+            painter = painterResource(R.drawable.ic_alarm_tab),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(24.dp),
         )
-        Slider(
-            value = volume,
-            valueRange = 0f..maxVolume,
-            steps = (maxVolume.roundToInt() - 1).coerceAtLeast(0),
-            onValueChange = { newValue ->
-                volume = newValue
-                audioManager.setStreamVolume(AudioManager.STREAM_ALARM, newValue.roundToInt(), 0)
-            },
-            onValueChangeFinished = { previewPlayer.play(scope) },
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_volume_title),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Slider(
+                value = volume,
+                valueRange = 0f..maxVolume,
+                // stepsを指定すると目盛りの点が描かれる。純正の音量スライダーに点は無いので指定せず、
+                // 代わりに値を整数へ丸めることで、見た目を保ったまま段階どおりに止まるようにする
+                onValueChange = { newValue ->
+                    val stepped = newValue.roundToInt()
+                    volume = stepped.toFloat()
+                    audioManager.setStreamVolume(AudioManager.STREAM_ALARM, stepped, 0)
+                },
+                onValueChangeFinished = { previewPlayer.play(scope) },
+            )
+        }
     }
 }
 
