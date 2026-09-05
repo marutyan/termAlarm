@@ -88,7 +88,9 @@ class AlarmListScreenTest {
         val id = runBlocking { repository.add(defaultTestSchedule()) }
         composeTestRule.setContent { ListEditHost(repository) }
 
-        composeTestRule.onNodeWithText("5分ごと · 25回").performClick()
+        // カードは中身をまとめて1つの節点にするため、文字で探すとカードそのものが返る。
+        // その中心は曜日の行に重なることがあるので、時刻の文字を直接押す
+        composeTestRule.onNodeWithText("5分ごと · 25回", useUnmergedTree = true).performClick()
         composeTestRule.waitUntilAtLeastOneExists(hasText(context().getString(R.string.edit_title_existing)), 5_000)
 
         // TimeCardはラベルと値をマージした1ノードになる(「開始」「7:00」がまとめて1つのText)

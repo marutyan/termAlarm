@@ -85,19 +85,25 @@ import kotlinx.coroutines.delay
 
 /**
  * タイマーカードに描く進捗リングの線の太さ。
- * 純正アプリの実測値（docs/OFFICIAL_UI.md）に合わせて11dpとする。
+ * 純正アプリの実測値（docs/OFFICIAL_UI.md）に合わせて13dpとする。
  */
-private val RING_STROKE_WIDTH = 11.dp
+private val RING_STROKE_WIDTH = 13.dp
 
-/**
- * 輪の下に横並びで配置する操作ボタンの高さ（88dp）。
- * 純正アプリの実測値（docs/OFFICIAL_UI.md）に合わせて指定する。
- */
-// 丸いアイコンのボタン(閉じる・リセット)の大きさ。純正を実機で測ると39dp
-private val ICON_BUTTON_SIZE = 39.dp
+// 輪の真上に置く始まりの点。純正を実機で測ると5dp
+private val RING_START_DOT_SIZE = 5.dp
 
-// 輪の下に並べるボタンの高さ。純正を実機で測ると101dpだった
-private val ACTION_BUTTON_HEIGHT = 101.dp
+// 輪の直径が、カードの内側の幅に対して占める割合。純正は内側413dpに対して外径391dpだった
+private const val RING_WIDTH_RATIO = 0.947f
+
+// カード右上の×ボタンの大きさ。丸い地の部分を含めて純正を実機で測ると56dp
+private val CLOSE_BUTTON_SIZE = 56.dp
+
+// 輪の中のリセット。純正は丸い地を持たず、絵柄そのものが30dp。押す場所は指が届く48dpにする
+private val RESET_ICON_SIZE = 30.dp
+private val RESET_TOUCH_SIZE = 48.dp
+
+// 輪の下に並べるボタンの高さ。純正を実機で測ると124dpだった
+private val ACTION_BUTTON_HEIGHT = 124.dp
 
 /**
  * 輪の下に横並びで配置する操作ボタンの角丸（40dp）。
@@ -106,18 +112,18 @@ private val ACTION_BUTTON_HEIGHT = 101.dp
 private val ACTION_BUTTON_CORNER_SHAPE = RoundedCornerShape(40.dp)
 
 /**
- * 輪の下に横並びで配置する操作ボタン同士の間隔（18dp）。
- * 純正アプリの実測値（docs/OFFICIAL_UI.md）に合わせて指定する。
+ * 輪の下に横並びで配置する操作ボタン同士の間隔。
+ * 純正アプリの実測値（docs/OFFICIAL_UI.md）に合わせて8dpとする。
  */
-private val ACTION_BUTTON_GAP = 18.dp
+private val ACTION_BUTTON_GAP = 8.dp
 
 /**
- * 純正のタイマーは輪の直径311dp、中の数字の高さ40dpだった。
+ * 純正のタイマーは輪の直径379dp、中の数字の高さ49dpだった。
  * 画面の幅は端末によって違うので、輪は使える幅いっぱいまで広げ、
  * 数字は純正と同じ見え方になるよう、その比のまま拡げ縮めする。
  */
-private const val OFFICIAL_RING_DIAMETER_DP = 311f
-private const val OFFICIAL_CLOCK_FONT_SIZE_SP = 79f
+private const val OFFICIAL_RING_DIAMETER_DP = 379f
+private const val OFFICIAL_CLOCK_FONT_SIZE_SP = 77f
 
 /**
  * タイマー1件のカードと、その中で使う部品。
@@ -183,8 +189,8 @@ fun TimerCard(
                 IconButton(
                     onClick = onDelete,
                     colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-                    // 純正を実機で測ると39dp。既定のままでは19dpしかなく、押す場所として小さい
-                    modifier = Modifier.size(ICON_BUTTON_SIZE),
+                    // 純正を実機で測ると56dp。既定のままでは19dpしかなく、押す場所として小さい
+                    modifier = Modifier.size(CLOSE_BUTTON_SIZE),
                 ) {
                     Icon(
                         Icons.Filled.Close,
@@ -194,14 +200,15 @@ fun TimerCard(
                 }
             }
 
-            // 輪はカードの内側の幅いっぱいに広げる（決め打ちにせず利用可能なmaxWidthから決定）
+            // 輪の大きさは決め打ちにせず、カードの内側の幅から決める（端末で幅が違うため）。
+            // 純正は内側いっぱいには広げず、左右に少し残している（RING_WIDTH_RATIO）
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp, bottom = if (isFinished) 0.dp else 24.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                val ringDiameter = maxWidth
+                val ringDiameter = maxWidth * RING_WIDTH_RATIO
                 Box(modifier = Modifier.size(ringDiameter), contentAlignment = Alignment.Center) {
                     TimerRing(
                         diameter = ringDiameter,
@@ -238,15 +245,16 @@ fun TimerCard(
                             IconButton(
                                 onClick = onReset,
                                 interactionSource = resetInteractionSource,
-                                // 純正と同じ39dp。既定のままでは19dpしかない
                                 modifier = Modifier
-                                    .size(ICON_BUTTON_SIZE)
+                                    .size(RESET_TOUCH_SIZE)
                                     .pressScaleEffect(resetInteractionSource),
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_reset),
                                     contentDescription = stringResource(R.string.timer_reset),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    // 純正の絵柄は30dp。既定の24dpだと小さい
+                                    modifier = Modifier.size(RESET_ICON_SIZE),
                                 )
                             }
                         }
@@ -285,12 +293,13 @@ fun TimerCard(
 @Composable
 fun TimerRing(diameter: Dp, progress: Float, trackColor: Color, progressColor: Color) {
     val strokeWidthPx = with(LocalDensity.current) { RING_STROKE_WIDTH.toPx() }
+    val startDotRadiusPx = with(LocalDensity.current) { RING_START_DOT_SIZE.toPx() } / 2f
     Canvas(modifier = Modifier.size(diameter)) {
         val stroke = Stroke(width = strokeWidthPx, cap = StrokeCap.Round)
-        val headRadius = strokeWidthPx
-        // 先端の丸(直径22dp相当)がCanvas境界からはみ出さないよう、headRadius分だけ内側に収める
-        val arcRadius = (size.width - 2 * headRadius) / 2f
-        val topLeft = Offset(headRadius, headRadius)
+        // 線が丸く終わる分だけ内側へ収めないと、Canvasの縁で切れる
+        val inset = strokeWidthPx / 2f
+        val arcRadius = (size.width - 2 * inset) / 2f
+        val topLeft = Offset(inset, inset)
         val arcSize = Size(arcRadius * 2f, arcRadius * 2f)
 
         drawArc(
@@ -303,30 +312,23 @@ fun TimerRing(diameter: Dp, progress: Float, trackColor: Color, progressColor: C
             style = stroke,
         )
         if (progress > 0f) {
-            val sweepAngle = 360f * progress
             drawArc(
                 color = progressColor,
                 startAngle = -90f,
-                sweepAngle = sweepAngle,
+                sweepAngle = 360f * progress,
                 useCenter = false,
                 topLeft = topLeft,
                 size = arcSize,
                 style = stroke,
             )
-
-            val centerOffset = Offset(size.width / 2f, size.height / 2f)
-            val angleDegrees = -90f + sweepAngle
-            val angleRadians = Math.toRadians(angleDegrees.toDouble())
-            val headCenter = Offset(
-                x = centerOffset.x + (arcRadius * Math.cos(angleRadians)).toFloat(),
-                y = centerOffset.y + (arcRadius * Math.sin(angleRadians)).toFloat(),
-            )
-            drawCircle(
-                color = progressColor,
-                radius = headRadius,
-                center = headCenter,
-            )
         }
+
+        // 純正は輪の真上に小さな点を置き、どこが始まりかを示す。線の先端には何も付けない
+        drawCircle(
+            color = progressColor,
+            radius = startDotRadiusPx,
+            center = Offset(size.width / 2f, inset),
+        )
     }
 }
 

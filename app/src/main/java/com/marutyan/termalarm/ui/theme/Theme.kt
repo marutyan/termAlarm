@@ -11,6 +11,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 
@@ -70,14 +71,23 @@ fun TermAlarmTheme(
 @Composable
 private fun ColorScheme.withSystemErrorColors(darkTheme: Boolean): ColorScheme {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return this
-    return copy(
-        error = colorResource(if (darkTheme) android.R.color.system_error_dark else android.R.color.system_error_light),
-        onError = colorResource(if (darkTheme) android.R.color.system_on_error_dark else android.R.color.system_on_error_light),
-        errorContainer = colorResource(
-            if (darkTheme) android.R.color.system_error_container_dark else android.R.color.system_error_container_light,
-        ),
-        onErrorContainer = colorResource(
-            if (darkTheme) android.R.color.system_on_error_container_dark else android.R.color.system_on_error_container_light,
-        ),
+    // 描き直すたびに新しい配色を作ると、配色を見ている画面すべてが毎回作り直しになる。
+    // 元の配色と明暗が変わったときだけ作り直す
+    val errorColor = colorResource(if (darkTheme) android.R.color.system_error_dark else android.R.color.system_error_light)
+    val onErrorColor = colorResource(if (darkTheme) android.R.color.system_on_error_dark else android.R.color.system_on_error_light)
+    val errorContainerColor = colorResource(
+        if (darkTheme) android.R.color.system_error_container_dark else android.R.color.system_error_container_light,
     )
+    val onErrorContainerColor = colorResource(
+        if (darkTheme) android.R.color.system_on_error_container_dark else android.R.color.system_on_error_container_light,
+    )
+    val base = this
+    return remember(base, errorColor, onErrorColor, errorContainerColor, onErrorContainerColor) {
+        base.copy(
+            error = errorColor,
+            onError = onErrorColor,
+            errorContainer = errorContainerColor,
+            onErrorContainer = onErrorContainerColor,
+        )
+    }
 }
