@@ -67,7 +67,9 @@ object TimerNotifications {
                 .putExtra(EXTRA_DEEPLINK_TAB, TermAlarmTab.TIMER.name),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val builder = Notification.Builder(context, ensureChannel(context))
+        // 鳴っている間は重要度の高いチャンネルへ移して、画面の上へ降りてくるようにする
+        val isFiring = main.runState == TimerRunState.FINISHED
+        val builder = Notification.Builder(context, ensureChannel(context, isFiring))
             .setSmallIcon(R.drawable.ic_stat_timer)
             .setOngoing(true)
             // 種類はタイマーにする。新しいAndroidは、この種類の進行中の通知だけを
@@ -215,23 +217,38 @@ object TimerNotifications {
         )
 
     /**
-     * 通知チャンネルを用意する。
-     * 重要度がLOWだと「サイレント」欄へ入ってしまうためDEFAULTにする。ただし音は鳴らさない。
+     * 通知チャンネルを用意する。動作中と鳴動中で分ける。
+     *
+     * 動作中は重要度DEFAULT。LOWだと「サイレント」欄へ入ってしまう。
+     * 鳴動中は重要度HIGHにして、画面の上へ降りてくる形（ヘッドアップ通知）にする。
+     * 純正の時計アプリも同じように2つへ分けている。
+     *
+     * どちらも音は鳴らさない。音はMediaPlayerがアラーム用途で鳴らすため、
+     * チャンネル側でも鳴らすと二重になる。
+     *
      * 一度作ったチャンネルは重要度を上げられないため、古いものは消して新しいIDで作り直す。
      */
-    private fun ensureChannel(context: Context): String {
+    private fun ensureChannel(context: Context, isFiring: Boolean): String {
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.deleteNotificationChannel(LEGACY_TIMER_NOTIFICATION_CHANNEL_ID)
-        if (manager.getNotificationChannel(TIMER_NOTIFICATION_CHANNEL_ID) == null) {
+        val id = if (isFiring) TIMER_FIRING_NOTIFICATION_CHANNEL_ID else TIMER_NOTIFICATION_CHANNEL_ID
+        if (manager.getNotificationChannel(id) == null) {
+            val nameRes = if (isFiring) {
+                R.string.timer_firing_notification_channel_name
+            } else {
+                R.string.timer_notification_channel_name
+            }
+            val importance = if (isFiring) {
+                NotificationManager.IMPORTANCE_HIGH
+            } else {
+                NotificationManager.IMPORTANCE_DEFAULT
+            }
             manager.createNotificationChannel(
-                NotificationChannel(
-                    TIMER_NOTIFICATION_CHANNEL_ID,
-                    context.getString(R.string.timer_notification_channel_name),
-                    NotificationManager.IMPORTANCE_DEFAULT,
-                ).apply { setSound(null, null) },
+                NotificationChannel(id, context.getString(nameRes), importance)
+                    .apply { setSound(null, null) },
             )
         }
-        return TIMER_NOTIFICATION_CHANNEL_ID
+        return id
     }
 
     const val ACTION_STOP = "com.marutyan.termalarm.timer.STOP"

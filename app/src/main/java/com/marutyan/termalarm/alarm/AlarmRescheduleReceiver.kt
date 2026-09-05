@@ -14,6 +14,17 @@ import kotlinx.coroutines.launch
  */
 class AlarmRescheduleReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // 外部アプリから偽のIntentが送られた場合に意図しない再予約処理が走るのを防ぐため、
+        // AndroidManifest.xmlのintent-filterで定義された想定通りのactionであるか検証する。
+        when (intent.action) {
+            Intent.ACTION_BOOT_COMPLETED,
+            Intent.ACTION_TIMEZONE_CHANGED,
+            Intent.ACTION_TIME_CHANGED,
+            Intent.ACTION_LOCALE_CHANGED,
+            Intent.ACTION_MY_PACKAGE_REPLACED -> Unit
+            else -> return
+        }
+
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.Default).launch {
             try {

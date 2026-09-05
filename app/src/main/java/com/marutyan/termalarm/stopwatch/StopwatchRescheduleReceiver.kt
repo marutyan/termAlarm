@@ -21,6 +21,12 @@ import kotlinx.coroutines.launch
  */
 class StopwatchRescheduleReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // 外部アプリから偽のIntentが送られた場合に意図しない復元処理が走るのを防ぐため、
+        // AndroidManifest.xmlのintent-filterで定義された想定通りのaction (BOOT_COMPLETED) であるか検証する。
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED) {
+            return
+        }
+
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.Default).launch {
             try {

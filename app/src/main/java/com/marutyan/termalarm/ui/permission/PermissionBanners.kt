@@ -1,10 +1,10 @@
 package com.marutyan.termalarm.ui.permission
 
 import android.content.Intent
-import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.net.toUri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -102,7 +102,7 @@ fun ExactAlarmPermissionBanner() {
 }
 
 private fun appSettingsIntent(packageName: String): Intent =
-    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
+    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:$packageName".toUri())
 
 @Composable
 private fun PermissionBanner(message: String, actionLabel: String, onAction: () -> Unit) {
