@@ -11,6 +11,7 @@ import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.ClockSettingsRepository
+import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.data.StopwatchRepository
 import com.marutyan.termalarm.data.TimerRepository
 import com.marutyan.termalarm.ui.alarmlist.AlarmListScreen
@@ -46,6 +47,7 @@ class OverflowMenuTest {
     private lateinit var clockRepository: ClockSettingsRepository
     private lateinit var timerRepository: TimerRepository
     private lateinit var stopwatchRepository: StopwatchRepository
+    private lateinit var settingsRepository: SettingsRepository
 
     /**
      * テストごとに独立したインメモリDBと各タブ用のRepository群を初期化する。
@@ -59,6 +61,7 @@ class OverflowMenuTest {
         clockRepository = ClockSettingsRepository(db.clockSettingsDao())
         timerRepository = TimerRepository(db.timerDao())
         stopwatchRepository = StopwatchRepository(db.stopwatchDao())
+        settingsRepository = SettingsRepository(db.appSettingsDao())
     }
 
     /**
@@ -148,7 +151,7 @@ class OverflowMenuTest {
     fun 時計タブでメニューを開くと3項目が表示される() {
         composeTestRule.setContent {
             ClockScreen(
-                viewModel = remember { ClockViewModel(clockRepository) },
+                viewModel = remember { ClockViewModel(clockRepository, settingsRepository) },
                 bottomBar = {},
             )
         }
@@ -164,7 +167,7 @@ class OverflowMenuTest {
 
         composeTestRule.setContent {
             ClockScreen(
-                viewModel = remember { ClockViewModel(clockRepository) },
+                viewModel = remember { ClockViewModel(clockRepository, settingsRepository) },
                 onOpenSettings = { openedSettings = true },
                 onOpenPrivacyPolicy = { openedPrivacy = true },
                 onOpenAbout = { openedAbout = true },

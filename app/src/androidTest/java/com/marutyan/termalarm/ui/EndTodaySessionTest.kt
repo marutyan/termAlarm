@@ -183,7 +183,9 @@ class EndTodaySessionTest {
             // 最初のタップを2番目の数字にして順序を崩す。SequentialTapGameはこの場合onSubmitを呼ばず最初からやり直しになる
             is GameQuestion.SequentialTap -> composeTestRule.onNodeWithText("2").performClick()
             is GameQuestion.ColorWord -> {
-                val wrongChoice = question.choices.first { it != question.correctAnswer }
+                // 出題されている語そのものは画面に2つ(問題の文字と選択肢)出るため、目印として使えない。
+                // 色は6つあるので、正解でも出題語でもないものが必ず残る
+                val wrongChoice = question.choices.first { it != question.correctAnswer && it != question.word }
                 composeTestRule.onNodeWithText(wrongChoice).performClick()
             }
             is GameQuestion.ShakeDevice -> error("hasShakeSensor=falseのためSHAKE_DEVICEは出題されないはず")

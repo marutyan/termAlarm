@@ -69,8 +69,8 @@ class AlarmListScreenTest {
         // 保存はRoomへのsuspend書き込みを挟むため、一覧へ戻り行の要約が出るまで待つ
         val summary = "5分ごと · 25回"
         composeTestRule.waitUntilAtLeastOneExists(hasText(summary), 5_000)
-        composeTestRule.onNodeWithText("7:00").assertExists()
-        composeTestRule.onNodeWithText("9:00").assertExists()
+        // 開始と終了は1つの文にまとめて出す(折り返し位置を揃えるため)
+        composeTestRule.onNodeWithText("7:00\u20139:00").assertExists()
 
         val saved = runBlocking { repository.observeAll().first() }
         org.junit.Assert.assertEquals(1, saved.size)

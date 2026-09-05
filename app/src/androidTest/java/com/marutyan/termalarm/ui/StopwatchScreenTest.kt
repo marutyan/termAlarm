@@ -68,13 +68,15 @@ class StopwatchScreenTest {
         }
     }
 
-    // 何も操作していない(IDLE)とき、経過時間は0:00.00のまま、開始ボタンとラップ空表示が出ていることを保証する
+    // 何も操作していない(IDLE)とき、経過時間は00:00.00のまま、操作は「開始」だけであることを保証する。
+    // 純正と同じで、押せないリセットやラップを並べない
     @Test
     fun 何もしていないときの表示() {
         setScreen()
         composeTestRule.onNodeWithText(formatElapsed(0L, includeCentiseconds = true)).assertExists()
         composeTestRule.onNodeWithText(string(R.string.stopwatch_start)).assertExists()
-        composeTestRule.onNodeWithText(string(R.string.stopwatch_laps_empty)).assertExists()
+        composeTestRule.onNodeWithText(string(R.string.stopwatch_reset)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(string(R.string.stopwatch_lap)).assertDoesNotExist()
         composeTestRule.onNodeWithText(string(R.string.stopwatch_pause)).assertDoesNotExist()
     }
 
@@ -157,7 +159,6 @@ class StopwatchScreenTest {
 
         val laps = runBlocking { repository.getLapsOnce() }
         assertEquals(2, laps.size)
-        composeTestRule.onNodeWithText(string(R.string.stopwatch_laps_empty)).assertDoesNotExist()
         laps.forEach { lap: StopwatchLap ->
             val numberText = composeTestRule.activity.getString(R.string.stopwatch_lap_number, lap.lapNumber)
             val totalText = composeTestRule.activity.getString(
@@ -193,7 +194,6 @@ class StopwatchScreenTest {
             composeTestRule.onAllNodesWithText(formatElapsed(12_345L, includeCentiseconds = true))
                 .fetchSemanticsNodes().size == 2,
         )
-        composeTestRule.onNodeWithText(string(R.string.stopwatch_laps_empty)).assertDoesNotExist()
 
         composeTestRule.onNodeWithText(string(R.string.stopwatch_reset)).performClick()
 
@@ -206,7 +206,6 @@ class StopwatchScreenTest {
         val lapsAfterReset = runBlocking { repository.getLapsOnce() }
         assertTrue(lapsAfterReset.isEmpty())
         composeTestRule.onNodeWithText(formatElapsed(0L, includeCentiseconds = true)).assertExists()
-        composeTestRule.onNodeWithText(string(R.string.stopwatch_laps_empty)).assertExists()
         composeTestRule.onNodeWithText(string(R.string.stopwatch_start)).assertExists()
     }
 }

@@ -11,6 +11,7 @@ import androidx.compose.ui.test.performClick
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.ClockSettingsRepository
+import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.ClockDisplayMode
 import com.marutyan.termalarm.ui.clock.ClockScreen
 import com.marutyan.termalarm.ui.clock.ClockViewModel
@@ -40,6 +41,7 @@ class ClockScreenTest {
 
     private lateinit var db: AlarmDatabase
     private lateinit var repository: ClockSettingsRepository
+    private lateinit var settingsRepository: SettingsRepository
 
     /**
      * テストごとに独立したインメモリDBとClockSettingsRepositoryを初期化する。
@@ -50,6 +52,7 @@ class ClockScreenTest {
         val (database, repo) = createTestClockRepository()
         db = database
         repository = repo
+        settingsRepository = SettingsRepository(db.appSettingsDao())
     }
 
     /**
@@ -74,7 +77,7 @@ class ClockScreenTest {
     private fun setScreen() {
         composeTestRule.setContent {
             ClockScreen(
-                viewModel = remember { ClockViewModel(repository) },
+                viewModel = remember { ClockViewModel(repository, settingsRepository) },
                 bottomBar = {},
             )
         }

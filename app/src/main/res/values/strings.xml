@@ -164,7 +164,6 @@
     <string name="stopwatch_resume">再開</string>
     <string name="stopwatch_reset">リセット</string>
     <string name="stopwatch_lap">ラップ</string>
-    <string name="stopwatch_laps_empty">ラップを刻むとここに表示されます</string>
     <!-- ラップ一覧の行: ラップ番号とその時点の合計 -->
     <string name="stopwatch_lap_number">ラップ %1$d</string>
     <string name="stopwatch_lap_total">合計 %1$s</string>

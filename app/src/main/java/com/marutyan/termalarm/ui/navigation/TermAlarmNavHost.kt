@@ -125,7 +125,11 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             val clockRepository = remember {
                 ClockSettingsRepository(AlarmDatabase.getInstance(context).clockSettingsDao())
             }
-            val viewModel: ClockViewModel = viewModel(factory = ClockViewModelFactory(clockRepository))
+            val clockSettingsRepository = remember {
+                SettingsRepository(AlarmDatabase.getInstance(context).appSettingsDao())
+            }
+            val viewModel: ClockViewModel =
+                viewModel(factory = ClockViewModelFactory(clockRepository, clockSettingsRepository))
             ClockScreen(
                 viewModel = viewModel,
                 onOpenSettings = { navController.navigate(ROUTE_SETTINGS) },

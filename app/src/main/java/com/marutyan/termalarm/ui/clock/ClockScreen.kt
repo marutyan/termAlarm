@@ -59,11 +59,9 @@ fun ClockScreen(
     // アナログの秒針・デジタルの秒表示のどちらも1秒ごとに動かす(要件「1秒ごとの更新」)
     val now = rememberCurrentSecond()
 
-    // 設定「時刻に秒を表示」。ClockViewModelはClockSettingsRepositoryしか持たないため、
-    // NavHostを変更せずに済むよう、ここでcontextから直接AppSettingsを読む
-    val context = LocalContext.current
-    val settingsRepository = remember { SettingsRepository(AlarmDatabase.getInstance(context).appSettingsDao()) }
-    val appSettings by settingsRepository.observe().collectAsStateWithLifecycle(initialValue = AppSettings())
+    // 設定「時刻に秒を表示」。画面が自分でDBを開くと、テストが差し替えた先と食い違って
+    // 実行のたびに結果が変わるため、ViewModelから受け取る
+    val appSettings by viewModel.appSettings.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
