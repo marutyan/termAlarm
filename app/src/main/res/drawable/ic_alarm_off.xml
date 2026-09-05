@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 音量0のときに出すアラームのアイコン。ic_alarm_tabと同じ文字盤に、消音を表す斜線を重ねる
+     (純正も音量0のときだけ絵柄を切り替える。docs/OFFICIAL_SETTINGS.md「アラームの音量」) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M 4.5,13 a 7.5,7.5 0 1,0 15,0 a 7.5,7.5 0 1,0 -15,0" />
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M4,3 L20,21" />
+</vector>

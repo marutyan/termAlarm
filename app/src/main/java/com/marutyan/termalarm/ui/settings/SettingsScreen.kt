@@ -1,11 +1,14 @@
 package com.marutyan.termalarm.ui.settings
 
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.database.ContentObserver
 import android.media.AudioManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
@@ -14,6 +17,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -70,6 +75,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import java.util.concurrent.atomic.AtomicBoolean
 
 // 消音までの時間・スヌーズの長さで選べる分数の候補(AlarmEditScreenのスヌーズ入力(1〜60分)より粗い、
 // 設定画面としてよく使う値だけに絞ったプリセット)
@@ -355,30 +361,45 @@ private fun SettingsToggleRow(label: String, checked: Boolean, onCheckedChange: 
     }
 }
 
-// アラームの音量スライダー。アプリ側に値を持たず、端末のSTREAM_ALARMを直接読み書きする
-// (docs/OFFICIAL_SETTINGS.md「アラームの音量」)。
-//
-// 端末の音量が別の場所(設定アプリや、鳴っている最中の音量ボタン)で変わることがあるため、
-// 音量の保存先であるSettings.Systemを見張り、変わったらこのスライダーも動かす。
-//
-// 純正と同じく、指を離した時点でその音量の試聴音を鳴らす。数字だけでは大きさが分からないため
-// (docs/OFFICIAL_SETTINGS.md「追記: 音量スライダーの挙動」)。動かすたびに鳴らすと騒がしいので
-// onValueChangeFinished(ドラッグ終了時)だけで鳴らし、画面を離れたら止める。
+/**
+ * アラームの音量スライダー。純正の`AlarmVolumePreference`を逆コンパイルして分かった仕様に合わせている。
+ *
+ * - 値はアプリ側に持たず、端末のSTREAM_ALARMを直接読み書きする
+ * - 下限は0ではなく端末が返す最小値。端末によってはアラームを完全に無音にできない
+ * - 端末の音量が別の場所で変わることがあるため、保存先のSettings.Systemを見張って合わせる
+ * - 自分で書き換えた分は見張りが1回読み飛ばす。指で動かしている最中も合わせに行かない
+ * - サイレントモードでアラームが鳴らせない状態のときは操作できなくする
+ * - 指を離した時点でその音量の試聴音を鳴らす。数字だけでは大きさが分からないため。
+ *   連打で鳴り続けないよう、鳴らした後2秒は次を鳴らさない
+ */
 @Composable
 private fun AlarmVolumeRow(isCompact: Boolean = false) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+    val minVolume = remember { alarmMinVolume(audioManager).toFloat() }
     val maxVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM).toFloat() }
-    var volume by remember { mutableFloatStateOf(audioManager.getStreamVolume(AudioManager.STREAM_ALARM).toFloat()) }
+    var volume by remember {
+        mutableFloatStateOf(audioManager.getStreamVolume(AudioManager.STREAM_ALARM).toFloat().coerceIn(minVolume, maxVolume))
+    }
+    var isEnabled by remember { mutableStateOf(alarmVolumeAdjustable(context)) }
     val previewPlayer = remember { AlarmVolumePreviewPlayer(context) }
     DisposableEffect(Unit) { onDispose { previewPlayer.stop() } }
 
-    // 端末側で音量が変わったら、このスライダーも合わせる
+    // 指で動かしている最中は、端末側の値で上書きしない。触っている場所が飛んでしまうため
+    val interactionSource = remember { MutableInteractionSource() }
+    val isDragged by interactionSource.collectIsDraggedAsState()
+    // 自分でsetStreamVolumeした分の通知を1回だけ読み飛ばすための目印
+    val skipNextChange = remember { AtomicBoolean(false) }
+
+    // 端末側で音量が変わったら、このスライダーも合わせる（純正と同じくSettings.Systemを見張る）
     DisposableEffect(context) {
         val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) {
-                volume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM).toFloat()
+                if (skipNextChange.getAndSet(false)) return
+                if (isDragged) return
+                volume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM).toFloat().coerceIn(minVolume, maxVolume)
+                isEnabled = alarmVolumeAdjustable(context)
             }
         }
         context.contentResolver.registerContentObserver(AndroidSettings.System.CONTENT_URI, true, observer)
@@ -391,9 +412,11 @@ private fun AlarmVolumeRow(isCompact: Boolean = false) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // 純正はスライダーの左にアラームのアイコンを置き、何の音量かを一目で分かるようにしている
+        // 純正はスライダーの左にアラームのアイコンを置き、消音のときは絵柄を切り替える
         Icon(
-            painter = painterResource(R.drawable.ic_alarm_tab),
+            painter = painterResource(
+                if (volume <= 0f) R.drawable.ic_alarm_off else R.drawable.ic_alarm_tab,
+            ),
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(24.dp),
@@ -406,17 +429,46 @@ private fun AlarmVolumeRow(isCompact: Boolean = false) {
             )
             Slider(
                 value = volume,
-                valueRange = 0f..maxVolume,
+                valueRange = minVolume..maxVolume,
+                enabled = isEnabled,
+                interactionSource = interactionSource,
                 // stepsを指定すると目盛りの点が描かれる。純正の音量スライダーに点は無いので指定せず、
                 // 代わりに値を整数へ丸めることで、見た目を保ったまま段階どおりに止まるようにする
                 onValueChange = { newValue ->
                     val stepped = newValue.roundToInt()
-                    volume = stepped.toFloat()
-                    audioManager.setStreamVolume(AudioManager.STREAM_ALARM, stepped, 0)
+                    if (stepped.toFloat() != volume) {
+                        volume = stepped.toFloat()
+                        skipNextChange.set(true)
+                        audioManager.setStreamVolume(AudioManager.STREAM_ALARM, stepped, 0)
+                    }
                 },
-                onValueChangeFinished = { previewPlayer.play(scope) },
+                onValueChangeFinished = { if (volume > 0f) previewPlayer.play(scope) },
             )
         }
+    }
+}
+
+// 端末が許すアラーム音量の下限。API28より前はこの値を聞けないため0とする
+private fun alarmMinVolume(audioManager: AudioManager): Int =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        audioManager.getStreamMinVolume(AudioManager.STREAM_ALARM)
+    } else {
+        0
+    }
+
+/**
+ * いま音量を変えられる状態か。サイレントモードでアラームまで止められているときは、
+ * 動かしても意味がないので操作できなくする（純正も同じ判定でスライダーを無効にする）。
+ * 通知ポリシーを読む権限が無い端末では、判断できないので操作できる扱いにする。
+ */
+private fun alarmVolumeAdjustable(context: Context): Boolean {
+    val manager = context.getSystemService(NotificationManager::class.java) ?: return true
+    return when (manager.currentInterruptionFilter) {
+        NotificationManager.INTERRUPTION_FILTER_NONE -> false
+        NotificationManager.INTERRUPTION_FILTER_PRIORITY -> runCatching {
+            manager.notificationPolicy.priorityCategories and NotificationManager.Policy.PRIORITY_CATEGORY_ALARMS != 0
+        }.getOrDefault(true)
+        else -> true
     }
 }
 
@@ -426,7 +478,12 @@ private class AlarmVolumePreviewPlayer(private val context: Context) {
     private var player: MediaPlayer? = null
     private var stopJob: Job? = null
 
+    // 直前に鳴らし始めた時刻。連打で鳴り続けるのを防ぐために覚えておく
+    private var lastPlayedAt = 0L
+
     fun play(scope: CoroutineScope) {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastPlayedAt < PREVIEW_COOLDOWN_MILLIS) return
         stop()
         val uri = RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_ALARM) ?: return
         val newPlayer = MediaPlayer()
@@ -436,6 +493,7 @@ private class AlarmVolumePreviewPlayer(private val context: Context) {
             newPlayer.prepare()
             newPlayer.start()
         }.onSuccess {
+            lastPlayedAt = now
             player = newPlayer
             stopJob = scope.launch {
                 delay(PREVIEW_DURATION_MILLIS)
@@ -454,6 +512,9 @@ private class AlarmVolumePreviewPlayer(private val context: Context) {
     companion object {
         // 大きさが分かれば十分な長さ。純正のスライダーも一瞬だけ鳴る
         private const val PREVIEW_DURATION_MILLIS = 1200L
+
+        // 鳴らした後、次を鳴らさない時間。純正も2秒空けている
+        private const val PREVIEW_COOLDOWN_MILLIS = 2000L
     }
 }
 
