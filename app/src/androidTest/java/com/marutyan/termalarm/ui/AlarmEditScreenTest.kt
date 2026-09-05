@@ -89,22 +89,43 @@ class AlarmEditScreenTest {
         composeTestRule.onNodeWithText("7:00 に 1回 鳴ります").assertExists()
     }
 
-    // 不正な間隔(0)を入力すると保存できず、理由が表示されることを保証する
+    // 「その他」を選んでも1分未満や120分超の不正な値は選べず、1〜120分の安全な範囲でのみ保存されることを保証する
     @Test
-    fun 不正な間隔は保存できず理由が表示される() {
+    fun 不正な間隔は選べず保存されない() {
+        lateinit var viewModel: AlarmEditViewModel
         composeTestRule.setContent {
-            AlarmEditScreen(viewModel = AlarmEditViewModel(repository, testAppContext(), null), onClose = {})
+            viewModel = AlarmEditViewModel(repository, testAppContext(), null)
+            AlarmEditScreen(viewModel = viewModel, onClose = {})
         }
         composeTestRule.onNodeWithText(string(R.string.interval_custom_label)).performClick() // 「その他」
-        composeTestRule.onNode(hasSetTextAction()).performTextReplacement("0")
 
-        composeTestRule.onNodeWithText(string(R.string.error_interval_not_positive)).assertExists()
+        // 自由入力欄(OutlinedTextField)は存在せず、手入力で0や負数を入力できない
+        composeTestRule.onNode(hasSetTextAction()).assertDoesNotExist()
 
+        // 大きな数字で初期値(5)と単位「分」が表示される
+        composeTestRule.onNodeWithText("5").assertExists()
+        composeTestRule.onNodeWithText(string(R.string.unit_minutes)).assertExists()
+
+        // 範囲外の値(0分)を指定しようとしても最小値1分に丸められ、0分にはならない
+        composeTestRule.runOnIdle {
+            viewModel.setCustomInterval(0)
+        }
+        composeTestRule.onNodeWithText("1").assertExists()
+
+        // 範囲外の値(150分)を指定しようとしても最大値120分に丸められ、120分超にはならない
+        composeTestRule.runOnIdle {
+            viewModel.setCustomInterval(150)
+        }
+        composeTestRule.onNodeWithText("120").assertExists()
+
+        // 保存すると120分として保存され、不正な間隔では保存されない
         composeTestRule.onNodeWithText(string(R.string.save)).performClick()
-        // 保存が拒否され編集画面のままであることを、新規作成タイトルがまだ表示されていることで確認する
-        composeTestRule.onNodeWithText(string(R.string.edit_title_new)).assertExists()
+        composeTestRule.waitUntil(5_000) { viewModel.uiState.isSaved }
+
         val count = runBlocking { repository.observeAll().first().size }
-        assertEquals(0, count)
+        assertEquals(1, count)
+        val savedSchedule = runBlocking { repository.observeAll().first().first() }
+        assertEquals(120, savedSchedule.intervalMinutes)
     }
 
     // 「止めにくさ」の既定値(skipRequiresApp=オン/skipGame=オフ/snooze=オフ)を保証する

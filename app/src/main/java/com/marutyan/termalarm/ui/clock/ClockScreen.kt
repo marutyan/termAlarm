@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
@@ -100,7 +101,7 @@ fun ClockScreen(
 @Composable
 private fun MainClock(mode: ClockDisplayMode, time: ZonedDateTime, showSeconds: Boolean) {
     when (mode) {
-        ClockDisplayMode.ANALOG -> AnalogClockFace(time = time, showSeconds = showSeconds, modifier = Modifier.size(280.dp))
+        ClockDisplayMode.ANALOG -> AnalogClockFace(time = time, showSeconds = showSeconds, modifier = Modifier.size(320.dp))
         ClockDisplayMode.DIGITAL -> DigitalClockFace(time = time, showSeconds = showSeconds)
     }
 }
@@ -123,6 +124,9 @@ private fun DigitalClockFace(time: ZonedDateTime, showSeconds: Boolean) {
     }
 }
 
+// 「アナログ」「デジタル」が折り返さずに収まる幅
+private val SEGMENT_WIDTH = 132.dp
+
 // 表示モード(アナログ/デジタル)を選ぶ2択のセグメントボタン
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -132,15 +136,18 @@ private fun DisplayModeToggle(mode: ClockDisplayMode, onModeChange: (ClockDispla
             selected = mode == ClockDisplayMode.ANALOG,
             onClick = { onModeChange(ClockDisplayMode.ANALOG) },
             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+            modifier = Modifier.width(SEGMENT_WIDTH),
         ) {
-            Text(stringResource(R.string.clock_display_mode_analog))
+            // 幅が足りないと「アナ/ログ」のように途中で折り返してしまう
+            Text(stringResource(R.string.clock_display_mode_analog), maxLines = 1, softWrap = false)
         }
         SegmentedButton(
             selected = mode == ClockDisplayMode.DIGITAL,
             onClick = { onModeChange(ClockDisplayMode.DIGITAL) },
             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+            modifier = Modifier.width(SEGMENT_WIDTH),
         ) {
-            Text(stringResource(R.string.clock_display_mode_digital))
+            Text(stringResource(R.string.clock_display_mode_digital), maxLines = 1, softWrap = false)
         }
     }
 }

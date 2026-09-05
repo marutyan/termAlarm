@@ -10,9 +10,9 @@
     <!-- 鳴動画面: スヌーズボタン(snoozeMinutesが設定されているときだけ表示) -->
     <string name="ringing_snooze">スヌーズ</string>
     <!-- 鳴動画面: 今日はもう止めるボタン(skipRequiresAppがfalseのときだけ表示) -->
-    <string name="ringing_skip_today">今日はもう止める</string>
+    <string name="ringing_skip_today">このタームを終了</string>
     <!-- 鳴動画面: skipRequiresAppがtrue(既定)のとき、当日終了の導線の代わりに出す1行の案内文 -->
-    <string name="ringing_skip_requires_app_notice">今日はもう止めるにはアプリを開いてください</string>
+    <string name="ringing_skip_requires_app_notice">このタームを終了するにはアプリを開いてください</string>
     <!-- 鳴動画面: 残り鳴動回数の表示。現在鳴っている回は含めない(docs/SPEC.md「追記」参照) -->
     <string name="ringing_remaining_count">この時間帯であと %1$d 回鳴ります</string>
     <!-- 鳴動画面: 次回の鳴動時刻の表示 -->
@@ -53,6 +53,7 @@
     <string name="interval_minutes_label">%1$d分</string>
     <string name="interval_custom_label">その他</string>
     <string name="interval_custom_input_label">間隔(分)</string>
+    <string name="unit_minutes">分</string>
     <string name="preview_range">%1$s から %2$s まで %3$d回 鳴ります</string>
     <string name="preview_single">%1$s に 1回 鳴ります</string>
     <string name="error_interval_not_positive">間隔は1分以上にしてください</string>
@@ -66,11 +67,11 @@
     <string name="sound_default">既定の音</string>
     <string name="vibration_title">バイブレーション</string>
     <string name="difficulty_section_title">止めにくさ</string>
-    <string name="skip_requires_app_title">当日終了はアプリからのみ</string>
+    <string name="skip_requires_app_title">タームの終了はアプリからのみ</string>
     <string name="skip_requires_app_subtitle">寝ぼけて止めてしまうのを防ぎます</string>
-    <string name="skip_game_title">止める前にゲームを出す</string>
+    <string name="skip_game_title">停止時にゲームを出題</string>
     <string name="skip_game_subtitle">6種類からランダムに1問</string>
-    <string name="skip_game_disabled_reason">「当日終了はアプリからのみ」がオフのときは選べません</string>
+    <string name="skip_game_disabled_reason">「タームの終了はアプリからのみ」がオフのときは選べません</string>
     <string name="snooze_title">スヌーズ</string>
     <string name="snooze_subtitle">間隔が長めのときに使えます。短い間隔では次の鳴動がスヌーズの役割を果たすため既定はオフです</string>
     <string name="snooze_minutes_label">スヌーズ間隔(分)</string>

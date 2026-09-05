@@ -217,13 +217,13 @@ private fun AlarmCard(
                 if (isSingle) {
                     Text(
                         text = formatClockMinutes(schedule.startMinutes),
-                        style = MaterialTheme.typography.displaySmall,
+                        style = MaterialTheme.typography.displayMedium,
                     )
                 } else {
                     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(text = formatClockMinutes(schedule.startMinutes), style = MaterialTheme.typography.displaySmall)
+                        Text(text = formatClockMinutes(schedule.startMinutes), style = MaterialTheme.typography.displayMedium)
                         Text(text = "–", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(text = formatClockMinutes(schedule.endMinutes), style = MaterialTheme.typography.displaySmall)
+                        Text(text = formatClockMinutes(schedule.endMinutes), style = MaterialTheme.typography.displayMedium)
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

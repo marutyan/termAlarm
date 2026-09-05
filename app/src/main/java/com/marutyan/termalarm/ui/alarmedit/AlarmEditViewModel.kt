@@ -26,6 +26,12 @@ import kotlinx.coroutines.launch
 // 1分は実用の場面が乏しいうえ、鳴り止んですぐ次が鳴るため候補から外している
 val INTERVAL_PRESETS_MINUTES = listOf(3, 5, 10, 15, 30)
 
+// 「その他」で指定できる間隔の最小値(1分)。0分以下のアラーム鳴動を防ぐために必要
+const val CUSTOM_INTERVAL_MIN = 1
+
+// 「その他」で指定できる間隔の最大値(120分)。極端に長い間隔による計算不正を防ぐために必要
+const val CUSTOM_INTERVAL_MAX = 120
+
 /** 保存を妨げる入力エラーの種類。文言はComposable側でstringResourceへ変換する(ViewModelに文字列を持たせない)。 */
 enum class AlarmEditValidationError { INTERVAL_NOT_POSITIVE, INTERVAL_TOO_LARGE, CUSTOM_INTERVAL_INVALID, SNOOZE_OUT_OF_RANGE }
 
@@ -150,16 +156,14 @@ class AlarmEditViewModel(
     }
 
     fun selectCustomInterval() {
-        uiState = uiState.copy(useCustomInterval = true)
+        val clamped = uiState.intervalMinutes.coerceIn(CUSTOM_INTERVAL_MIN, CUSTOM_INTERVAL_MAX)
+        uiState = revalidate(uiState.copy(useCustomInterval = true, intervalMinutes = clamped, customIntervalText = clamped.toString()))
     }
 
-    fun setCustomIntervalText(text: String) {
-        val minutes = text.toIntOrNull()
-        uiState = if (minutes == null) {
-            uiState.copy(customIntervalText = text, validationError = AlarmEditValidationError.CUSTOM_INTERVAL_INVALID)
-        } else {
-            revalidate(uiState.copy(customIntervalText = text, intervalMinutes = minutes))
-        }
+    // 「その他」で選択したカスタム間隔(1〜120分)を反映する。範囲外の値が来ないよう1..120に収める
+    fun setCustomInterval(minutes: Int) {
+        val clamped = minutes.coerceIn(CUSTOM_INTERVAL_MIN, CUSTOM_INTERVAL_MAX)
+        uiState = revalidate(uiState.copy(intervalMinutes = clamped, customIntervalText = clamped.toString()))
     }
 
     fun toggleDay(day: DayOfWeek) {

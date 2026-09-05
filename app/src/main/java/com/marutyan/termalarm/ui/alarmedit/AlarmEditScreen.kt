@@ -39,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -69,7 +70,9 @@ import com.marutyan.termalarm.domain.WeekStart
 import com.marutyan.termalarm.domain.occurrenceCount
 import com.marutyan.termalarm.ui.alarmlist.orderedDaysOfWeek
 import com.marutyan.termalarm.ui.common.formatClockMinutes
+import com.marutyan.termalarm.ui.theme.tabularNums
 import java.time.DayOfWeek
+import kotlin.math.roundToInt
 
 /**
  * アラーム追加・編集画面。design/AlarmEdit.dc.htmlを再現する。
@@ -149,10 +152,9 @@ fun AlarmEditScreen(
             IntervalSection(
                 intervalMinutes = uiState.intervalMinutes,
                 useCustomInterval = uiState.useCustomInterval,
-                customIntervalText = uiState.customIntervalText,
                 onSelectPreset = viewModel::selectPresetInterval,
                 onSelectCustom = viewModel::selectCustomInterval,
-                onCustomTextChange = viewModel::setCustomIntervalText,
+                onCustomIntervalChange = viewModel::setCustomInterval,
             )
 
             PreviewBanner(
@@ -297,20 +299,66 @@ private fun TimeCard(label: String, minutes: Int, highlighted: Boolean, modifier
     }
 }
 
+// 「その他」選択時に大きな数字とスライダーで間隔(1〜120分)を直感的に指定する入力欄。
+// 小さな文字入力欄に比べて視認性を高め、指で素早く調整できるようにするために必要
+@Composable
+private fun CustomIntervalPicker(
+    intervalMinutes: Int,
+    onIntervalChange: (Int) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = intervalMinutes.toString(),
+                style = MaterialTheme.typography.displayMedium.tabularNums(),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.size(4.dp))
+            Text(
+                text = stringResource(R.string.unit_minutes),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        }
+        Slider(
+            value = intervalMinutes.toFloat().coerceIn(CUSTOM_INTERVAL_MIN.toFloat(), CUSTOM_INTERVAL_MAX.toFloat()),
+            onValueChange = { onIntervalChange(it.roundToInt().coerceIn(CUSTOM_INTERVAL_MIN, CUSTOM_INTERVAL_MAX)) },
+            valueRange = CUSTOM_INTERVAL_MIN.toFloat()..CUSTOM_INTERVAL_MAX.toFloat(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
 // 鳴らす間隔の選択チップ。Material3 ExpressiveのToggleButtonを使う
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun IntervalSection(
     intervalMinutes: Int,
     useCustomInterval: Boolean,
-    customIntervalText: String,
     onSelectPreset: (Int) -> Unit,
     onSelectCustom: () -> Unit,
-    onCustomTextChange: (String) -> Unit,
+    onCustomIntervalChange: (Int) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(stringResource(R.string.interval_section_title), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // 左詰めにすると右へ余白が寄って偏って見えるため、幅いっぱいに散らす
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             INTERVAL_PRESETS_MINUTES.forEach { minutes ->
                 val selected = !useCustomInterval && intervalMinutes == minutes
                 ToggleButton(checked = selected, onCheckedChange = { onSelectPreset(minutes) }) {
@@ -322,12 +370,9 @@ private fun IntervalSection(
             }
         }
         if (useCustomInterval) {
-            OutlinedTextField(
-                value = customIntervalText,
-                onValueChange = onCustomTextChange,
-                label = { Text(stringResource(R.string.interval_custom_input_label)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+            CustomIntervalPicker(
+                intervalMinutes = intervalMinutes,
+                onIntervalChange = onCustomIntervalChange,
             )
         }
     }
