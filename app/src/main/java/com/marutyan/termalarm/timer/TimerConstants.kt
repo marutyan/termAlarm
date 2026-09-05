@@ -9,8 +9,13 @@ package com.marutyan.termalarm.timer
 // AlarmManagerの予約／通知アクションからTimerForegroundServiceへ渡す、対象TimerStateのid
 const val EXTRA_TIMER_ID = "com.marutyan.termalarm.timer.EXTRA_TIMER_ID"
 
-// 通知チャンネルID。鳴動中(finished)も動作中(running)も同じチャンネルにまとめる
-const val TIMER_NOTIFICATION_CHANNEL_ID = "timer"
+// 旧通知チャンネルID。一度作られた通知チャンネルはアプリから重要度を上げられないため、
+// LOWからDEFAULTへ上げる際に新IDへ移行した。既存端末に残った古いチャンネルを削除するためだけに保持する。
+const val LEGACY_TIMER_NOTIFICATION_CHANNEL_ID = "timer"
+
+// 現在の通知チャンネルID。通知が「サイレント」欄に入らないよう重要度DEFAULTで作成する。
+// 鳴動中(finished)も動作中(running)も同じチャンネルにまとめる
+const val TIMER_NOTIFICATION_CHANNEL_ID = "timer_v2"
 
 // 動作中/完了のタイマーが1件でもある間、常に表示し続けるフォアグラウンド通知のID
 const val TIMER_FOREGROUND_NOTIFICATION_ID = 2001
