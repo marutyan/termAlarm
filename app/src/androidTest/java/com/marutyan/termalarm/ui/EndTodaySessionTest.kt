@@ -92,6 +92,8 @@ class EndTodaySessionTest {
                 notificationPermissionBanner = {},
             )
         }
+        // 一覧のカードは動きを付けて出るため、押せる状態になるまで待つ
+        composeTestRule.waitUntilAtLeastOneExists(hasText(string(R.string.ringing_skip_today)), 5_000)
         composeTestRule.onNodeWithText(string(R.string.ringing_skip_today)).performClick()
         // skipGame=falseなのでゲーム画面へは遷移せず、確認ダイアログが出るはず
         assertTrue(!navigatedToSkipGame)
@@ -118,6 +120,8 @@ class EndTodaySessionTest {
                 notificationPermissionBanner = {},
             )
         }
+        // 一覧のカードは動きを付けて出るため、押せる状態になるまで待つ
+        composeTestRule.waitUntilAtLeastOneExists(hasText(string(R.string.ringing_skip_today)), 5_000)
         composeTestRule.onNodeWithText(string(R.string.ringing_skip_today)).performClick()
         // 確認ダイアログを経由せず直接遷移するので、確認ボタンは存在しない
         composeTestRule.onNodeWithText(string(R.string.end_today_session_confirm)).assertDoesNotExist()

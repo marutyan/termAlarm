@@ -1,6 +1,5 @@
 package com.marutyan.termalarm.alarm
 
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
@@ -16,6 +15,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.notification.NotificationChannels
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
@@ -166,21 +166,12 @@ class RingingService : Service() {
 
     // 通知チャンネルは一度だけ作成すればよい。音はサービス側のMediaPlayerが鳴らすため、
     // チャンネル自体の音源はnullにする（docs/SPEC.md「チャンネル側では音を鳴らさない」）
-    private fun ensureChannel(): String {
-        val manager = getSystemService(NotificationManager::class.java)
-        if (manager.getNotificationChannel(CHANNEL_ID) == null) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                getString(R.string.ringing_channel_name),
-                NotificationManager.IMPORTANCE_HIGH,
-            ).apply {
-                setSound(null, null)
-                enableVibration(false)
-            }
-            manager.createNotificationChannel(channel)
-        }
-        return CHANNEL_ID
-    }
+    private fun ensureChannel(): String = NotificationChannels.ensure(
+        this,
+        CHANNEL_ID,
+        R.string.ringing_channel_name,
+        NotificationManager.IMPORTANCE_HIGH,
+    )
 
     private fun repository(): AlarmRepository = AlarmRepository(AlarmDatabase.getInstance(this).alarmDao())
 

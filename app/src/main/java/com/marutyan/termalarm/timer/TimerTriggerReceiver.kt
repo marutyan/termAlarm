@@ -4,9 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.PowerManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.marutyan.termalarm.notification.runAsync
 
 /**
  * TimerScheduler.setExactAndAllowWhileIdle()の発火先。予約はタイマーごとの完了予定時刻ちょうどに
@@ -18,21 +16,20 @@ import kotlinx.coroutines.launch
  */
 class TimerTriggerReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // Doze中でもCPUを維持したまま、保存と鳴動の開始まで終わらせる
         val wakeLock = context.getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "termalarm:timer-trigger")
         wakeLock.acquire(15_000L)
 
-        // onReceiveを抜けるとプロセスを止められてしまうため、保存が終わるまで待たせる
-        val pending = goAsync()
+        // Receiverが受け取るContextは短命なので、アプリ全体のものへ持ち替える
         val appContext = context.applicationContext
-        CoroutineScope(Dispatchers.Default).launch {
+        runAsync {
             try {
                 if (TimerActions.markDueTimersFinished(appContext)) {
                     TimerRingingService.start(appContext)
                 }
             } finally {
                 runCatching { wakeLock.release() }
-                pending.finish()
             }
         }
     }

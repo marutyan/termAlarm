@@ -1,7 +1,6 @@
 package com.marutyan.termalarm.timer
 
 import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
@@ -13,6 +12,7 @@ import android.os.SystemClock
 import androidx.annotation.RequiresApi
 import com.marutyan.termalarm.MainActivity
 import com.marutyan.termalarm.R
+import com.marutyan.termalarm.notification.NotificationChannels
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
 import com.marutyan.termalarm.domain.overdueMillis
@@ -243,26 +243,22 @@ object TimerNotifications {
      * 一度作ったチャンネルは重要度を上げられないため、古いものは消して新しいIDで作り直す。
      */
     private fun ensureChannel(context: Context, isFiring: Boolean): String {
-        val manager = context.getSystemService(NotificationManager::class.java)
-        manager.deleteNotificationChannel(LEGACY_TIMER_NOTIFICATION_CHANNEL_ID)
-        val id = if (isFiring) TIMER_FIRING_NOTIFICATION_CHANNEL_ID else TIMER_NOTIFICATION_CHANNEL_ID
-        if (manager.getNotificationChannel(id) == null) {
-            val nameRes = if (isFiring) {
-                R.string.timer_firing_notification_channel_name
-            } else {
-                R.string.timer_notification_channel_name
-            }
-            val importance = if (isFiring) {
-                NotificationManager.IMPORTANCE_HIGH
-            } else {
-                NotificationManager.IMPORTANCE_DEFAULT
-            }
-            manager.createNotificationChannel(
-                NotificationChannel(id, context.getString(nameRes), importance)
-                    .apply { setSound(null, null) },
+        NotificationChannels.delete(context, LEGACY_TIMER_NOTIFICATION_CHANNEL_ID)
+        return if (isFiring) {
+            NotificationChannels.ensure(
+                context,
+                TIMER_FIRING_NOTIFICATION_CHANNEL_ID,
+                R.string.timer_firing_notification_channel_name,
+                NotificationManager.IMPORTANCE_HIGH,
+            )
+        } else {
+            NotificationChannels.ensure(
+                context,
+                TIMER_NOTIFICATION_CHANNEL_ID,
+                R.string.timer_notification_channel_name,
+                NotificationManager.IMPORTANCE_DEFAULT,
             )
         }
-        return id
     }
 
     const val ACTION_STOP = "com.marutyan.termalarm.timer.STOP"

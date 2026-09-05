@@ -3,9 +3,7 @@ package com.marutyan.termalarm.alarm
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.marutyan.termalarm.notification.runAsync
 
 /**
  * 端末再起動・タイムゾーン変更・時刻変更・ロケール変更のたびに、全アラームの予約を再計算して登録し直す
@@ -25,13 +23,8 @@ class AlarmRescheduleReceiver : BroadcastReceiver() {
             else -> return
         }
 
-        val pendingResult = goAsync()
-        CoroutineScope(Dispatchers.Default).launch {
-            try {
-                AlarmScheduler.rescheduleAll(context)
-            } finally {
-                pendingResult.finish()
-            }
-        }
+        // Receiverが受け取るContextは短命なので、アプリ全体のものへ持ち替える
+        val appContext = context.applicationContext
+        runAsync { AlarmScheduler.rescheduleAll(appContext) }
     }
 }
