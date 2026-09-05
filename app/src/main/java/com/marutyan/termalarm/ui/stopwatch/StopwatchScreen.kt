@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -111,6 +111,12 @@ fun StopwatchScreen(
             Text(
                 text = formatElapsed(elapsed, includeCentiseconds = true),
                 style = MaterialTheme.typography.displayLarge.heroClock(),
+                // まだ計測していないときは地に近い色にして、動いていないことを見て分かるようにする
+                color = if (state.runState == StopwatchRunState.IDLE) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
@@ -209,20 +215,24 @@ private fun StopwatchControls(
             containerColor = primaryContainerColor,
             contentColor = primaryContentColor,
         )
-        ControlButton(
-            label = stringResource(R.string.stopwatch_reset),
-            onClick = onReset,
-            enabled = runState == StopwatchRunState.PAUSED,
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-        )
-        ControlButton(
-            label = stringResource(R.string.stopwatch_lap),
-            onClick = onLap,
-            enabled = isRunning,
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-        )
+        // まだ計測していないときは「開始」だけを出す。純正も同じで、押せないボタンを並べない。
+        // 一度でも動かした後は、止める・戻す・刻むの3つが要る
+        if (runState != StopwatchRunState.IDLE) {
+            ControlButton(
+                label = stringResource(R.string.stopwatch_reset),
+                onClick = onReset,
+                enabled = runState == StopwatchRunState.PAUSED,
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            )
+            ControlButton(
+                label = stringResource(R.string.stopwatch_lap),
+                onClick = onLap,
+                enabled = isRunning,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            )
+        }
     }
 }
 
@@ -286,7 +296,9 @@ private fun LapRow(laps: List<StopwatchLap>, modifier: Modifier = Modifier) {
             )
         }
         LazyRow(state = listState, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(laps, key = { it.lapNumber }) { lap -> LapCard(lap) }
+            itemsIndexed(laps, key = { _, lap -> lap.lapNumber }) { index, lap ->
+                LapCard(lap, isLatest = index == laps.lastIndex)
+            }
         }
     }
 }
@@ -302,12 +314,17 @@ private fun LapScrollButton(icon: ImageVector, contentDescription: String, onCli
 }
 
 // ラップ1件のカード。周回数・そのラップの時間・その時点の合計を縦3行で並べる(docs/OFFICIAL_UI.md)
+// isLatestは直前に刻んだラップ。純正と同じく色を変えて、どれが今のものか一目で分かるようにする
 @Composable
-private fun LapCard(lap: StopwatchLap) {
+private fun LapCard(lap: StopwatchLap, isLatest: Boolean) {
+    val accent = MaterialTheme.colorScheme.primary
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        border = BorderStroke(
+            width = if (isLatest) 2.dp else 1.dp,
+            color = if (isLatest) accent else MaterialTheme.colorScheme.outlineVariant,
+        ),
     ) {
         Column(
             modifier = Modifier.width(96.dp).padding(vertical = 14.dp, horizontal = 8.dp),
@@ -317,12 +334,12 @@ private fun LapCard(lap: StopwatchLap) {
             Text(
                 text = stringResource(R.string.stopwatch_lap_number, lap.lapNumber),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (isLatest) accent else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 text = formatElapsed(lap.lapMillis, includeCentiseconds = true),
                 style = MaterialTheme.typography.bodyMedium.tabularNums(),
-                color = MaterialTheme.colorScheme.onSurface,
+                color = if (isLatest) accent else MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text = stringResource(R.string.stopwatch_lap_total, formatElapsed(lap.totalMillis, includeCentiseconds = true)),
