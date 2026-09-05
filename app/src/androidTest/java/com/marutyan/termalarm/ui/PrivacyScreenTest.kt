@@ -20,6 +20,10 @@ import org.junit.Test
  */
 @OptIn(ExperimentalTestApi::class)
 class PrivacyScreenTest {
+    // 端末がスリープしていてもテストが動くようにする
+    @get:Rule
+    val screenWakeRule = ScreenWakeRule()
+
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 

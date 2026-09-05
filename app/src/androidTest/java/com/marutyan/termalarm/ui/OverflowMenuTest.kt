@@ -34,6 +34,10 @@ import org.junit.Test
  */
 @OptIn(ExperimentalTestApi::class)
 class OverflowMenuTest {
+    // 端末がスリープしていてもテストが動くようにする
+    @get:Rule
+    val screenWakeRule = ScreenWakeRule()
+
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 

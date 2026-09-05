@@ -31,6 +31,10 @@ import java.util.Locale
  */
 @OptIn(ExperimentalTestApi::class)
 class ClockScreenTest {
+    // 端末がスリープしていてもテストが動くようにする
+    @get:Rule
+    val screenWakeRule = ScreenWakeRule()
+
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
