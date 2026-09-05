@@ -64,6 +64,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.marutyan.termalarm.R
+import com.marutyan.termalarm.ui.theme.alarmCardClock
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.marutyan.termalarm.domain.AlarmSchedule
 import com.marutyan.termalarm.domain.WeekStart
@@ -295,7 +296,14 @@ private fun TimeCard(label: String, minutes: Int, highlighted: Boolean, modifier
             .padding(16.dp),
     ) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = contentColor)
-        Text(formatClockMinutes(minutes), style = MaterialTheme.typography.displaySmall, color = contentColor)
+        // 一覧のカードと同じ大きさにする。ここが一番よく見る値なので小さくしない
+        Text(
+            text = formatClockMinutes(minutes),
+            style = MaterialTheme.typography.displayLarge.alarmCardClock(),
+            color = contentColor,
+            maxLines = 1,
+            softWrap = false,
+        )
     }
 }
 
