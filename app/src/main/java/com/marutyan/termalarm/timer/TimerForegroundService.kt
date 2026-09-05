@@ -23,13 +23,17 @@ import androidx.core.content.ContextCompat
 import com.marutyan.termalarm.MainActivity
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.ui.alarmlist.TermAlarmTab
+import com.marutyan.termalarm.ui.navigation.EXTRA_DEEPLINK_TAB
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.data.TimerRepository
 import com.marutyan.termalarm.domain.AppSettings
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
+import com.marutyan.termalarm.domain.extendTimer
 import com.marutyan.termalarm.domain.finishTimer
 import com.marutyan.termalarm.domain.isDue
+import com.marutyan.termalarm.domain.pauseTimer
 import com.marutyan.termalarm.domain.remainingMillis
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -61,6 +65,10 @@ class TimerForegroundService : Service() {
     // 鳴動中(FINISHED)のタイマーidごとのMediaPlayer。複数のタイマーが同時に完了しても個別に鳴らし続けられる
     private val ringingPlayers = mutableMapOf<Long, MediaPlayer>()
 
+    // 鳴り始めた壁時計の時刻。通知に「タイムアップから何秒経ったか」を出すために覚えておく。
+    // 通知は1秒ごとに作り直すので、その都度「今」を入れると経過時間がいつまでも0のままになる
+    private val ringingSince = mutableMapOf<Long, Long>()
+
     // 鳴動中の全タイマーで共有する単一のVibrator。端末のバイブは1つしか無く、タイマーごとに分けられないため
     private var vibrator: Vibrator? = null
 
@@ -86,7 +94,30 @@ class TimerForegroundService : Service() {
     }
 
     // startCommandそのものには意味を持たせず、常駐ループ(onCreateで開始済み)に処理を一本化する
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_NOT_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val id = intent?.getLongExtra(EXTRA_TIMER_ID, -1L) ?: -1L
+        if (id >= 0) {
+            when (intent?.action) {
+                ACTION_STOP -> scope.launch { stopTimer(id) }
+                ACTION_EXTEND -> scope.launch { mutateTimer(id) { s, now, wall -> extendTimer(s, 60_000L, now, wall) } }
+                ACTION_PAUSE -> scope.launch { mutateTimer(id, ::pauseTimer) }
+            }
+        }
+        return START_NOT_STICKY
+    }
+
+    // 通知の「停止」。鳴っているタイマーは止めると消える(domain/TimerState.ktの契約)
+    private suspend fun stopTimer(id: Long) {
+        repository().delete(id)
+        TimerScheduler.cancel(this, id)
+    }
+
+    // 通知の「+1分」「一時停止」。画面側(TimerViewModel)と同じ手順で、状態を変えて予約を取り直す
+    private suspend fun mutateTimer(id: Long, transform: (TimerState, Long, Long) -> TimerState) {
+        val state = repository().getById(id) ?: return
+        repository().update(transform(state, SystemClock.elapsedRealtime(), System.currentTimeMillis()))
+        TimerScheduler.reschedule(this, id)
+    }
 
     private suspend fun tick() {
         val repo = repository()
@@ -135,6 +166,7 @@ class TimerForegroundService : Service() {
             }
         }
         ringingPlayers[id] = player
+        ringingSince[id] = System.currentTimeMillis()
         fadeIn(player)
         if (settings.timerVibration) startVibrationIfNeeded()
     }
@@ -165,6 +197,7 @@ class TimerForegroundService : Service() {
     }
 
     private fun stopRingingFor(id: Long) {
+        ringingSince.remove(id)
         ringingPlayers.remove(id)?.let { player ->
             runCatching { player.stop() }
             player.release()
@@ -176,32 +209,89 @@ class TimerForegroundService : Service() {
         }
     }
 
+    /**
+     * 通知を純正の時計アプリと同じ形で出す。
+     * 主役のタイマー1件（鳴っていればそれ、なければ次に鳴るもの）の残り時間を右上へ大きく出し、
+     * その場で操作できるボタンを付ける。他のタイマーは下に一覧として並べる。
+     *
+     * 残り時間は数字を書き込まず、通知の時計機能（Chronometer）へ終わる時刻を渡して数えさせる。
+     * こうすると鳴ったあとは純正と同じくマイナス表示になり、経過時間がそのまま続く。
+     */
     private fun updateNotification(timers: List<TimerState>, nowElapsed: Long, nowWall: Long) {
-        val style = NotificationCompat.InboxStyle()
-        timers.forEach { style.addLine(statusLine(it, nowElapsed, nowWall)) }
+        // 鳴っているものを最優先。それ以外は残り時間が短い順に見て、いちばん早く鳴るものを主役にする
+        val main = timers.firstOrNull { it.runState == TimerRunState.FINISHED }
+            ?: timers.filter { it.runState == TimerRunState.RUNNING }
+                .minByOrNull { remainingMillis(it, nowElapsed, nowWall) }
+            ?: timers.firstOrNull()
         val contentIntent = PendingIntent.getActivity(
             this,
             0,
-            Intent(this, MainActivity::class.java),
+            // 通知を押したらタイマーのタブを開く。一覧が出ると、どのタイマーの話か分からない
+            Intent(this, MainActivity::class.java)
+                .putExtra(EXTRA_DEEPLINK_TAB, TermAlarmTab.TIMER.name),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val notification = NotificationCompat.Builder(this, ensureChannel())
+        val builder = NotificationCompat.Builder(this, ensureChannel())
             .setSmallIcon(R.drawable.ic_stat_alarm)
-            .setContentTitle(getString(R.string.timer_notification_title))
-            .setContentText(getString(R.string.timer_notification_summary, timers.size))
-            .setStyle(style)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setContentIntent(contentIntent)
-            .build()
+
+        if (main == null) {
+            builder.setContentTitle(getString(R.string.timer_notification_title))
+        } else {
+            builder.setContentTitle(main.label.ifBlank { getString(R.string.timer_notification_title) })
+            builder.setContentText(
+                when (main.runState) {
+                    TimerRunState.FINISHED -> getString(R.string.timer_notification_finished)
+                    TimerRunState.PAUSED -> getString(R.string.timer_notification_paused)
+                    TimerRunState.RUNNING -> getString(R.string.timer_notification_running)
+                },
+            )
+            // 鳴っているタイマーは鳴り始めた時刻を基準にする。そうすると経過した分だけマイナスへ伸びていく
+            val target = when (main.runState) {
+                TimerRunState.FINISHED -> ringingSince[main.id] ?: nowWall
+                else -> nowWall + remainingMillis(main, nowElapsed, nowWall)
+            }
+            if (main.runState != TimerRunState.PAUSED) {
+                builder.setWhen(target).setUsesChronometer(true).setChronometerCountDown(true).setShowWhen(true)
+            }
+            builder.addAction(0, getString(R.string.timer_stop), actionIntent(ACTION_STOP, main.id))
+            builder.addAction(
+                0,
+                getString(R.string.timer_extend_one_minute),
+                actionIntent(ACTION_EXTEND, main.id),
+            )
+            if (main.runState == TimerRunState.RUNNING) {
+                builder.addAction(0, getString(R.string.timer_pause), actionIntent(ACTION_PAUSE, main.id))
+            }
+        }
+
+        // 2件以上あるときだけ、主役以外を一覧で見せる
+        val others = timers.filter { it.id != main?.id }
+        if (others.isNotEmpty()) {
+            val style = NotificationCompat.InboxStyle()
+            others.forEach { style.addLine(statusLine(it, nowElapsed, nowWall)) }
+            builder.setStyle(style)
+            builder.setSubText(getString(R.string.timer_notification_summary, timers.size))
+        }
+
         ServiceCompat.startForeground(
             this,
             TIMER_FOREGROUND_NOTIFICATION_ID,
-            notification,
+            builder.build(),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
         )
     }
+
+    // 通知のボタンから自分自身へ操作を送り返すための入れ物
+    private fun actionIntent(action: String, id: Long): PendingIntent = PendingIntent.getService(
+        this,
+        (action + id).hashCode(),
+        Intent(this, TimerForegroundService::class.java).setAction(action).putExtra(EXTRA_TIMER_ID, id),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
 
     private fun statusLine(state: TimerState, nowElapsed: Long, nowWall: Long): String = when (state.runState) {
         TimerRunState.FINISHED -> getString(R.string.timer_notification_line_finished, state.label)
@@ -245,6 +335,11 @@ class TimerForegroundService : Service() {
     }
 
     companion object {
+        const val ACTION_STOP = "com.marutyan.termalarm.timer.STOP"
+        const val ACTION_EXTEND = "com.marutyan.termalarm.timer.EXTEND"
+        const val ACTION_PAUSE = "com.marutyan.termalarm.timer.PAUSE"
+        const val EXTRA_TIMER_ID = "timer_id"
+
         /**
          * 動作中/完了のタイマーが1件でもあるかもしれないタイミングで呼ぶ。サービス自身が不要になったら
          * 自分で止まる設計なので、呼び出し側(ui/timer, TimerTriggerReceiver, TimerRescheduleReceiver)は

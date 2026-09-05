@@ -64,6 +64,10 @@ private const val ARG_ALARM_ID = "alarmId"
 // 値が-1なら新規作成画面、0以上ならそのidの編集画面へ直接遷移する。他パッケージから参照するためpublic。
 const val EXTRA_DEEPLINK_ALARM_ID = "com.marutyan.termalarm.ui.EXTRA_DEEPLINK_ALARM_ID"
 
+// どのタブを開いた状態で始めるかを指定する拡張。TermAlarmTabの名前(ALARM/CLOCK/TIMER/STOPWATCH)を入れる。
+// タイマーの通知から開いたときにタイマータブが出るようにするために使う。他パッケージから参照するためpublic。
+const val EXTRA_DEEPLINK_TAB = "com.marutyan.termalarm.ui.EXTRA_DEEPLINK_TAB"
+
 /**
  * アプリ全体の画面遷移。アラーム一覧を起点に、追加・編集、当日終了ゲーム、ライセンス表示、
  * 下部ナビの4タブ(アラーム/時計/タイマー/ストップウォッチ)を1つのNavHostへまとめる。
@@ -83,16 +87,16 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             val id = launchIntent.getLongExtra(EXTRA_DEEPLINK_ALARM_ID, -1L)
             navController.navigate(if (id >= 0) "$ROUTE_EDIT?$ARG_ALARM_ID=$id" else ROUTE_EDIT)
         }
+        // 通知から開いたときは、そのタブを出す。知らない名前が入っていた場合は一覧のままにする
+        launchIntent?.getStringExtra(EXTRA_DEEPLINK_TAB)?.let { name ->
+            runCatching { TermAlarmTab.valueOf(name) }.getOrNull()?.let { tab ->
+                navController.navigate(routeOf(tab))
+            }
+        }
     }
 
     fun goToTab(tab: TermAlarmTab) {
-        val route = when (tab) {
-            TermAlarmTab.ALARM -> ROUTE_LIST
-            TermAlarmTab.CLOCK -> ROUTE_CLOCK
-            TermAlarmTab.TIMER -> ROUTE_TIMER
-            TermAlarmTab.STOPWATCH -> ROUTE_STOPWATCH
-        }
-        navController.navigate(route) {
+        navController.navigate(routeOf(tab)) {
             popUpTo(ROUTE_LIST) { saveState = true }
             launchSingleTop = true
             restoreState = true
@@ -189,4 +193,12 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             PrivacyScreen(onBack = { navController.popBackStack() })
         }
     }
+}
+
+// タブと画面の対応。下部ナビからの移動と、通知から開いたときの移動の両方で使う
+private fun routeOf(tab: TermAlarmTab): String = when (tab) {
+    TermAlarmTab.ALARM -> ROUTE_LIST
+    TermAlarmTab.CLOCK -> ROUTE_CLOCK
+    TermAlarmTab.TIMER -> ROUTE_TIMER
+    TermAlarmTab.STOPWATCH -> ROUTE_STOPWATCH
 }
