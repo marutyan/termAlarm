@@ -47,12 +47,9 @@ import com.marutyan.termalarm.ui.timer.TimerViewModel
 import com.marutyan.termalarm.ui.timer.TimerViewModelFactory
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.ui.res.stringResource
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.ui.theme.tabFadeSpec
-import com.marutyan.termalarm.ui.theme.tabSlideSpec
 
 private const val ROUTE_LIST = "list"
 private const val ROUTE_EDIT = "edit"
@@ -112,54 +109,12 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
     NavHost(
         navController = navController,
         startDestination = ROUTE_LIST,
-        enterTransition = {
-            val fromIndex = tabOrder(initialState.destination.route)
-            val toIndex = tabOrder(targetState.destination.route)
-            if (fromIndex != -1 && toIndex != -1) {
-                val toRight = toIndex > fromIndex
-                slideInHorizontally(animationSpec = tabSlideSpec()) { fullWidth ->
-                    if (toRight) fullWidth else -fullWidth
-                } + fadeIn(animationSpec = tabFadeSpec())
-            } else {
-                fadeIn(animationSpec = tabFadeSpec())
-            }
-        },
-        exitTransition = {
-            val fromIndex = tabOrder(initialState.destination.route)
-            val toIndex = tabOrder(targetState.destination.route)
-            if (fromIndex != -1 && toIndex != -1) {
-                val toRight = toIndex > fromIndex
-                slideOutHorizontally(animationSpec = tabSlideSpec()) { fullWidth ->
-                    if (toRight) -fullWidth else fullWidth
-                } + fadeOut(animationSpec = tabFadeSpec())
-            } else {
-                fadeOut(animationSpec = tabFadeSpec())
-            }
-        },
-        popEnterTransition = {
-            val fromIndex = tabOrder(initialState.destination.route)
-            val toIndex = tabOrder(targetState.destination.route)
-            if (fromIndex != -1 && toIndex != -1) {
-                val toRight = toIndex > fromIndex
-                slideInHorizontally(animationSpec = tabSlideSpec()) { fullWidth ->
-                    if (toRight) fullWidth else -fullWidth
-                } + fadeIn(animationSpec = tabFadeSpec())
-            } else {
-                fadeIn(animationSpec = tabFadeSpec())
-            }
-        },
-        popExitTransition = {
-            val fromIndex = tabOrder(initialState.destination.route)
-            val toIndex = tabOrder(targetState.destination.route)
-            if (fromIndex != -1 && toIndex != -1) {
-                val toRight = toIndex > fromIndex
-                slideOutHorizontally(animationSpec = tabSlideSpec()) { fullWidth ->
-                    if (toRight) -fullWidth else fullWidth
-                } + fadeOut(animationSpec = tabFadeSpec())
-            } else {
-                fadeOut(animationSpec = tabFadeSpec())
-            }
-        },
+        // タブを移るとき、画面を横へ滑らせない。純正も滑らせず、その場で入れ替わる。
+        // 横に動くと、押した場所と違うところが動いて見えて落ち着かない
+        enterTransition = { fadeIn(animationSpec = tabFadeSpec()) },
+        exitTransition = { fadeOut(animationSpec = tabFadeSpec()) },
+        popEnterTransition = { fadeIn(animationSpec = tabFadeSpec()) },
+        popExitTransition = { fadeOut(animationSpec = tabFadeSpec()) },
     ) {
         composable(ROUTE_LIST) {
             val viewModel: AlarmListViewModel = viewModel(factory = AlarmListViewModelFactory(repository, context))
@@ -264,14 +219,3 @@ private fun routeOf(tab: TermAlarmTab): String = when (tab) {
     TermAlarmTab.STOPWATCH -> ROUTE_STOPWATCH
 }
 
-/**
- * ルート文字列に対応するタブの表示順序(0〜3)を返す。
- * タブ切り替え時に左方向または右方向への横スライドを判定するために使う。
- */
-private fun tabOrder(route: String?): Int = when (route) {
-    ROUTE_LIST -> 0
-    ROUTE_CLOCK -> 1
-    ROUTE_TIMER -> 2
-    ROUTE_STOPWATCH -> 3
-    else -> -1
-}

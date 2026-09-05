@@ -40,15 +40,6 @@ const val CLOCK_MODE_TRANSITION_DURATION_MS = 300
 const val ALARM_COLOR_TRANSITION_DURATION_MS = 250
 
 /**
- * タブ切り替え時の横スライド移動量を補間するAnimationSpecを生成する。
- * 減速から始まる曲線(FastOutSlowInEasing)で300msかけて滑らかに遷移させる。
- */
-fun tabSlideSpec(): TweenSpec<IntOffset> = tween(
-    durationMillis = TAB_TRANSITION_DURATION_MS,
-    easing = FastOutSlowInEasing,
-)
-
-/**
  * タブ切り替え時のフェードイン・フェードアウトを補間するAnimationSpecを生成する。
  * 横スライドと協調して画面内容の切り替わりを自然に見せる。
  */
