@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import com.marutyan.termalarm.R
-import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
@@ -84,7 +84,7 @@ class RingingActivity : ComponentActivity() {
         val triggerAtMillis = intent.getLongExtra(EXTRA_TRIGGER_AT_MILLIS, System.currentTimeMillis())
 
         lifecycleScope.launch {
-            settings = SettingsRepository(AlarmDatabase.getInstance(this@RingingActivity).appSettingsDao())
+            settings = Repositories.settings(this@RingingActivity)
                 .observe().first()
         }
 
@@ -180,7 +180,7 @@ private fun RingingScreen(alarmId: Long, triggerAtMillis: Long, autoStopMinutes:
 
     var schedule by remember { mutableStateOf<AlarmSchedule?>(null) }
     LaunchedEffect(alarmId) {
-        schedule = AlarmRepository(AlarmDatabase.getInstance(context).alarmDao()).getById(alarmId)
+        schedule = Repositories.alarm(context).getById(alarmId)
     }
 
     // 画面上部に表示する現在時刻。1秒ごとに更新する

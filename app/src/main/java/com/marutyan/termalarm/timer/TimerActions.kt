@@ -2,7 +2,7 @@ package com.marutyan.termalarm.timer
 
 import android.content.Context
 import android.os.SystemClock
-import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.TimerRepository
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
@@ -86,5 +86,5 @@ object TimerActions {
     }
 
     private fun repository(context: Context): TimerRepository =
-        TimerRepository(AlarmDatabase.getInstance(context).timerDao())
+        Repositories.timer(context)
 }

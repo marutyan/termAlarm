@@ -5,7 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import com.marutyan.termalarm.MainActivity
-import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
 import com.marutyan.termalarm.domain.nextTrigger
@@ -98,7 +98,7 @@ object AlarmScheduler {
         context.getSystemService(AlarmManager::class.java)
 
     private fun repository(context: Context): AlarmRepository =
-        AlarmRepository(AlarmDatabase.getInstance(context).alarmDao())
+        Repositories.alarm(context)
 
     // AlarmManagerが発火時に送るPendingIntent。requestCodeをidにすることでアラームごとに別々の予約として扱う
     private fun operationPendingIntent(context: Context, id: Long, triggerAtMillis: Long = 0L): PendingIntent {

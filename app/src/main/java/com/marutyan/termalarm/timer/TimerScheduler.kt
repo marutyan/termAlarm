@@ -5,7 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
-import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.TimerRepository
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.remainingMillis
@@ -54,7 +54,7 @@ object TimerScheduler {
         context.getSystemService(AlarmManager::class.java)
 
     private fun repository(context: Context): TimerRepository =
-        TimerRepository(AlarmDatabase.getInstance(context).timerDao())
+        Repositories.timer(context)
 
     private fun pendingIntent(context: Context, id: Long): PendingIntent {
         val intent = Intent(context, TimerTriggerReceiver::class.java).putExtra(EXTRA_TIMER_ID, id)

@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.Intent
 import com.marutyan.termalarm.notification.runAsync
 import android.os.SystemClock
-import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.TimerRepository
 import com.marutyan.termalarm.domain.rebaseTimerAfterReboot
 
@@ -28,7 +28,7 @@ class TimerRescheduleReceiver : BroadcastReceiver() {
         // Receiverが受け取るContextは短命なので、アプリ全体のものへ持ち替える
         val appContext = context.applicationContext
         runAsync {
-            val repository = TimerRepository(AlarmDatabase.getInstance(appContext).timerDao())
+            val repository = Repositories.timer(appContext)
             val nowElapsed = SystemClock.elapsedRealtime()
             val nowWall = System.currentTimeMillis()
             repository.getAllRunningOnce().forEach { state ->

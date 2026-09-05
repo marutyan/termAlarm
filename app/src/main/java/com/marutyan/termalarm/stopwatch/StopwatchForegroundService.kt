@@ -13,7 +13,7 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.marutyan.termalarm.MainActivity
 import com.marutyan.termalarm.R
-import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.notification.NotificationChannels
 import com.marutyan.termalarm.data.StopwatchRepository
 import com.marutyan.termalarm.domain.StopwatchRunState
@@ -107,7 +107,7 @@ class StopwatchForegroundService : Service() {
         NotificationManager.IMPORTANCE_LOW,
     )
 
-    private fun repository(): StopwatchRepository = StopwatchRepository(AlarmDatabase.getInstance(this).stopwatchDao())
+    private fun repository(): StopwatchRepository = Repositories.stopwatch(this)
 
     override fun onDestroy() {
         super.onDestroy()

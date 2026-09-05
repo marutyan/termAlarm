@@ -4,7 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
-import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.notification.runAsync
 import com.marutyan.termalarm.data.StopwatchRepository
 import com.marutyan.termalarm.domain.StopwatchRunState
@@ -28,7 +28,7 @@ class StopwatchRescheduleReceiver : BroadcastReceiver() {
         // Receiverが受け取るContextは短命なので、アプリ全体のものへ持ち替える
         val appContext = context.applicationContext
         runAsync {
-            val repository = StopwatchRepository(AlarmDatabase.getInstance(appContext).stopwatchDao())
+            val repository = Repositories.stopwatch(appContext)
             val state = repository.getStateOnce()
             if (state.runState == StopwatchRunState.RUNNING) {
                 val nowElapsed = SystemClock.elapsedRealtime()

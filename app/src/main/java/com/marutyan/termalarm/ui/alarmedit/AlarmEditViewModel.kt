@@ -8,7 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.marutyan.termalarm.alarm.AlarmScheduler
-import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
@@ -102,7 +102,7 @@ class AlarmEditViewModel(
 
     // 全体設定の読み出し用。新規アラームのスヌーズ初期値(defaultSnoozeMinutes)と
     // 曜日チップの並び順(weekStart)に使う。NavHostを変更せずに済むよう、ここでcontextから組み立てる
-    private val settingsRepository = SettingsRepository(AlarmDatabase.getInstance(appContext).appSettingsDao())
+    private val settingsRepository = Repositories.settings(appContext)
 
     var uiState by mutableStateOf(AlarmEditUiState(id = alarmId, isLoading = alarmId != null))
         private set

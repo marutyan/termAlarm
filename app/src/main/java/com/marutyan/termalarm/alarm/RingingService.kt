@@ -14,7 +14,7 @@ import android.os.Vibrator
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.marutyan.termalarm.R
-import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.notification.NotificationChannels
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.SettingsRepository
@@ -173,9 +173,9 @@ class RingingService : Service() {
         NotificationManager.IMPORTANCE_HIGH,
     )
 
-    private fun repository(): AlarmRepository = AlarmRepository(AlarmDatabase.getInstance(this).alarmDao())
+    private fun repository(): AlarmRepository = Repositories.alarm(this)
 
-    private fun settingsRepository(): SettingsRepository = SettingsRepository(AlarmDatabase.getInstance(this).appSettingsDao())
+    private fun settingsRepository(): SettingsRepository = Repositories.settings(this)
 
     override fun onDestroy() {
         super.onDestroy()

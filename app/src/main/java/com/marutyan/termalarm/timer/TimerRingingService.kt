@@ -14,7 +14,7 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.marutyan.termalarm.alarm.AlarmVibration
 import com.marutyan.termalarm.alarm.SoundFadeIn
-import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.data.TimerRepository
 import com.marutyan.termalarm.domain.AppSettings
@@ -57,7 +57,7 @@ class TimerRingingService : Service() {
         // 中身が確定する前に、まず今の一覧で通知を出す
         startForegroundWithCurrentTimers()
         watchJob = scope.launch {
-            settings = SettingsRepository(AlarmDatabase.getInstance(this@TimerRingingService).appSettingsDao())
+            settings = Repositories.settings(this@TimerRingingService)
                 .observe().first()
             // 鳴っているタイマーが増減したら音を合わせる。鳴っているものが無くなったら自分を止める
             while (isActive) {
@@ -132,7 +132,7 @@ class TimerRingingService : Service() {
         }
     }
 
-    private fun repository(): TimerRepository = TimerRepository(AlarmDatabase.getInstance(this).timerDao())
+    private fun repository(): TimerRepository = Repositories.timer(this)
 
     override fun onDestroy() {
         super.onDestroy()

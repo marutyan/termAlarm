@@ -11,6 +11,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.ui.settings.SettingsScreen
@@ -30,7 +31,6 @@ import com.marutyan.termalarm.ui.clock.ClockScreen
 import com.marutyan.termalarm.ui.clock.ClockViewModel
 import com.marutyan.termalarm.ui.clock.ClockViewModelFactory
 import com.marutyan.termalarm.data.ClockSettingsRepository
-import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.ui.common.PlaceholderTabScreen
 import com.marutyan.termalarm.ui.permission.ExactAlarmPermissionBanner
 import com.marutyan.termalarm.ui.permission.NotificationPermissionBanner
@@ -180,10 +180,10 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             // AlarmDatabaseは共有シングルトンのため、ここでdaoを取り出して組み立てる
             // (MainActivityの配線は変えず、時計タブの行だけで完結させる)
             val clockRepository = remember {
-                ClockSettingsRepository(AlarmDatabase.getInstance(context).clockSettingsDao())
+                Repositories.clockSettings(context)
             }
             val clockSettingsRepository = remember {
-                SettingsRepository(AlarmDatabase.getInstance(context).appSettingsDao())
+                Repositories.settings(context)
             }
             val viewModel: ClockViewModel =
                 viewModel(factory = ClockViewModelFactory(clockRepository, clockSettingsRepository))
@@ -196,7 +196,7 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             )
         }
         composable(ROUTE_TIMER) {
-            val timerRepository = remember { TimerRepository(AlarmDatabase.getInstance(context).timerDao()) }
+            val timerRepository = remember { Repositories.timer(context) }
             val viewModel: TimerViewModel = viewModel(factory = TimerViewModelFactory(timerRepository, context))
             TimerScreen(
                 viewModel = viewModel,
@@ -207,7 +207,7 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             )
         }
         composable(ROUTE_STOPWATCH) {
-            val stopwatchRepository = remember { StopwatchRepository(AlarmDatabase.getInstance(context).stopwatchDao()) }
+            val stopwatchRepository = remember { Repositories.stopwatch(context) }
             val viewModel: StopwatchViewModel = viewModel(factory = StopwatchViewModelFactory(stopwatchRepository, context))
             StopwatchScreen(
                 viewModel = viewModel,
@@ -237,10 +237,10 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
         composable(ROUTE_SETTINGS) {
             // 設定は全体で1つなので、ここでRepositoryを組み立てて渡す
             val settingsRepository = remember {
-                SettingsRepository(AlarmDatabase.getInstance(context).appSettingsDao())
+                Repositories.settings(context)
             }
             val clockRepository = remember {
-                ClockSettingsRepository(AlarmDatabase.getInstance(context).clockSettingsDao())
+                Repositories.clockSettings(context)
             }
             val viewModel: SettingsViewModel = viewModel(
                 factory = SettingsViewModelFactory(settingsRepository, clockRepository),
