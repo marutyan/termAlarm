@@ -134,10 +134,11 @@ fun StopwatchScreen(
                 onResume = viewModel::resume,
                 onReset = viewModel::reset,
                 onLap = viewModel::lap,
+                // 純正の開始ボタンは画面の下端に張り付かず、少し上に浮いている
                 modifier = Modifier.padding(
                     start = SCREEN_HORIZONTAL_PADDING,
                     end = SCREEN_HORIZONTAL_PADDING,
-                    bottom = 16.dp,
+                    bottom = 48.dp,
                 ),
             )
         }
@@ -196,18 +197,18 @@ private fun StopwatchControls(
         label = "StopwatchButtonTransition",
     )
     val primaryContainerColor = lerp(
-        MaterialTheme.colorScheme.primaryContainer,
+        MaterialTheme.colorScheme.primary,
         MaterialTheme.colorScheme.error,
         transitionProgress,
     )
     val primaryContentColor = lerp(
-        MaterialTheme.colorScheme.onPrimaryContainer,
+        MaterialTheme.colorScheme.onPrimary,
         MaterialTheme.colorScheme.onError,
         transitionProgress,
     )
 
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        // 一時停止(=停止)のときだけerror色。開始・再開は「主要な操作ボタン」としてprimaryContainerを使う
+        // 一時停止(=停止)のときだけerror色。開始・再開は主要な操作なのでprimaryを使う
         // (docs/OFFICIAL_UI.md「共通」の色対応表)。切り替え時はanimateFloatAsStateで滑らかに遷移する
         ControlButton(
             label = stringResource(primaryLabel),
@@ -264,16 +265,8 @@ private fun ControlButton(
  */
 @Composable
 private fun LapRow(laps: List<StopwatchLap>, modifier: Modifier = Modifier) {
-    if (laps.isEmpty()) {
-        Box(modifier = modifier.fillMaxWidth().height(72.dp), contentAlignment = Alignment.Center) {
-            Text(
-                text = stringResource(R.string.stopwatch_laps_empty),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        return
-    }
+    // 純正はラップが無いとき何も出さない。案内文を置くと、押せない操作があるように見える
+    if (laps.isEmpty()) return
 
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()

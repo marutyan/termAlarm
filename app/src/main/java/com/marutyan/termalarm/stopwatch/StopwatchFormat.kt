@@ -6,6 +6,7 @@ package com.marutyan.termalarm.stopwatch
  * 両方から使う共通の書式（値を複数箇所に持たないための1箇所化。timer/TimerFormat.ktと同じ方針）。
  *
  * includeCentiseconds=trueで"1:02:34.56"のように1/100秒まで、falseで"1:02:34"のように秒までを出す。
+ * 1時間未満は"00:00.00"のように分を2桁にする(純正に合わせる)。
  * 画面表示は1/100秒まで、通知は秒までにする理由はStopwatchScreen.ktのコメントを参照。
  */
 fun formatElapsed(millis: Long, includeCentiseconds: Boolean): String {
@@ -16,7 +17,8 @@ fun formatElapsed(millis: Long, includeCentiseconds: Boolean): String {
     val time = if (hours > 0) {
         "%d:%02d:%02d".format(hours, minutes, seconds)
     } else {
-        "%d:%02d".format(minutes, seconds)
+        // 純正は1時間未満でも分を2桁で出す(00:00.00)。桁数が変わると数字の位置が動いて読みにくい
+        "%02d:%02d".format(minutes, seconds)
     }
     if (!includeCentiseconds) return time
     val centiseconds = (clamped % 1000L) / 10L

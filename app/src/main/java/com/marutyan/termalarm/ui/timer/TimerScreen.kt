@@ -54,6 +54,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.marutyan.termalarm.ui.theme.subHeroClock
@@ -67,8 +71,19 @@ import kotlinx.coroutines.delay
 
 // タイマーカードに描く円形リングの直径と線の太さ。純正の実測値(docs/OFFICIAL_UI.md「タイマー」)は
 // 直径311dp/線11dpだが、リングの右側に2つの操作ボタンを横並びで収めるため、画面幅に合わせて直径を200dpへ縮小した。
-private val RING_DIAMETER = 200.dp
 private val RING_STROKE_WIDTH = 11.dp
+
+// 輪の右へ置くボタンの幅と、輪との間隔。輪の大きさをここから逆算する
+private val SIDE_BUTTON_WIDTH = 80.dp
+private val SIDE_BUTTON_GAP = 12.dp
+
+/**
+ * 純正のタイマーは輪の直径311dp、中の数字の高さ40dpだった。
+ * 画面の幅は端末によって違うので、輪は使える幅いっぱいまで広げ、
+ * 数字は純正と同じ見え方になるよう、その比のまま拡げ縮めする。
+ */
+private const val OFFICIAL_RING_DIAMETER_DP = 311f
+private const val OFFICIAL_CLOCK_FONT_SIZE_SP = 79f
 
 /**
  * 動作中タイマーの残り時間表示用文字列を生成する。
@@ -257,26 +272,37 @@ private fun TimerCard(
 
             if (isFinished) {
                 // 鳴動中はボタンを出さず、リングと残り時間を中央に表示する
-                Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-                    TimerRing(
-                        progress = progress,
-                        trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        progressColor = MaterialTheme.colorScheme.error,
-                    )
-                    Text(
-                        text = formatTimerRemaining(remaining),
-                        style = MaterialTheme.typography.displayLarge.subHeroClock().tabularNums(),
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                    // 鳴動中はボタンを出さないので、幅いっぱいを輪に使える
+                    val ringDiameter = maxWidth
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        TimerRing(
+                            diameter = ringDiameter,
+                            progress = progress,
+                            trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            progressColor = MaterialTheme.colorScheme.error,
+                        )
+                        Text(
+                            text = formatTimerRemaining(remaining),
+                            style = MaterialTheme.typography.displayLarge
+                                .clockSizeFor(ringDiameter, remaining)
+                                .tabularNums(),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
             } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(modifier = Modifier.size(RING_DIAMETER), contentAlignment = Alignment.Center) {
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                    // 右のボタンを引いた残りが輪に使える幅。端末の幅に関わらず目一杯まで広げる
+                    val ringDiameter = maxWidth - SIDE_BUTTON_WIDTH - SIDE_BUTTON_GAP
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                    Box(modifier = Modifier.size(ringDiameter), contentAlignment = Alignment.Center) {
                         TimerRing(
+                            diameter = ringDiameter,
                             progress = progress,
                             trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             progressColor = MaterialTheme.colorScheme.primary,
@@ -287,11 +313,9 @@ private fun TimerCard(
                         ) {
                             Text(
                                 text = formatTimerRemaining(remaining),
-                                style = (when {
-                                    remaining >= 3600_000L -> MaterialTheme.typography.headlineLarge
-                                    remaining < 60_000L -> MaterialTheme.typography.displayLarge
-                                    else -> MaterialTheme.typography.displayMedium
-                                }).tabularNums(),
+                                style = MaterialTheme.typography.displayLarge
+                                    .clockSizeFor(ringDiameter, remaining)
+                                    .tabularNums(),
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             IconButton(onClick = onReset) {
@@ -311,6 +335,7 @@ private fun TimerCard(
                         ExtendChip(onClick = onExtend)
                         PlayPauseButton(isRunning = isRunning, onClick = if (isRunning) onPause else onResume)
                     }
+                    }
                 }
             }
         }
@@ -321,9 +346,9 @@ private fun TimerCard(
  * 円形の進捗リング。背景の全周弧と残り時間の弧を描き、先端に進捗を示す丸を配置する。
  */
 @Composable
-private fun TimerRing(progress: Float, trackColor: Color, progressColor: Color) {
+private fun TimerRing(diameter: Dp, progress: Float, trackColor: Color, progressColor: Color) {
     val strokeWidthPx = with(LocalDensity.current) { RING_STROKE_WIDTH.toPx() }
-    Canvas(modifier = Modifier.size(RING_DIAMETER)) {
+    Canvas(modifier = Modifier.size(diameter)) {
         val stroke = Stroke(width = strokeWidthPx, cap = StrokeCap.Round)
         val headRadius = strokeWidthPx
         // 先端の丸(直径22dp相当)がCanvas境界からはみ出さないよう、headRadius分だけ内側に収める
@@ -446,3 +471,15 @@ private fun sortTimers(
     },
 )
 
+/**
+ * 輪の中に収める残り時間の文字サイズ。
+ * 純正と同じ見え方にするため、輪の大きさに対する比を保つ。
+ * 桁が多いときは輪からはみ出すので、その分だけ縮める。
+ */
+private fun TextStyle.clockSizeFor(ringDiameter: Dp, remainingMillis: Long): TextStyle {
+    val base = OFFICIAL_CLOCK_FONT_SIZE_SP * (ringDiameter.value / OFFICIAL_RING_DIAMETER_DP)
+    // 「1:23:45」は7文字あり、「12:34」の5文字より横に広い。収まるよう先に細くしておく
+    val shrink = if (remainingMillis >= 3600_000L) 0.62f else 1f
+    val size = (base * shrink).sp
+    return copy(fontSize = size, lineHeight = size * 1.1f)
+}
