@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.marutyan.termalarm.R
+import com.marutyan.termalarm.ui.theme.keypadInput
 import com.marutyan.termalarm.ui.theme.tabularNums
 
 // 純正のテンキーで押しやすい大きさを確保するためのキー直径。
@@ -197,17 +198,17 @@ private fun TimeUnitDisplay(
     Row(verticalAlignment = Alignment.Bottom) {
         Text(
             text = digit1.toString(),
-            style = MaterialTheme.typography.displayMedium.tabularNums(),
+            style = MaterialTheme.typography.displayLarge.keypadInput(),
             color = if (isDigit1Entered) activeColor else inactiveColor,
         )
         Text(
             text = digit2.toString(),
-            style = MaterialTheme.typography.displayMedium.tabularNums(),
+            style = MaterialTheme.typography.displayLarge.keypadInput(),
             color = if (isDigit2Entered) activeColor else inactiveColor,
         )
         Text(
             text = unit,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleLarge,
             color = if (isUnitEntered) activeColor else inactiveColor,
             modifier = Modifier.padding(start = 2.dp, bottom = 6.dp),
         )

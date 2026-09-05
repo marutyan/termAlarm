@@ -99,3 +99,14 @@ fun TextStyle.alarmCardClock(): TextStyle = copy(
     lineHeight = 52.sp,
     fontFeatureSettings = "tnum",
 )
+
+/**
+ * タイマーの追加画面で、入力中の時間を出す文字。
+ * 「00h 00m 00s」を1行に収める必要があるため、画面の主役の時刻ほどは大きくできない。
+ * 幅の計算から、この端末幅で収まる上限に近い値にしている。
+ */
+fun TextStyle.keypadInput(): TextStyle = copy(
+    fontSize = 60.sp,
+    lineHeight = 68.sp,
+    fontFeatureSettings = "tnum",
+)
