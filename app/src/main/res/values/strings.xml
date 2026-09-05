@@ -106,6 +106,25 @@
     <string name="timer_decrease">減らす</string>
     <string name="timer_increase">増やす</string>
     <string name="timer_start">開始</string>
+    <!-- タイマー追加画面: テンキー入力 -->
+    <string name="timer_time_description">%1$d時間%2$d分%3$d秒</string>
+    <string name="timer_unit_hours">h</string>
+    <string name="timer_unit_minutes">m</string>
+    <string name="timer_unit_seconds">s</string>
+    <string name="timer_key_1">1</string>
+    <string name="timer_key_2">2</string>
+    <string name="timer_key_3">3</string>
+    <string name="timer_key_4">4</string>
+    <string name="timer_key_5">5</string>
+    <string name="timer_key_6">6</string>
+    <string name="timer_key_7">7</string>
+    <string name="timer_key_8">8</string>
+    <string name="timer_key_9">9</string>
+    <string name="timer_key_00">00</string>
+    <string name="timer_key_0">0</string>
+    <string name="timer_key_backspace">⌫</string>
+    <string name="timer_backspace">削除</string>
+    <string name="timer_cancel">取り消し</string>
     <!-- タイマー画面: 一覧が空のときの案内 -->
     <string name="timer_list_empty">動作中のタイマーがありません</string>
     <!-- タイマー画面: 各カードの操作 -->
@@ -113,18 +132,23 @@
     <string name="timer_resume">再開</string>
     <string name="timer_reset">リセット</string>
     <string name="timer_extend_one_minute">+1分</string>
+    <string name="timer_extend_one_minute_button">+1:00</string>
     <string name="timer_delete">削除</string>
     <!-- タイマー画面: 完了(鳴動中)のタイマーを止めるボタン。停止するとそのタイマー自体を削除する -->
     <string name="timer_stop">停止</string>
     <!-- タイマー画面: 右下のFAB(新規追加)。押すと時分秒を入力する別画面を開く。同じ文言を追加画面のタイトルにも使う -->
     <string name="timer_add">タイマーを追加</string>
     <!-- タイマー画面: カード左上のラベル。%1$sには開始時に指定した時間("5:00"等)が入る -->
-    <string name="timer_card_title">タイマー（%1$s）</string>
+    <string name="timer_card_title">%1$s</string>
+    <string name="timer_card_title_unnamed">タイマー</string>
 
     <!-- タイマーのフォアグラウンド通知 -->
     <string name="timer_notification_channel_name">タイマー</string>
     <string name="timer_notification_title">タイマー動作中</string>
     <string name="timer_notification_summary">%1$d件のタイマー</string>
+    <string name="timer_notification_finished">タイムアップ</string>
+    <string name="timer_notification_paused">一時停止中</string>
+    <string name="timer_notification_running">動作中</string>
     <string name="timer_notification_line_running">%1$s のこり %2$s</string>
     <string name="timer_notification_line_paused">%1$s 一時停止中 %2$s</string>
     <string name="timer_notification_line_finished">%1$s 完了</string>

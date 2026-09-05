@@ -4,42 +4,50 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.ui.theme.tabularNums
 
+// 純正のテンキーで押しやすい大きさを確保するためのキー直径。
+// docs/OFFICIAL_UI.mdの「押せる大きさを確保する（1辺72dp以上）」を満たす値とする。
+private val KEY_SIZE = 76.dp
+
+// テンキーのキー間の余白。3列並べたときに画面幅(360dp〜392dp)へバランスよく収まるサイズとする。
+private val KEY_SPACING = 16.dp
+
 /**
- * タイマー新規追加画面。純正の時計アプリと同じく、時分秒の入力はタイマー一覧の画面から追い出し、
- * FAB経由で開くこの専用画面だけに置く(docs/OFFICIAL_UI.md「タイマー」)。
+ * タイマー新規追加画面。純正の時計アプリと同じく、3列×4行の円形テンキーで右から数字を詰めて
+ * 時分秒を入力する(docs/OFFICIAL_UI.md「タイマー / 追加画面はテンキー」)。
  * NavHostのルートではなくTimerScreen内のローカルな状態切り替えとして表示するため、
  * システムの戻る操作にはBackHandlerで対応する。
  */
@@ -47,70 +55,295 @@ import com.marutyan.termalarm.ui.theme.tabularNums
 fun TimerAddScreen(onStart: (hours: Int, minutes: Int, seconds: Int) -> Unit, onClose: () -> Unit) {
     BackHandler(onBack = onClose)
 
-    var hours by rememberSaveable { mutableIntStateOf(0) }
-    var minutes by rememberSaveable { mutableIntStateOf(5) }
-    var seconds by rememberSaveable { mutableIntStateOf(0) }
+    // 入力された数字列（最大6桁）。電子レンジと同様に右から順に詰まる。
+    var inputDigits by rememberSaveable { mutableStateOf("") }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.timer_add), style = MaterialTheme.typography.headlineMedium) },
-                navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close))
+    // 6桁にゼロパディングして時・分・秒を右から2桁ずつ解釈する。
+    val padded = inputDigits.padStart(6, '0')
+    val hours = padded.substring(0, 2).toInt()
+    val minutes = padded.substring(2, 4).toInt()
+    val seconds = padded.substring(4, 6).toInt()
+
+    val isStartEnabled = inputDigits.isNotEmpty() && (hours > 0 || minutes > 0 || seconds > 0)
+
+    Scaffold { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 24.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // 上部の入力中時間表示
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.Center,
+            ) {
+                TimerDisplay(
+                    hours = hours,
+                    minutes = minutes,
+                    seconds = seconds,
+                    padded = padded,
+                    inputLength = inputDigits.length,
+                )
+            }
+
+            // 中央の3列×4行テンキー
+            TimerKeypad(
+                onDigit = { digit ->
+                    if (inputDigits.length < 6) {
+                        inputDigits = if (inputDigits == "0") digit.toString() else inputDigits + digit
+                    }
+                },
+                onZero = {
+                    if (inputDigits.isNotEmpty() && inputDigits != "0" && inputDigits.length < 6) {
+                        inputDigits += '0'
+                    }
+                },
+                onDoubleZero = {
+                    repeat(2) {
+                        if (inputDigits.isNotEmpty() && inputDigits != "0" && inputDigits.length < 6) {
+                            inputDigits += '0'
+                        }
+                    }
+                },
+                onBackspace = {
+                    if (inputDigits.isNotEmpty()) {
+                        inputDigits = inputDigits.dropLast(1)
                     }
                 },
             )
-        },
-    ) { padding ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    NumberStepper(stringResource(R.string.timer_input_hours), hours, 0..23) { hours = it }
-                    NumberStepper(stringResource(R.string.timer_input_minutes), minutes, 0..59) { minutes = it }
-                    NumberStepper(stringResource(R.string.timer_input_seconds), seconds, 0..59) { seconds = it }
-                }
-            }
-            Button(
-                onClick = { onStart(hours, minutes, seconds) },
-                enabled = hours > 0 || minutes > 0 || seconds > 0,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp).heightIn(min = 56.dp),
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(20.dp))
-                Text(stringResource(R.string.timer_start), modifier = Modifier.padding(start = 8.dp))
-            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 下部の取り消し（×）と開始（▶）
+            TimerActionRow(
+                isStartEnabled = isStartEnabled,
+                onClose = onClose,
+                onStart = { onStart(hours, minutes, seconds) },
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
-// 時/分/秒それぞれの入力用ステッパー。IMEを出さずタップだけで完結させる
-// (旧TimerScreenの同名関数をこの追加専用画面へ移した)
+/**
+ * 入力中の時間を「00h 00m 00s」の書式で大きく表示する。
+ * 未入力の桁は薄く、入力済みの桁は通常色で表示し、単位は数字に小さく添える。
+ * 画面読み上げでは1つの時間として読み上げられるよう、子ノードの個別数字を隠して集約する。
+ */
 @Composable
-private fun NumberStepper(label: String, value: Int, range: IntRange, onChange: (Int) -> Unit) {
-    val decreaseDescription = stringResource(R.string.timer_decrease)
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { if (value > range.first) onChange(value - 1) }, modifier = Modifier.size(48.dp)) {
-                // Icons.Filled.Removeはmaterial-icons-coreに含まれないため、Textでマイナス記号を出す
-                Text(
-                    text = "－",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.semantics { contentDescription = decreaseDescription },
+private fun TimerDisplay(
+    hours: Int,
+    minutes: Int,
+    seconds: Int,
+    padded: String,
+    inputLength: Int,
+) {
+    val description = stringResource(R.string.timer_time_description, hours, minutes, seconds)
+    Row(
+        modifier = Modifier.clearAndSetSemantics {
+            contentDescription = description
+        },
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        TimeUnitDisplay(
+            digit1 = padded[0],
+            isDigit1Entered = 0 >= (6 - inputLength),
+            digit2 = padded[1],
+            isDigit2Entered = 1 >= (6 - inputLength),
+            unit = stringResource(R.string.timer_unit_hours),
+            isUnitEntered = inputLength >= 5,
+        )
+        TimeUnitDisplay(
+            digit1 = padded[2],
+            isDigit1Entered = 2 >= (6 - inputLength),
+            digit2 = padded[3],
+            isDigit2Entered = 3 >= (6 - inputLength),
+            unit = stringResource(R.string.timer_unit_minutes),
+            isUnitEntered = inputLength >= 3,
+        )
+        TimeUnitDisplay(
+            digit1 = padded[4],
+            isDigit1Entered = 4 >= (6 - inputLength),
+            digit2 = padded[5],
+            isDigit2Entered = 5 >= (6 - inputLength),
+            unit = stringResource(R.string.timer_unit_seconds),
+            isUnitEntered = inputLength >= 1,
+        )
+    }
+}
+
+/**
+ * 時間・分・秒の各単位における数字2桁と単位文字を表示する。
+ * 各桁ごとに未入力か入力済みかに応じて色を切り替える。
+ */
+@Composable
+private fun TimeUnitDisplay(
+    digit1: Char,
+    isDigit1Entered: Boolean,
+    digit2: Char,
+    isDigit2Entered: Boolean,
+    unit: String,
+    isUnitEntered: Boolean,
+) {
+    val activeColor = MaterialTheme.colorScheme.onSurface
+    val inactiveColor = MaterialTheme.colorScheme.outline
+
+    Row(verticalAlignment = Alignment.Bottom) {
+        Text(
+            text = digit1.toString(),
+            style = MaterialTheme.typography.displayMedium.tabularNums(),
+            color = if (isDigit1Entered) activeColor else inactiveColor,
+        )
+        Text(
+            text = digit2.toString(),
+            style = MaterialTheme.typography.displayMedium.tabularNums(),
+            color = if (isDigit2Entered) activeColor else inactiveColor,
+        )
+        Text(
+            text = unit,
+            style = MaterialTheme.typography.titleMedium,
+            color = if (isUnitEntered) activeColor else inactiveColor,
+            modifier = Modifier.padding(start = 2.dp, bottom = 6.dp),
+        )
+    }
+}
+
+/**
+ * 3列×4行の円形テンキー。
+ * 純正時計アプリと同じ配置（1〜9、00、0、⌫）で数字を入力するために使う。
+ */
+@Composable
+private fun TimerKeypad(
+    onDigit: (Char) -> Unit,
+    onZero: () -> Unit,
+    onDoubleZero: () -> Unit,
+    onBackspace: () -> Unit,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(KEY_SPACING),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(KEY_SPACING)) {
+            KeypadButton(text = stringResource(R.string.timer_key_1), onClick = { onDigit('1') })
+            KeypadButton(text = stringResource(R.string.timer_key_2), onClick = { onDigit('2') })
+            KeypadButton(text = stringResource(R.string.timer_key_3), onClick = { onDigit('3') })
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(KEY_SPACING)) {
+            KeypadButton(text = stringResource(R.string.timer_key_4), onClick = { onDigit('4') })
+            KeypadButton(text = stringResource(R.string.timer_key_5), onClick = { onDigit('5') })
+            KeypadButton(text = stringResource(R.string.timer_key_6), onClick = { onDigit('6') })
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(KEY_SPACING)) {
+            KeypadButton(text = stringResource(R.string.timer_key_7), onClick = { onDigit('7') })
+            KeypadButton(text = stringResource(R.string.timer_key_8), onClick = { onDigit('8') })
+            KeypadButton(text = stringResource(R.string.timer_key_9), onClick = { onDigit('9') })
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(KEY_SPACING)) {
+            KeypadButton(text = stringResource(R.string.timer_key_00), onClick = onDoubleZero)
+            KeypadButton(text = stringResource(R.string.timer_key_0), onClick = onZero)
+            KeypadButton(
+                text = stringResource(R.string.timer_key_backspace),
+                contentDescription = stringResource(R.string.timer_backspace),
+                onClick = onBackspace,
+            )
+        }
+    }
+}
+
+/**
+ * テンキーの1つの円形キー。
+ * 1辺72dp以上の円形領域を確保し、押し間違いを防ぐために使う。
+ */
+@Composable
+private fun KeypadButton(
+    text: String,
+    onClick: () -> Unit,
+    contentDescription: String? = null,
+) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.size(KEY_SIZE),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (contentDescription != null) {
+                        Modifier.semantics { this.contentDescription = contentDescription }
+                    } else {
+                        Modifier
+                    }
+                ),
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+/**
+ * テンキーの下に配置する操作ボタン行（取り消しと開始）。
+ * テンキーの幅に合わせて左右に配置し、片手でも押しやすくするために使う。
+ */
+@Composable
+private fun TimerActionRow(
+    isStartEnabled: Boolean,
+    onClose: () -> Unit,
+    onStart: () -> Unit,
+) {
+    // テンキー全体の幅（KEY_SIZE * 3 + KEY_SPACING * 2）に合わせて配置する
+    val keypadWidth = KEY_SIZE * 3 + KEY_SPACING * 2
+
+    Row(
+        modifier = Modifier.width(keypadWidth),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // 取り消し（×）
+        Surface(
+            onClick = onClose,
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.size(KEY_SIZE),
+        ) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.timer_cancel),
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
-            Text(
-                text = value.toString().padStart(2, '0'),
-                style = MaterialTheme.typography.headlineSmall.tabularNums(),
-                modifier = Modifier.width(40.dp),
-                textAlign = TextAlign.Center,
+        }
+
+        // 開始（▶）
+        FilledIconButton(
+            onClick = onStart,
+            enabled = isStartEnabled,
+            shape = CircleShape,
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                disabledContentColor = MaterialTheme.colorScheme.outline,
+            ),
+            modifier = Modifier.size(KEY_SIZE),
+        ) {
+            Icon(
+                Icons.Filled.PlayArrow,
+                contentDescription = stringResource(R.string.timer_start),
             )
-            IconButton(onClick = { if (value < range.last) onChange(value + 1) }, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.timer_increase))
-            }
         }
     }
 }

@@ -76,19 +76,22 @@ class TimerScreenTest {
         composeTestRule.onNodeWithText(string(R.string.timer_list_empty)).assertExists()
     }
 
-    // 既定値(5分)のまま「開始」を押すと、一覧に1件現れ空表示が消えることを保証する。
-    // 時分秒の入力は右下のFABから開く別画面(TimerAddScreen)へ移ったため、まずFABを押してから開始する
+    // テンキーで5分00秒(5 → 0 → 0)を入力して開始すると、一覧に1件現れ空表示が消えることを保証する。
+    // 時分秒の入力は右下のFABから開くテンキー画面(TimerAddScreen)で行う。
     @Test
     fun 開始すると一覧に1件現れる() {
         setScreen()
         composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).performClick()
-        composeTestRule.onNodeWithText(string(R.string.timer_start)).performClick()
+        composeTestRule.onNodeWithText("5").performClick()
+        composeTestRule.onNodeWithText("0").performClick()
+        composeTestRule.onNodeWithText("0").performClick()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_start)).performClick()
 
         composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().size == 1 } }
         composeTestRule.onNodeWithText(string(R.string.timer_list_empty)).assertDoesNotExist()
 
         val saved = runBlocking { repository.observeAll().first().single() }
-        assertEquals(300_000L, saved.totalMillis) // 既定値は0時間5分0秒
+        assertEquals(300_000L, saved.totalMillis) // 5分0秒 = 300,000ms
         assertEquals(TimerRunState.RUNNING, saved.runState)
     }
 
@@ -96,19 +99,23 @@ class TimerScreenTest {
     @Test
     fun 複数開始すると両方一覧に出てそれぞれ独立している() {
         setScreen()
-        val decrease = string(R.string.timer_decrease)
         val addDescription = string(R.string.timer_add)
+        val startDescription = string(R.string.timer_start)
 
+        // 1件目はテンキーで 5分00秒 (5 → 0 → 0) を入力して開始する
         composeTestRule.onNodeWithContentDescription(addDescription).performClick()
-        composeTestRule.onNodeWithText(string(R.string.timer_start)).performClick()
+        composeTestRule.onNodeWithText("5").performClick()
+        composeTestRule.onNodeWithText("0").performClick()
+        composeTestRule.onNodeWithText("0").performClick()
+        composeTestRule.onNodeWithContentDescription(startDescription).performClick()
         composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().size == 1 } }
 
-        // 2件目は分数を3分に変えてから開始し、1件目と別の合計時間にする。Add画面はFABを押すたびに
-        // 新しく開くため入力値は既定値(0時間5分0秒)へ戻っている
-        // (時/分/秒の3つのステッパーはcontentDescriptionが共通のため、並び順のindex=1で分のステッパーを指す)
+        // 2件目はテンキーで 3分00秒 (3 → 0 → 0) を入力して開始する
         composeTestRule.onNodeWithContentDescription(addDescription).performClick()
-        repeat(2) { composeTestRule.onAllNodesWithContentDescription(decrease)[1].performClick() }
-        composeTestRule.onNodeWithText(string(R.string.timer_start)).performClick()
+        composeTestRule.onNodeWithText("3").performClick()
+        composeTestRule.onNodeWithText("0").performClick()
+        composeTestRule.onNodeWithText("0").performClick()
+        composeTestRule.onNodeWithContentDescription(startDescription).performClick()
         composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().size == 2 } }
 
         val all = runBlocking { repository.observeAll().first() }
@@ -152,7 +159,8 @@ class TimerScreenTest {
         }
         setScreen()
 
-        composeTestRule.onNodeWithText(string(R.string.timer_extend_one_minute)).performClick()
+        // 延長ボタンは新デザインでは「+1:00」表記のため、timer_extend_one_minute_button で探す
+        composeTestRule.onNodeWithText(string(R.string.timer_extend_one_minute_button)).performClick()
         composeTestRule.waitUntil(5_000) { runBlocking { repository.getById(id)?.totalMillis == 120_000L } }
 
         val extended = runBlocking { repository.getById(id)!! }
@@ -179,7 +187,8 @@ class TimerScreenTest {
             )
         }
         setScreen()
-        composeTestRule.onNodeWithText(string(R.string.timer_reset)).performClick()
+        // リセットボタンは新デザインでは円を描く矢印アイコンのため、contentDescriptionで探す
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_reset)).performClick()
 
         composeTestRule.waitUntil(5_000) { runBlocking { repository.getById(id)?.remainingMillisAtAnchor == 300_000L } }
         val reset = runBlocking { repository.getById(id)!! }
