@@ -1,0 +1,222 @@
+package com.marutyan.termalarm.timer
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.graphics.drawable.Icon
+import android.os.Build
+import android.os.Bundle
+import android.os.SystemClock
+import com.marutyan.termalarm.MainActivity
+import com.marutyan.termalarm.R
+import com.marutyan.termalarm.domain.TimerRunState
+import com.marutyan.termalarm.domain.TimerState
+import com.marutyan.termalarm.domain.overdueMillis
+import com.marutyan.termalarm.domain.remainingMillis
+import com.marutyan.termalarm.ui.alarmlist.TermAlarmTab
+import com.marutyan.termalarm.ui.navigation.EXTRA_DEEPLINK_TAB
+import java.time.Duration
+
+/**
+ * タイマーの通知を組み立てて出す。
+ *
+ * 純正の時計アプリを調べたところ、動作中はサービスを持たず、通知を1回出すだけだった。
+ * 残り時間はMetricStyleへ「ゼロになる時刻」を渡し、数えるのは端末に任せている。
+ * そのため1秒ごとに通知を作り直す必要がなく、状態が変わったときだけ出し直せばよい。
+ *
+ * この置き場所をサービスから切り離してあるのは、動作中は誰でも（画面でもReceiverでも）
+ * 通知を出し直せるようにするため。
+ */
+object TimerNotifications {
+
+    // MetricStyle(通知へ残り時間を任せる仕組み)が使えるようになったAndroidの版。
+    // 定数が古い端末向けのSDKに無いため、数値で持つ
+    private const val METRIC_STYLE_SDK_INT = 37
+
+    /**
+     * いまのタイマー一覧に合わせて通知を出し直す。1件も無ければ消す。
+     * 動作中・一時停止中・鳴動中のどれでも同じ通知にまとめる（純正も1つにまとめている）。
+     */
+    fun refresh(context: Context, timers: List<TimerState>) {
+        val manager = context.getSystemService(NotificationManager::class.java)
+        if (timers.isEmpty()) {
+            manager.cancel(TIMER_FOREGROUND_NOTIFICATION_ID)
+            return
+        }
+        manager.notify(TIMER_FOREGROUND_NOTIFICATION_ID, build(context, timers))
+    }
+
+    /** 通知そのものを作る。鳴動中のサービスが startForeground へ渡すためにも使う。 */
+    fun build(context: Context, timers: List<TimerState>): Notification {
+        val nowElapsed = SystemClock.elapsedRealtime()
+        val nowWall = System.currentTimeMillis()
+        // 鳴っているものを最優先。それ以外は残り時間が短い順に見て、いちばん早く鳴るものを主役にする
+        val main = timers.firstOrNull { it.runState == TimerRunState.FINISHED }
+            ?: timers.filter { it.runState == TimerRunState.RUNNING }
+                .minByOrNull { remainingMillis(it, nowElapsed, nowWall) }
+            ?: timers.first()
+
+        val contentIntent = PendingIntent.getActivity(
+            context,
+            0,
+            // 通知を押したらタイマーのタブを開く。一覧が出ると、どのタイマーの話か分からない
+            Intent(context, MainActivity::class.java)
+                .putExtra(EXTRA_DEEPLINK_TAB, TermAlarmTab.TIMER.name),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val builder = Notification.Builder(context, ensureChannel(context))
+            .setSmallIcon(R.drawable.ic_stat_timer)
+            .setOngoing(true)
+            // 種類はタイマーにする。新しいAndroidは、この種類の進行中の通知だけを
+            // ステータスバーへ出す対象として扱う。アラームは「今まさに鳴っている」ための種類で対象外
+            .setCategory(Notification.CATEGORY_STOPWATCH)
+            // 純正と同じく、この端末の中だけで出す。ロック画面でも中身を隠さない
+            .setLocalOnly(true)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
+            // 通知の丸いアイコンに、アプリのアイコンではなく砂時計を使わせる
+            .addExtras(Bundle().apply { putBoolean("android.app.preferSmallIcon", true) })
+            // 何時に出したかは要らない。残り時間の方が知りたい情報
+            .setShowWhen(false)
+            .setContentIntent(contentIntent)
+
+        applyRemainingTime(context, builder, timers, main, nowElapsed, nowWall)
+        builder.addAction(action(context, R.string.timer_stop, ACTION_STOP, main.id))
+        builder.addAction(action(context, R.string.timer_extend_one_minute, ACTION_EXTEND, main.id))
+        if (main.runState == TimerRunState.RUNNING) {
+            builder.addAction(action(context, R.string.timer_pause, ACTION_PAUSE, main.id))
+        }
+        if (timers.size > 1) {
+            builder.setSubText(context.getString(R.string.timer_notification_summary, timers.size))
+        }
+        return builder.build()
+    }
+
+    /**
+     * 残り時間を通知へ載せる。
+     *
+     * 純正は動いているタイマーを横に並べて出す。2件なら数字が2つ、3件なら3つ並ぶ。
+     * MetricStyleへタイマーの数だけMetricを足すと、その形になる。
+     */
+    private fun applyRemainingTime(
+        context: Context,
+        builder: Notification.Builder,
+        timers: List<TimerState>,
+        main: TimerState,
+        nowElapsed: Long,
+        nowWall: Long,
+    ) {
+        if (Build.VERSION.SDK_INT < METRIC_STYLE_SDK_INT) {
+            applyChronometerFallback(builder, main, nowElapsed, nowWall)
+            builder.setContentTitle(main.label.ifBlank { context.getString(R.string.timer_notification_title) })
+            builder.setContentText(context.getString(statusTextRes(main.runState)))
+            return
+        }
+        // 主役を先頭に置く。ステータスバーの狭い場所へ出すのは先頭の1つだけになる
+        val ordered = listOf(main) + timers.filter { it.id != main.id }
+        val style = Notification.MetricStyle()
+        ordered.forEach { style.addMetric(metricOf(context, it, nowElapsed, nowWall)) }
+        builder.setStyle(style.setCriticalMetric(0))
+        builder.setRequestPromotedOngoing(true)
+    }
+
+    /** タイマー1件を、通知が数を数えられる形へ変える。 */
+    private fun metricOf(
+        context: Context,
+        timer: TimerState,
+        nowElapsed: Long,
+        nowWall: Long,
+    ): Notification.Metric {
+        val remaining = remainingMillis(timer, nowElapsed, nowWall)
+        val value = if (timer.runState == TimerRunState.PAUSED) {
+            Notification.Metric.TimeDifference.forPausedTimer(
+                Duration.ofMillis(remaining),
+                Notification.Metric.TimeDifference.FORMAT_CHRONOMETER,
+            )
+        } else {
+            // 残り時間が尽きる時刻。鳴動中はすでに過ぎているので、過去の時刻になる
+            val zero = when (timer.runState) {
+                TimerRunState.FINISHED -> nowElapsed - overdueMillis(timer, nowElapsed, nowWall)
+                else -> nowElapsed + remaining
+            }
+            Notification.Metric.TimeDifference.forTimer(
+                zero,
+                Notification.Metric.TimeDifference.FORMAT_CHRONOMETER,
+            )
+        }
+        // 名前を付けていないタイマーは、代わりに今の状態を書く(純正も状態を出している)
+        val label = timer.label.ifBlank { context.getString(statusTextRes(timer.runState)) }
+        return Notification.Metric(value, label)
+    }
+
+    /**
+     * MetricStyleを使えない端末向けに、通知の時計機能へ終わる時刻を渡して数えさせる。
+     * 数字を書き込むのではなく基準の時刻を渡す点はMetricStyleと同じ考え方。
+     */
+    private fun applyChronometerFallback(
+        builder: Notification.Builder,
+        main: TimerState,
+        nowElapsed: Long,
+        nowWall: Long,
+    ) {
+        if (main.runState == TimerRunState.PAUSED) return
+        val remaining = when (main.runState) {
+            TimerRunState.FINISHED -> -overdueMillis(main, nowElapsed, nowWall)
+            else -> remainingMillis(main, nowElapsed, nowWall)
+        }
+        builder.setWhen(nowWall + remaining)
+            .setUsesChronometer(true)
+            .setChronometerCountDown(true)
+            .setShowWhen(true)
+    }
+
+    // タイマーの状態を表す文言。通知の本文と、名前の無いタイマーの見出しの両方で使う
+    private fun statusTextRes(runState: TimerRunState): Int = when (runState) {
+        TimerRunState.FINISHED -> R.string.timer_notification_finished
+        TimerRunState.PAUSED -> R.string.timer_notification_paused
+        TimerRunState.RUNNING -> R.string.timer_notification_running
+    }
+
+    // 通知のボタン1つ分。アイコンは出さないのでnullを渡す
+    private fun action(context: Context, labelRes: Int, action: String, id: Long): Notification.Action =
+        Notification.Action.Builder(
+            null as Icon?,
+            context.getString(labelRes),
+            actionIntent(context, action, id),
+        ).build()
+
+    // 通知のボタンから操作を送り返すための入れ物。受け取るのはTimerActionReceiver
+    private fun actionIntent(context: Context, action: String, id: Long): PendingIntent =
+        PendingIntent.getBroadcast(
+            context,
+            (action + id).hashCode(),
+            Intent(context, TimerActionReceiver::class.java).setAction(action).putExtra(EXTRA_TIMER_ID, id),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+    /**
+     * 通知チャンネルを用意する。
+     * 重要度がLOWだと「サイレント」欄へ入ってしまうためDEFAULTにする。ただし音は鳴らさない。
+     * 一度作ったチャンネルは重要度を上げられないため、古いものは消して新しいIDで作り直す。
+     */
+    private fun ensureChannel(context: Context): String {
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager.deleteNotificationChannel(LEGACY_TIMER_NOTIFICATION_CHANNEL_ID)
+        if (manager.getNotificationChannel(TIMER_NOTIFICATION_CHANNEL_ID) == null) {
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    TIMER_NOTIFICATION_CHANNEL_ID,
+                    context.getString(R.string.timer_notification_channel_name),
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                ).apply { setSound(null, null) },
+            )
+        }
+        return TIMER_NOTIFICATION_CHANNEL_ID
+    }
+
+    const val ACTION_STOP = "com.marutyan.termalarm.timer.STOP"
+    const val ACTION_EXTEND = "com.marutyan.termalarm.timer.EXTEND"
+    const val ACTION_PAUSE = "com.marutyan.termalarm.timer.PAUSE"
+}

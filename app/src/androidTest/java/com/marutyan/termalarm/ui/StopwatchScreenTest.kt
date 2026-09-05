@@ -188,11 +188,12 @@ class StopwatchScreenTest {
             repository.addLap(StopwatchLap(lapNumber = 1, lapMillis = 12_345L, totalMillis = 12_345L))
         }
         setScreen()
-        // 1件目のラップはlapMillis==totalMillisになるため、メイン表示とラップ行の両方が同じ文字列になる
+        // 1件目のラップはlapMillis==totalMillisになり、合計時間も接頭辞なく表示されるため、
+        // メイン表示・ラップ行のラップ時間・合計時間の3箇所が同じ文字列になる
         // (単一ノード前提のonNodeWithTextは使わない)
         assertTrue(
-            composeTestRule.onAllNodesWithText(formatElapsed(12_345L, includeCentiseconds = true))
-                .fetchSemanticsNodes().size == 2,
+            composeTestRule.onAllNodesWithText("00:12.34")
+                .fetchSemanticsNodes().size == 3,
         )
 
         composeTestRule.onNodeWithText(string(R.string.stopwatch_reset)).performClick()
@@ -205,7 +206,7 @@ class StopwatchScreenTest {
         }
         val lapsAfterReset = runBlocking { repository.getLapsOnce() }
         assertTrue(lapsAfterReset.isEmpty())
-        composeTestRule.onNodeWithText(formatElapsed(0L, includeCentiseconds = true)).assertExists()
+        composeTestRule.onNodeWithText("00:00.00").assertExists()
         composeTestRule.onNodeWithText(string(R.string.stopwatch_start)).assertExists()
     }
 }

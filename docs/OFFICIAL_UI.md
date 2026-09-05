@@ -246,8 +246,55 @@ template=android.app.Notification$MetricStyle
 `setColorized(true)` も試したが、フラグは立たず、
 かわりに `FOREGROUND_SERVICE` の印が消える副作用だけが出たため戻した。
 
-**未解決。** 通知そのものは純正と同じ見た目になっているため、
-チップだけのために通知を2本立てにするかは、利用者の判断を待つ。
+### 純正のサービスの使い方（純正のコードを読んで分かった）
+
+純正の `TimerService` は、`com.android.deskclock.action.FIRE_TIMER` 以外の呼び出しを
+「予期しない」として記録する。つまり **鳴ったときにしか起動しない**。
+
+動作中はサービスを持たず、通知を1回出すだけ。残り時間は MetricStyle が数えるため、
+1秒ごとに通知を作り直す必要がない。
+
+このアプリも同じ作りへ変えた（2026年9月5日）。
+
+| | 前 | 後 |
+|---|---|---|
+| 動作中 | 1秒ごとに更新するサービスが常駐 | 通知だけ。サービスなし |
+| 鳴動中 | 同じサービス | 鳴らすためだけのサービス |
+| 期限の判定 | サービスの1秒ごとの見回り | AlarmManagerの予約 |
+
+### 純正が使っている、見つけにくい指定
+
+純正のコードから見つけた。どれも通知の見た目に効く。
+
+```java
+extras.putBoolean("android.app.preferSmallIcon", true);   // 丸アイコンにsmallIconを使う
+extras.putBoolean("android.requestPromotedOngoing", true);
+setShowWhen(false);
+```
+
+`preferSmallIcon` を入れないと、通知の丸いアイコンがアプリのアイコンになる。
+純正のように砂時計を出すにはこの指定が要る。
+
+### 残った差: ステータスバーのチップ
+
+`PROMOTED_ONGOING` のフラグだけが、こちらでは立たない。
+
+純正: `ONGOING_EVENT|LOCAL_ONLY|PROMOTED_ONGOING`
+こちら: `ONGOING_EVENT|ONLY_ALERT_ONCE|LOCAL_ONLY`
+
+試したこと。
+
+- `setRequestPromotedOngoing(true)` を呼ぶ → extras には入るがフラグは立たない
+- 種類を `CATEGORY_STOPWATCH` にする → 効果なし
+- `MetricStyle` を使う → 効果なし
+- `setColorized(true)` → 効果なし。むしろ副作用が出たので戻した
+- フォアグラウンドサービスをやめる → `FOREGROUND_SERVICE` の印は消えたが、フラグは立たない
+- `setOnlyAlertOnce` をやめる → `NO_CLEAR` は消えたが、フラグは立たない
+
+アプリの通知設定を実機で見たが、それを許可する項目自体が無い。
+システムが判断しているとみられ、アプリ側からできることが見当たらない。
+
+**未解決。** 通知の中身は純正と同じ見た目・同じ挙動になっているため、ここで追うのを止めた。
 
 チャンネルの重要度が `IMPORTANCE_LOW` だと「サイレント」欄へ入る。
 `IMPORTANCE_DEFAULT` にした上で、チャンネルへ `setSound(null, null)` を指定すると、
@@ -261,3 +308,76 @@ template=android.app.Notification$MetricStyle
 - 切ってあるアラームは時刻が地に近い灰色になる
 - 右にスイッチ
 - 右下のボタン（追加）は明るい色。角の丸い四角で、円ではない
+
+
+## 実寸の測り方
+
+画像から目分量で測ると外す。実機の画面から直接、要素の位置と大きさを取り出せる。
+
+```sh
+# 純正の画面を開く（座標を叩かないので誤操作の心配がない）
+adb shell am start -a android.intent.action.SHOW_TIMERS   # タイマー
+adb shell am start -a android.intent.action.SHOW_ALARMS    # アラーム
+adb shell am start -a android.intent.action.SET_TIMER \
+    --ei android.intent.extra.alarm.LENGTH 3600 \
+    --ez android.intent.extra.alarm.SKIP_UI true           # 1時間のタイマーを開始
+adb shell am start -a android.intent.action.DISMISS_TIMER  # 消す
+
+# 画面の中身を取り出す
+adb shell rm -f /sdcard/ui.xml
+adb shell uiautomator dump /sdcard/ui.xml
+adb pull /sdcard/ui.xml
+```
+
+出てくるXMLの `bounds="[x1,y1][x2,y2]"` がピクセル。
+この端末は 1080x2410、density 2.75 なので、dpは値を2.75で割る。
+
+同じことをこのアプリの画面へも行えば、純正との差が数値で出る。
+`--es com.marutyan.termalarm.ui.EXTRA_DEEPLINK_TAB TIMER` を付けて起動すると
+狙ったタブを開けるので、比較しやすい。
+
+**注意**: 純正はJetpack Composeで書かれており、APKの中にレイアウトXMLが1つも無い。
+寸法はコードの中にあるため、リソースを取り出しても読めない。実機から測るのが唯一の方法。
+
+## 純正の実寸（uiautomatorで測定、2026年9月5日）
+
+### タイマーの追加画面（テンキー）
+
+| 要素 | 実測 |
+|---|---|
+| 画面の見出し「タイマー」 | 高さ24dp、位置(19dp, 76dp) |
+| `00h 00m 00s` の領域 | 幅393dp（画面いっぱい）、高さ169dp、上端114dp |
+| テンキーのキー | **直径82dp** |
+| キーの中心の間隔 | 85dp（隙間はわずか3dp） |
+| テンキー全体の幅 | 252dp（画面の64%。左右に余白がある） |
+| 開始ボタン | **直径78dp、画面の中央** |
+| 取消（×） | **無い**。戻る操作で閉じる |
+
+### アラーム一覧
+
+| 要素 | 実測 |
+|---|---|
+| セクション見出し（起床／その他） | 高さ19dp、左13dp |
+| カード | 幅367dp、高さ119dp、左右の余白13dp |
+| カードの間隔 | 40dp |
+| カード内の左余白 | 16dp |
+| 繰り返し（毎日／未設定） | 高さ17dp |
+| 時刻 | 幅60dp、**高さ41dp**（余白込み。文字自体は約30dp） |
+| スイッチ | 42x39dp |
+
+### 下部ナビ
+
+| 要素 | 実測 |
+|---|---|
+| 項目1つ分 | 79x55dp |
+| アイコン | 19x19dp |
+| ラベル | 高さ16dp |
+
+### 設定画面
+
+| 要素 | 実測 |
+|---|---|
+| 項目のタイトル | 高さ17dp |
+| 項目の値 | 高さ14dp |
+| 左の余白 | 19dp |
+| 項目の間隔 | 36dp |

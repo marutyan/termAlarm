@@ -4,12 +4,17 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.PowerManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
- * TimerScheduler.setExactAndAllowWhileIdle()の発火先。予約はタイマーごとの完了予定時刻ちょうどに1回だけ
- * 届くが、どのタイマーが完了したかの実処理はTimerForegroundService側がRepositoryを読み直して行う
- * （複数タイマーが同時に完了する場合でも1回のtickでまとめて処理できるようにするため）。
- * ここではDoze中でもCPUを維持しつつサービスを起こすだけに留める（alarm/AlarmTriggerReceiverと同じ考え方）。
+ * TimerScheduler.setExactAndAllowWhileIdle()の発火先。予約はタイマーごとの完了予定時刻ちょうどに
+ * 1回だけ届く。ここで期限が来たタイマーを鳴動中へ移し、音を鳴らすサービスを起こす。
+ *
+ * 期限の判定をここで行うのは、動作中のタイマーがサービスを持たないため。
+ * 純正の時計アプリも同じで、動作中はAlarmManagerの予約だけに任せている。
+ * 複数のタイマーが同時に期限を迎える場合もまとめて処理する。
  */
 class TimerTriggerReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -17,6 +22,18 @@ class TimerTriggerReceiver : BroadcastReceiver() {
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "termalarm:timer-trigger")
         wakeLock.acquire(15_000L)
 
-        TimerForegroundService.ensureRunning(context)
+        // onReceiveを抜けるとプロセスを止められてしまうため、保存が終わるまで待たせる
+        val pending = goAsync()
+        val appContext = context.applicationContext
+        CoroutineScope(Dispatchers.Default).launch {
+            try {
+                if (TimerActions.markDueTimersFinished(appContext)) {
+                    TimerRingingService.start(appContext)
+                }
+            } finally {
+                runCatching { wakeLock.release() }
+                pending.finish()
+            }
+        }
     }
 }

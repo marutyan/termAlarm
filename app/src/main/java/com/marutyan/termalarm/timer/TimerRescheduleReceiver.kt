@@ -32,8 +32,11 @@ class TimerRescheduleReceiver : BroadcastReceiver() {
                     repository.update(rebased)
                     TimerScheduler.reschedule(context, rebased.id)
                 }
-                if (repository.hasActiveTimer()) {
-                    TimerForegroundService.ensureRunning(context)
+                // 再起動をまたいで期限が過ぎていたタイマーは、ここで鳴動中へ移す
+                if (TimerActions.markDueTimersFinished(context)) {
+                    TimerRingingService.start(context)
+                } else {
+                    TimerActions.refreshNotification(context)
                 }
             } finally {
                 pendingResult.finish()

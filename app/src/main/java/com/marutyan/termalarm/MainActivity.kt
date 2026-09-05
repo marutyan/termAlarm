@@ -12,7 +12,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
-import com.marutyan.termalarm.timer.TimerForegroundService
+import androidx.lifecycle.lifecycleScope
+import com.marutyan.termalarm.timer.TimerActions
+import kotlinx.coroutines.launch
 import com.marutyan.termalarm.ui.navigation.TermAlarmNavHost
 import com.marutyan.termalarm.ui.skipgame.hasShakeSensor
 import com.marutyan.termalarm.ui.theme.TermAlarmTheme
@@ -26,9 +28,8 @@ class MainActivity : ComponentActivity() {
         // ステータスバー/ナビゲーションバーの裏まで描画するエッジツーエッジ表示を有効化
         enableEdgeToEdge()
         // 動いているタイマーがあれば、その通知を出し直す。
-        // アプリを強制終了するとサービスも止まり、次に開いても通知が戻らなかった。
-        // 不要なら自分で止まる作りなので、動いていないときに呼んでも害はない
-        TimerForegroundService.ensureRunning(this)
+        // 通知を消してしまっても、アプリを開けば戻るようにするため
+        lifecycleScope.launch { TimerActions.refreshNotification(applicationContext) }
         setContent {
             TermAlarmTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {

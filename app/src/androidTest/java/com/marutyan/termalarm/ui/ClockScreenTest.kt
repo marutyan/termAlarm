@@ -18,6 +18,7 @@ import com.marutyan.termalarm.ui.clock.ClockViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -86,15 +87,19 @@ class ClockScreenTest {
     // 初期状態のデジタル表示で、現在時刻が表示されデジタルのセグメントボタンが選択されていることを保証する
     @Test
     fun デジタル表示のとき現在時刻が表示される() {
+        // 時計の毎秒更新アニメーションによりComposeがアイドル状態にならずタイムアウトするため、クロックの自動進行を止めて手動で進める
+        composeTestRule.mainClock.autoAdvance = false
         setScreen()
+        composeTestRule.mainClock.advanceTimeBy(500)
 
         composeTestRule.onNodeWithText(string(R.string.clock_display_mode_digital)).assertIsSelected()
 
         val now = ZonedDateTime.now()
         val currentTime = now.format(DateTimeFormatter.ofPattern("HH:mm"))
         val prevMinuteTime = now.minusMinutes(1).format(DateTimeFormatter.ofPattern("HH:mm"))
-        val hasCurrentOrPrev = composeTestRule.onAllNodes(hasText(currentTime)).fetchSemanticsNodes().isNotEmpty() ||
-            composeTestRule.onAllNodes(hasText(prevMinuteTime)).fetchSemanticsNodes().isNotEmpty()
+        // SlideAnimatedDigitsによりRow全体に「HH:mm:ss」が設定されるため、部分一致で現在時刻の時分が含まれることを確認する
+        val hasCurrentOrPrev = composeTestRule.onAllNodes(hasText(currentTime, substring = true)).fetchSemanticsNodes().isNotEmpty() ||
+            composeTestRule.onAllNodes(hasText(prevMinuteTime, substring = true)).fetchSemanticsNodes().isNotEmpty()
         assertTrue("現在時刻の表示が存在すること", hasCurrentOrPrev)
     }
 
@@ -119,24 +124,28 @@ class ClockScreenTest {
     // アナログからデジタルへ切り替え直すと、RepositoryにDIGITALが保存され、時分表示が再表示されることを保証する
     @Test
     fun アナログからデジタルに切り替えるとデジタル表示に戻りRepositoryに保存される() {
+        // 時計の毎秒更新アニメーションによりComposeがアイドル状態にならずタイムアウトするため、クロックの自動進行を止めて手動で進める
+        composeTestRule.mainClock.autoAdvance = false
         runBlocking { repository.setDisplayMode(ClockDisplayMode.ANALOG) }
         setScreen()
+        composeTestRule.mainClock.advanceTimeBy(500)
 
         composeTestRule.onNodeWithText(string(R.string.clock_display_mode_analog)).assertIsSelected()
 
         composeTestRule.onNodeWithText(string(R.string.clock_display_mode_digital)).performClick()
+        composeTestRule.mainClock.advanceTimeBy(500)
 
-        composeTestRule.waitUntil(5_000) {
-            runBlocking { repository.observeDisplayMode().first() == ClockDisplayMode.DIGITAL }
-        }
+        val saved = runBlocking { repository.observeDisplayMode().first() }
+        assertEquals(ClockDisplayMode.DIGITAL, saved)
 
         composeTestRule.onNodeWithText(string(R.string.clock_display_mode_digital)).assertIsSelected()
 
         val now = ZonedDateTime.now()
         val currentTime = now.format(DateTimeFormatter.ofPattern("HH:mm"))
         val prevMinuteTime = now.minusMinutes(1).format(DateTimeFormatter.ofPattern("HH:mm"))
-        val hasCurrentOrPrev = composeTestRule.onAllNodes(hasText(currentTime)).fetchSemanticsNodes().isNotEmpty() ||
-            composeTestRule.onAllNodes(hasText(prevMinuteTime)).fetchSemanticsNodes().isNotEmpty()
+        // SlideAnimatedDigitsによりRow全体に「HH:mm:ss」が設定されるため、部分一致でデジタル時刻の時分が含まれることを確認する
+        val hasCurrentOrPrev = composeTestRule.onAllNodes(hasText(currentTime, substring = true)).fetchSemanticsNodes().isNotEmpty() ||
+            composeTestRule.onAllNodes(hasText(prevMinuteTime, substring = true)).fetchSemanticsNodes().isNotEmpty()
         assertTrue("デジタル時刻の表示が再表示されること", hasCurrentOrPrev)
     }
 

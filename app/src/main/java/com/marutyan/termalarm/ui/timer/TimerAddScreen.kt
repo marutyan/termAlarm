@@ -42,12 +42,12 @@ import com.marutyan.termalarm.ui.theme.keypadInput
 import com.marutyan.termalarm.ui.theme.pressScaleEffect
 import com.marutyan.termalarm.ui.theme.tabularNums
 
-// テンキーのキー直径。純正は画面の幅をほぼ使い切る大きさで並べる。
-// 3列と間隔2つで 104*3 + 14*2 = 340dp となり、幅360dpの端末でも左右に余白が残る。
-private val KEY_SIZE = 104.dp
+// テンキーのキー直径。純正を実機で測ると82dpだった（uiautomatorで測定）。
+// 3列と間隔2つで 82*3 + 3*2 = 252dp。画面幅の64%に収まり、左右に余白が残る。
+private val KEY_SIZE = 82.dp
 
-// キーどうしの間隔
-private val KEY_SPACING = 14.dp
+// キーどうしの間隔。純正は中心の間隔が85dpで、キーが82dpなので隙間は3dpしかない
+private val KEY_SPACING = 3.dp
 
 /**
  * タイマー新規追加画面。純正の時計アプリと同じく、3列×4行の円形テンキーで右から数字を詰めて

@@ -137,17 +137,26 @@ class TimerScreenTest {
     // 一時停止/再開ボタンは新デザインではアイコンのみのため、文言ではなくcontentDescriptionで探す
     @Test
     fun 一時停止と再開() {
+        // タイマーの連続アニメーションによりComposeがアイドル状態にならずタイムアウトするため、クロックの自動進行を止めて手動で進める
+        composeTestRule.mainClock.autoAdvance = false
         val id = runBlocking {
             repository.add(startTimer(0L, "5:00", 300_000L, SystemClock.elapsedRealtime(), System.currentTimeMillis()))
         }
         setScreen()
+        composeTestRule.mainClock.advanceTimeBy(500)
 
         composeTestRule.onNodeWithContentDescription(string(R.string.timer_pause)).performClick()
-        composeTestRule.waitUntil(5_000) { runBlocking { repository.getById(id)?.runState == TimerRunState.PAUSED } }
+        // 保存はコルーチンで進むため、Composeのクロックを進めるだけでは終わらない。
+        // 保存の完了を確かめてから、画面の描き直しを進める
+        awaitRunState(id, TimerRunState.PAUSED)
+        composeTestRule.mainClock.advanceTimeBy(1_000)
         composeTestRule.onNodeWithContentDescription(string(R.string.timer_resume)).assertExists()
 
         composeTestRule.onNodeWithContentDescription(string(R.string.timer_resume)).performClick()
-        composeTestRule.waitUntil(5_000) { runBlocking { repository.getById(id)?.runState == TimerRunState.RUNNING } }
+        awaitRunState(id, TimerRunState.RUNNING)
+        composeTestRule.mainClock.advanceTimeBy(1_000)
+        // 再開後のUI再描画(recomposition)を完了させるためクロックを進める
+        composeTestRule.mainClock.advanceTimeBy(500)
         composeTestRule.onNodeWithContentDescription(string(R.string.timer_pause)).assertExists()
     }
 
@@ -211,5 +220,19 @@ class TimerScreenTest {
 
         composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().isEmpty() } }
         composeTestRule.onNodeWithText(string(R.string.timer_list_empty)).assertExists()
+    }
+
+    /**
+     * 保存が終わって指定の状態になるまで待つ。
+     * この画面は数字が動き続けるためComposeが「暇な状態」にならず、
+     * waitUntilやwaitForIdleでは待てない。Repositoryを直接見て待つ。
+     */
+    private fun awaitRunState(id: Long, expected: TimerRunState) {
+        val deadline = System.currentTimeMillis() + 5_000
+        while (System.currentTimeMillis() < deadline) {
+            if (runBlocking { repository.getById(id)?.runState } == expected) return
+            Thread.sleep(50)
+        }
+        assertEquals(expected, runBlocking { repository.getById(id)?.runState })
     }
 }

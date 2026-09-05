@@ -232,24 +232,25 @@ class SettingsScreenTest {
     fun 時刻に秒を表示のSwitchを切り替えるとRepositoryに反映される() {
         setScreen()
 
+        // 既定値はtrueのため、タップするとfalse(OFF)へ切り替わることを確認する
         composeTestRule.onNodeWithText(string(R.string.settings_show_seconds_title)).performScrollTo().performClick()
-
-        composeTestRule.waitUntil(5_000) {
-            runBlocking { settingsRepository.observe().first().showClockSeconds }
-        }
-
-        val savedOn = runBlocking { settingsRepository.observe().first() }
-        assertTrue("時刻に秒を表示がtrueになること", savedOn.showClockSeconds)
-
-        // もう一度タップしてOFFに戻ることを確認する
-        composeTestRule.onNodeWithText(string(R.string.settings_show_seconds_title)).performClick()
 
         composeTestRule.waitUntil(5_000) {
             runBlocking { !settingsRepository.observe().first().showClockSeconds }
         }
 
         val savedOff = runBlocking { settingsRepository.observe().first() }
-        assertTrue("時刻に秒を表示がfalseに戻ること", !savedOff.showClockSeconds)
+        assertTrue("時刻に秒を表示がfalseになること", !savedOff.showClockSeconds)
+
+        // もう一度タップしてtrue(ON)に戻ることを確認する
+        composeTestRule.onNodeWithText(string(R.string.settings_show_seconds_title)).performClick()
+
+        composeTestRule.waitUntil(5_000) {
+            runBlocking { settingsRepository.observe().first().showClockSeconds }
+        }
+
+        val savedOn = runBlocking { settingsRepository.observe().first() }
+        assertTrue("時刻に秒を表示がtrueに戻ること", savedOn.showClockSeconds)
     }
 
     // タイマーの音量徐々に増加ダイアログを開いて選択すると画面とRepositoryに保存されることを保証する

@@ -115,9 +115,14 @@
         <!-- 動作中/完了のタイマーが1件でもある間だけ生存するフォアグラウンドサービス。通知に残り時間を出し、
              完了時にUSAGE_ALARMで鳴らす -->
         <service
-            android:name=".timer.TimerForegroundService"
+            android:name=".timer.TimerRingingService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+
+        <!-- 通知のボタン(停止/+1分/一時停止)の受け口。自アプリ内のPendingIntent経由でのみ呼ばれる -->
+        <receiver
+            android:name=".timer.TimerActionReceiver"
+            android:exported="false" />
 
         <!-- TimerScheduler.setExactAndAllowWhileIdle()の発火先。自アプリ内のPendingIntent経由でのみ呼ばれる -->
         <receiver
