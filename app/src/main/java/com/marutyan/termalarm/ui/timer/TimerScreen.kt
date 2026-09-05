@@ -91,7 +91,7 @@ import kotlinx.coroutines.delay
  * 残り時間の表示は1秒ごとに更新する。
  */
 // 右下の追加ボタンの大きさ。純正の実測値に合わせている
-private val FAB_SIZE = 65.dp
+private val FAB_SIZE = 80.dp
 
 @Composable
 fun TimerScreen(
@@ -135,7 +135,7 @@ fun TimerScreen(
                     onClick = { showAddScreen = true },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                    // 純正を実測すると65dp。既定のままでは45dpしかなく、押す場所として小さい
+                    // 純正を実測すると80dp。既定のままでは45dpしかなく、押す場所として小さい
                     modifier = Modifier.size(FAB_SIZE),
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.timer_add))

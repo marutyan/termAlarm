@@ -63,9 +63,9 @@ import com.marutyan.termalarm.domain.WeekStart
 import com.marutyan.termalarm.ui.common.formatClockMinutes
 import java.time.DayOfWeek
 
-// 曜日の丸の大きさ。7つ並べるため、カードの内側(327dp)に収まる範囲でいちばん大きくしている。
-// 48dpだと9dpはみ出す
-private val DAY_CHIP_SIZE = 44.dp
+// 曜日の丸の大きさ。7つ並べても、カードの内側(413dp = 画面485dp − 左右の余白16dp×2 − カード内側20dp×2)に
+// 隙間を残して収まる大きさにしている。56dpなら 56×7 = 392dp で、丸どうしに少しずつ間が空く
+private val DAY_CHIP_SIZE = 56.dp
 
 // 週の始まり(設定「週の始まり」)に合わせて曜日チップの並び順を決める。DayOfWeek.entriesは月曜始まりの
 // 固定順のため、日曜始まりのときだけ日曜を先頭に回転させる。ui/alarmedit/AlarmEditScreen.ktからも使う
@@ -80,7 +80,7 @@ internal fun orderedDaysOfWeek(weekStart: WeekStart): List<DayOfWeek> = when (we
  * 秒までは表示しないので、次の分の頭に合わせて起こすことで無駄な再計算を避ける。
  */
 // 右下の追加ボタンの大きさ。純正の実測値に合わせている
-private val FAB_SIZE = 65.dp
+private val FAB_SIZE = 80.dp
 
 @Composable
 private fun rememberCurrentMinute(): ZonedDateTime {
@@ -143,7 +143,7 @@ fun AlarmListScreen(
                 onClick = onAddAlarm,
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-                // 純正を実測すると65dp。既定のままでは45dpしかなく、押す場所として小さい
+                // 純正を実測すると80dp。既定のままでは45dpしかなく、押す場所として小さい
                 modifier = Modifier.size(FAB_SIZE),
             ) {
                 Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_alarm))
