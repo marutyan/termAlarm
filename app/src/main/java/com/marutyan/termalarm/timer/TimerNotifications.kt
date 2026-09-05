@@ -82,6 +82,9 @@ object TimerNotifications {
             .setShowWhen(false)
             .setContentIntent(contentIntent)
 
+        // 見出しは「進行中の重要な通知」として扱われるための必須項目。
+        // 本文は書かない。MetricStyleが各タイマーの見出しを持つため、同じ言葉が2行続いてしまう
+        builder.setContentTitle(main.label.ifBlank { context.getString(R.string.timer_notification_title) })
         applyRemainingTime(context, builder, timers, main, nowElapsed, nowWall)
         builder.addAction(action(context, R.string.timer_stop, ACTION_STOP, main.id))
         builder.addAction(action(context, R.string.timer_extend_one_minute, ACTION_EXTEND, main.id))
@@ -110,7 +113,6 @@ object TimerNotifications {
     ) {
         if (Build.VERSION.SDK_INT < METRIC_STYLE_SDK_INT) {
             applyChronometerFallback(builder, main, nowElapsed, nowWall)
-            builder.setContentTitle(main.label.ifBlank { context.getString(R.string.timer_notification_title) })
             builder.setContentText(context.getString(statusTextRes(main.runState)))
             return
         }
@@ -120,6 +122,22 @@ object TimerNotifications {
         ordered.forEach { style.addMetric(metricOf(context, it, nowElapsed, nowWall)) }
         builder.setStyle(style.setCriticalMetric(0))
         builder.setRequestPromotedOngoing(true)
+        // ステータスバーの狭い場所(96dpまで)へ出す文字。収まらないとアイコンだけになる
+        builder.setShortCriticalText(shortCriticalText(context, main, nowElapsed, nowWall))
+    }
+
+    /**
+     * ステータスバーの丸いチップへ出す短い文字。
+     * 幅が96dpしかないため、7文字ほどで収まるようにする。
+     */
+    private fun shortCriticalText(
+        context: Context,
+        main: TimerState,
+        nowElapsed: Long,
+        nowWall: Long,
+    ): String = when (main.runState) {
+        TimerRunState.FINISHED -> context.getString(R.string.timer_notification_short_finished)
+        else -> formatDuration(remainingMillis(main, nowElapsed, nowWall))
     }
 
     /** タイマー1件を、通知が数を数えられる形へ変える。 */

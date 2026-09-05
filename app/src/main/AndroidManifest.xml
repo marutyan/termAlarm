@@ -10,6 +10,11 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <!-- 鳴動通知・全画面インテント表示に必要な実行時権限 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- タイマーの残り時間をステータスバーへ出すために要る。
+         この宣言が無いと、通知が「進行中の重要な通知」として扱われない
+         (developer.android.com「Create live update notifications」) -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <!-- 端末再起動後に予約済みアラームを復元するため -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- 鳴動中にフォアグラウンドサービスで音を鳴らし続けるため -->
