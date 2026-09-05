@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
@@ -27,8 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.theme.COMPACT_SCREEN_HEIGHT_THRESHOLD
 import com.marutyan.termalarm.ui.theme.fittingClock
 import com.marutyan.termalarm.ui.theme.heroClock
 import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
@@ -91,29 +95,55 @@ fun ClockScreen(
         },
         bottomBar = bottomBar,
     ) { padding ->
-        // 純正は時刻を画面の上の方へ置く(実測で上端が画面の16%の位置)。
-        // 中央へ置くと、上に広い空きができて時刻が沈んで見える
-        Column(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
         ) {
-            Spacer(modifier = Modifier.height(24.dp))
-            MainClock(mode = displayMode, time = now, showSeconds = appSettings.showClockSeconds)
-            Text(
-                text = now.format(DATE_FORMATTER),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 24.dp, bottom = 32.dp),
-            )
-            DisplayModeToggle(mode = displayMode, onModeChange = viewModel::setDisplayMode)
+            val isCompact = maxHeight < COMPACT_SCREEN_HEIGHT_THRESHOLD
+            val topSpacerHeight = if (isCompact) 8.dp else 24.dp
+            val datePaddingTop = if (isCompact) 8.dp else 24.dp
+            val datePaddingBottom = if (isCompact) 12.dp else 32.dp
+            val analogClockSize = if (isCompact) 200.dp else 320.dp
+
+            // 純正は時刻を画面の上の方へ置く(実測で上端が画面の16%の位置)。
+            // 縦が足りないときはスクロールできるようにし、狭い画面では余白と時計サイズを詰める
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = if (isCompact) 16.dp else 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(modifier = Modifier.height(topSpacerHeight))
+                MainClock(
+                    mode = displayMode,
+                    time = now,
+                    showSeconds = appSettings.showClockSeconds,
+                    analogClockSize = analogClockSize,
+                )
+                Text(
+                    text = now.format(DATE_FORMATTER),
+                    style = if (isCompact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = datePaddingTop, bottom = datePaddingBottom),
+                )
+                DisplayModeToggle(mode = displayMode, onModeChange = viewModel::setDisplayMode)
+            }
         }
     }
 }
 
 // 端末の現在時刻を、設定どおりアナログ(Canvas描画)またはデジタル(等幅数字)で大きく表示する。
-// showSecondsは設定「時刻に秒を表示」(デジタルは秒の文字、アナログは秒針の表示可否に反映する)
+// showSecondsは設定「時刻に秒を表示」(デジタルは秒の文字、アナログは秒針の表示可否に反映する)。
+// analogClockSizeは狭い画面でアナログ時計がはみ出さないよう縮小するために渡す。
 @Composable
-private fun MainClock(mode: ClockDisplayMode, time: ZonedDateTime, showSeconds: Boolean) {
+private fun MainClock(
+    mode: ClockDisplayMode,
+    time: ZonedDateTime,
+    showSeconds: Boolean,
+    analogClockSize: Dp = 320.dp,
+) {
     AnimatedContent(
         targetState = mode,
         transitionSpec = {
@@ -123,7 +153,7 @@ private fun MainClock(mode: ClockDisplayMode, time: ZonedDateTime, showSeconds: 
         label = "ClockModeTransition",
     ) { currentMode ->
         when (currentMode) {
-            ClockDisplayMode.ANALOG -> AnalogClockFace(time = time, showSeconds = showSeconds, modifier = Modifier.size(320.dp))
+            ClockDisplayMode.ANALOG -> AnalogClockFace(time = time, showSeconds = showSeconds, modifier = Modifier.size(analogClockSize))
             ClockDisplayMode.DIGITAL -> DigitalClockFace(time = time, showSeconds = showSeconds)
         }
     }

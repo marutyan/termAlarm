@@ -13,12 +13,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 
 // タブ間を切り替える画面遷移のアニメーション時間(ミリ秒)。滑らかな横スライドを実現するために定義する。
 const val TAB_TRANSITION_DURATION_MS = 300
 
 // タイマー新規追加画面の表示・非表示アニメーション時間(ミリ秒)。下からの出現と上への消去に合わせるために定義する。
 const val TIMER_ADD_TRANSITION_DURATION_MS = 300
+
+// 画面の高さが狭いと判定するしきい値(dp)。分割画面や小型端末で余白や文字サイズを詰める基準として用いる。
+val COMPACT_SCREEN_HEIGHT_THRESHOLD = 480.dp
 
 // ボタンを押下した際の縮小倍率。指の接触に応じた適度な押し込み感を出すために定義する。
 const val BUTTON_PRESS_SCALE = 0.92f

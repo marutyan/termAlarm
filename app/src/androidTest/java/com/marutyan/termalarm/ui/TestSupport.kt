@@ -12,6 +12,7 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
 import com.marutyan.termalarm.data.AlarmDatabase
@@ -137,6 +138,9 @@ internal fun ListEditHost(repository: AlarmRepository) {
  * 同じカード内の複数Switchを区別できない。そのため縦位置が重なるSwitchを幾何的に特定する。
  */
 internal fun ComposeTestRule.switchNear(label: String): SemanticsNodeInteraction {
+    // 画面が縦にスクロールできるようになったため、目当ての行が画面の外にあることがある。
+    // 外にある要素は座標を持たず、隣のスイッチを座標で探せない。先に見える位置まで運ぶ
+    runCatching { onNodeWithText(label).performScrollTo() }
     val labelBounds = onNodeWithText(label, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
     val match: SemanticsNode = onAllNodes(isToggleable(), useUnmergedTree = true)
         .fetchSemanticsNodes()

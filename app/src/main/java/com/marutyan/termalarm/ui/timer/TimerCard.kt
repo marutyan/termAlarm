@@ -93,7 +93,11 @@ private val RING_STROKE_WIDTH = 11.dp
  * 輪の下に横並びで配置する操作ボタンの高さ（88dp）。
  * 純正アプリの実測値（docs/OFFICIAL_UI.md）に合わせて指定する。
  */
-private val ACTION_BUTTON_HEIGHT = 88.dp
+// 丸いアイコンのボタン(閉じる・リセット)の大きさ。純正を実機で測ると39dp
+private val ICON_BUTTON_SIZE = 39.dp
+
+// 輪の下に並べるボタンの高さ。純正を実機で測ると101dpだった
+private val ACTION_BUTTON_HEIGHT = 101.dp
 
 /**
  * 輪の下に横並びで配置する操作ボタンの角丸（40dp）。
@@ -179,6 +183,8 @@ fun TimerCard(
                 IconButton(
                     onClick = onDelete,
                     colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                    // 純正を実機で測ると39dp。既定のままでは19dpしかなく、押す場所として小さい
+                    modifier = Modifier.size(ICON_BUTTON_SIZE),
                 ) {
                     Icon(
                         Icons.Filled.Close,
@@ -232,7 +238,10 @@ fun TimerCard(
                             IconButton(
                                 onClick = onReset,
                                 interactionSource = resetInteractionSource,
-                                modifier = Modifier.pressScaleEffect(resetInteractionSource),
+                                // 純正と同じ39dp。既定のままでは19dpしかない
+                                modifier = Modifier
+                                    .size(ICON_BUTTON_SIZE)
+                                    .pressScaleEffect(resetInteractionSource),
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_reset),

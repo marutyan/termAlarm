@@ -5,6 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,9 +38,11 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.remember
 import com.marutyan.termalarm.R
+import com.marutyan.termalarm.ui.theme.COMPACT_SCREEN_HEIGHT_THRESHOLD
 import com.marutyan.termalarm.ui.theme.keypadInput
 import com.marutyan.termalarm.ui.theme.pressScaleEffect
 import com.marutyan.termalarm.ui.theme.tabularNums
@@ -50,6 +53,12 @@ private val KEY_SIZE = 82.dp
 
 // キーどうしの間隔。純正は中心の間隔が85dpで、キーが82dpなので隙間は3dpしかない
 private val KEY_SPACING = 3.dp
+
+// 開始ボタンの直径。純正を実機で測ると78dpだった（docs/OFFICIAL_UI.md「テンキー画面」）
+private val START_BUTTON_SIZE = 78.dp
+
+// キーの1行目の上端が画面の高さに占める割合。純正の実測値(36%)に基づく
+private const val KEYPAD_TOP_RATIO = 0.36f
 
 /**
  * タイマー新規追加画面。純正の時計アプリと同じく、3列×4行の円形テンキーで右から数字を詰めて
@@ -78,66 +87,84 @@ fun TimerAddScreen(
 
     // 画面の枠(Scaffold)は呼び出し側が持つ。ここで自前の枠を作ると下部ナビが隠れる。
     // 純正もテンキーを出している間、下部ナビは見えたままになっている。
-    // 縦が足りない端末や分割画面でも押せるよう、縦へはみ出したらスクロールできるようにする
-    Column(
-    modifier = modifier
-        .fillMaxSize()
-        .verticalScroll(rememberScrollState())
-        .padding(horizontal = 12.dp, vertical = 16.dp),
-    horizontalAlignment = Alignment.CenterHorizontally,
+    // 縦が足りない端末や分割画面でも押せるよう、縦へはみ出したらスクロールできるようにする。
+    // 純正ではテンキー1行目の上端が画面の高さの36%の位置にあり、テンキー全体が画面中央付近に配置される。
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        // 上部の入力中時間表示。純正は画面の上の方へ大きく出す
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentAlignment = Alignment.Center,
+        val isCompact = maxHeight < COMPACT_SCREEN_HEIGHT_THRESHOLD
+        // 純正はテンキー1行目の上端が画面高さの36%の位置。TimerDisplayの高さ(約76dp)と間隔を引いて上部余白を導出する。
+        // 狭い画面(isCompact)では上部余白を最小限にしてスクロール量を抑える。
+        val displayHeightEstimate = if (isCompact) 52.dp else 76.dp
+        val displayToKeypadSpacing = if (isCompact) 8.dp else 16.dp
+        val keypadTargetTop = maxHeight * KEYPAD_TOP_RATIO
+        val topSpacerHeight = if (isCompact) {
+            4.dp
+        } else {
+            (keypadTargetTop - displayHeightEstimate - displayToKeypadSpacing).coerceAtLeast(8.dp)
+        }
+        val keypadToActionSpacing = if (isCompact) 12.dp else 20.dp
+        val bottomSpacerHeight = if (isCompact) 8.dp else 16.dp
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            Spacer(modifier = Modifier.height(topSpacerHeight))
+
+            // 入力中時間表示。純正と同じくテンキーのすぐ上に詰めて配置する
             TimerDisplay(
                 hours = hours,
                 minutes = minutes,
                 seconds = seconds,
                 padded = padded,
                 inputLength = inputDigits.length,
+                isCompact = isCompact,
             )
-        }
 
-        // 中央の3列×4行テンキー
-        TimerKeypad(
-            onDigit = { digit ->
-                if (inputDigits.length < 6) {
-                    inputDigits = if (inputDigits == "0") digit.toString() else inputDigits + digit
-                }
-            },
-            onZero = {
-                if (inputDigits.isNotEmpty() && inputDigits != "0" && inputDigits.length < 6) {
-                    inputDigits += '0'
-                }
-            },
-            onDoubleZero = {
-                repeat(2) {
+            Spacer(modifier = Modifier.height(displayToKeypadSpacing))
+
+            // 中央の3列×4行テンキー
+            TimerKeypad(
+                onDigit = { digit ->
+                    if (inputDigits.length < 6) {
+                        inputDigits = if (inputDigits == "0") digit.toString() else inputDigits + digit
+                    }
+                },
+                onZero = {
                     if (inputDigits.isNotEmpty() && inputDigits != "0" && inputDigits.length < 6) {
                         inputDigits += '0'
                     }
-                }
-            },
-            onBackspace = {
-                if (inputDigits.isNotEmpty()) {
-                    inputDigits = inputDigits.dropLast(1)
-                }
-            },
-        )
+                },
+                onDoubleZero = {
+                    repeat(2) {
+                        if (inputDigits.isNotEmpty() && inputDigits != "0" && inputDigits.length < 6) {
+                            inputDigits += '0'
+                        }
+                    }
+                },
+                onBackspace = {
+                    if (inputDigits.isNotEmpty()) {
+                        inputDigits = inputDigits.dropLast(1)
+                    }
+                },
+            )
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(keypadToActionSpacing))
 
-        // 下部の取り消し（×）と開始（▶）
-        TimerActionRow(
-            isStartEnabled = isStartEnabled,
-            onClose = onClose,
-            onStart = { onStart(hours, minutes, seconds) },
-        )
+            // 下部の取り消し（×）と開始（▶）
+            TimerActionRow(
+                isStartEnabled = isStartEnabled,
+                onClose = onClose,
+                onStart = { onStart(hours, minutes, seconds) },
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(bottomSpacerHeight))
+        }
     }
 }
 
@@ -145,6 +172,7 @@ fun TimerAddScreen(
  * 入力中の時間を「00h 00m 00s」の書式で大きく表示する。
  * 未入力の桁は薄く、入力済みの桁は通常色で表示し、単位は数字に小さく添える。
  * 画面読み上げでは1つの時間として読み上げられるよう、子ノードの個別数字を隠して集約する。
+ * 狭い画面(isCompact=true)ではフォントサイズを縮小して画面内に収める。
  */
 @Composable
 private fun TimerDisplay(
@@ -153,6 +181,7 @@ private fun TimerDisplay(
     seconds: Int,
     padded: String,
     inputLength: Int,
+    isCompact: Boolean = false,
 ) {
     val description = stringResource(R.string.timer_time_description, hours, minutes, seconds)
     Row(
@@ -169,6 +198,7 @@ private fun TimerDisplay(
             isDigit2Entered = 1 >= (6 - inputLength),
             unit = stringResource(R.string.timer_unit_hours),
             isUnitEntered = inputLength >= 5,
+            isCompact = isCompact,
         )
         TimeUnitDisplay(
             digit1 = padded[2],
@@ -177,6 +207,7 @@ private fun TimerDisplay(
             isDigit2Entered = 3 >= (6 - inputLength),
             unit = stringResource(R.string.timer_unit_minutes),
             isUnitEntered = inputLength >= 3,
+            isCompact = isCompact,
         )
         TimeUnitDisplay(
             digit1 = padded[4],
@@ -185,6 +216,7 @@ private fun TimerDisplay(
             isDigit2Entered = 5 >= (6 - inputLength),
             unit = stringResource(R.string.timer_unit_seconds),
             isUnitEntered = inputLength >= 1,
+            isCompact = isCompact,
         )
     }
 }
@@ -201,26 +233,38 @@ private fun TimeUnitDisplay(
     isDigit2Entered: Boolean,
     unit: String,
     isUnitEntered: Boolean,
+    isCompact: Boolean = false,
 ) {
     val activeColor = MaterialTheme.colorScheme.onSurface
     val inactiveColor = MaterialTheme.colorScheme.outline
+    val numberStyle = if (isCompact) {
+        MaterialTheme.typography.displayMedium.keypadInput().copy(fontSize = 44.sp, lineHeight = 50.sp)
+    } else {
+        MaterialTheme.typography.displayLarge.keypadInput()
+    }
+    val unitStyle = if (isCompact) {
+        MaterialTheme.typography.titleMedium
+    } else {
+        MaterialTheme.typography.titleLarge
+    }
+    val unitBottomPadding = if (isCompact) 4.dp else 6.dp
 
     Row(verticalAlignment = Alignment.Bottom) {
         Text(
             text = digit1.toString(),
-            style = MaterialTheme.typography.displayLarge.keypadInput(),
+            style = numberStyle,
             color = if (isDigit1Entered) activeColor else inactiveColor,
         )
         Text(
             text = digit2.toString(),
-            style = MaterialTheme.typography.displayLarge.keypadInput(),
+            style = numberStyle,
             color = if (isDigit2Entered) activeColor else inactiveColor,
         )
         Text(
             text = unit,
-            style = MaterialTheme.typography.titleLarge,
+            style = unitStyle,
             color = if (isUnitEntered) activeColor else inactiveColor,
-            modifier = Modifier.padding(start = 2.dp, bottom = 6.dp),
+            modifier = Modifier.padding(start = 2.dp, bottom = unitBottomPadding),
         )
     }
 }
@@ -310,7 +354,7 @@ private fun KeypadButton(
 
 /**
  * テンキーの下に配置する操作ボタン行（取り消しと開始）。
- * テンキーの列に合わせ、×は左列の中心、▶は中央列の中心へ来るように配置する。
+ * テンキーの列に合わせ、×は左列の中心、▶は画面の中央（中央列の中心）へ直径78dpで配置する。
  */
 @Composable
 private fun TimerActionRow(
@@ -329,44 +373,54 @@ private fun TimerActionRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // 取り消し（×）: テンキーの左列中心に配置
-        Surface(
-            onClick = onClose,
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            interactionSource = cancelInteractionSource,
-            modifier = Modifier
-                .size(KEY_SIZE)
-                .pressScaleEffect(cancelInteractionSource),
+        Box(
+            modifier = Modifier.size(KEY_SIZE),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                Icon(
-                    Icons.Filled.Close,
-                    contentDescription = stringResource(R.string.timer_cancel),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
+            Surface(
+                onClick = onClose,
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                interactionSource = cancelInteractionSource,
+                modifier = Modifier
+                    .size(KEY_SIZE)
+                    .pressScaleEffect(cancelInteractionSource),
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.timer_cancel),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
             }
         }
 
-        // 開始（▶）: テンキーの中央列中心に配置
-        FilledIconButton(
-            onClick = onStart,
-            enabled = isStartEnabled,
-            shape = CircleShape,
-            interactionSource = startInteractionSource,
-            colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                disabledContentColor = MaterialTheme.colorScheme.outline,
-            ),
-            modifier = Modifier
-                .size(KEY_SIZE)
-                .pressScaleEffect(startInteractionSource),
+        // 開始（▶）: テンキーの中央列中心（画面中央）に直径78dpで配置(docs/OFFICIAL_UI.md「テンキー画面」)
+        Box(
+            modifier = Modifier.size(KEY_SIZE),
+            contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                Icons.Filled.PlayArrow,
-                contentDescription = stringResource(R.string.timer_start),
-            )
+            FilledIconButton(
+                onClick = onStart,
+                enabled = isStartEnabled,
+                shape = CircleShape,
+                interactionSource = startInteractionSource,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    disabledContentColor = MaterialTheme.colorScheme.outline,
+                ),
+                modifier = Modifier
+                    .size(START_BUTTON_SIZE)
+                    .pressScaleEffect(startInteractionSource),
+            ) {
+                Icon(
+                    Icons.Filled.PlayArrow,
+                    contentDescription = stringResource(R.string.timer_start),
+                )
+            }
         }
 
         // 右列の空きスペース

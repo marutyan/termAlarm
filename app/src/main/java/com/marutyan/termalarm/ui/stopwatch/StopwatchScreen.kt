@@ -7,9 +7,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,7 +20,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -47,8 +51,10 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.theme.COMPACT_SCREEN_HEIGHT_THRESHOLD
 import com.marutyan.termalarm.ui.theme.heroClock
 import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import com.marutyan.termalarm.R
@@ -69,6 +75,9 @@ private const val TICK_INTERVAL_RUNNING_MILLIS = 100L
 
 // 操作ボタンの高さと左右余白。純正の実測値そのまま(docs/OFFICIAL_UI.md「ストップウォッチ」)
 private val CONTROL_BUTTON_HEIGHT = 104.dp
+
+// 画面の高さが狭いときに使う操作ボタンの高さ。分割画面でも3つのボタンが収まるように小さくする
+private val COMPACT_CONTROL_BUTTON_HEIGHT = 56.dp
 private val SCREEN_HORIZONTAL_PADDING = 13.dp
 
 /**
@@ -106,55 +115,83 @@ fun StopwatchScreen(
         },
         bottomBar = bottomBar,
     ) { padding ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            val formatted = formatElapsed(elapsed, includeCentiseconds = true)
-            val dotIndex = formatted.indexOf('.')
-            val (mainPart, centisPart) = if (dotIndex >= 0) {
-                formatted.substring(0, dotIndex) to formatted.substring(dotIndex)
-            } else {
-                formatted to ""
-            }
-            Box(
+            val screenMaxHeight = maxHeight
+            val isCompact = screenMaxHeight < COMPACT_SCREEN_HEIGHT_THRESHOLD
+            val buttonHeight = if (isCompact) COMPACT_CONTROL_BUTTON_HEIGHT else CONTROL_BUTTON_HEIGHT
+            val controlsBottomPadding = if (isCompact) 16.dp else 96.dp
+            val timeVerticalPadding = if (isCompact) 4.dp else 8.dp
+            val buttonSpacing = if (isCompact) 8.dp else 12.dp
+
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                contentAlignment = Alignment.Center,
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
             ) {
-                // 数字は動かさない。純正も経過時間の数字は動かさず、静かに入れ替える
-                Text(
-                    text = mainPart + centisPart,
-                    style = MaterialTheme.typography.displayLarge.heroClock(),
-                    // まだ計測していないときは地に近い色にして、動いていないことを見て分かるようにする
-                    color = if (state.runState == StopwatchRunState.IDLE) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = screenMaxHeight),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        val formatted = formatElapsed(elapsed, includeCentiseconds = true)
+                        val dotIndex = formatted.indexOf('.')
+                        val (mainPart, centisPart) = if (dotIndex >= 0) {
+                            formatted.substring(0, dotIndex) to formatted.substring(dotIndex)
+                        } else {
+                            formatted to ""
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = timeVerticalPadding),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            // 数字は動かさない。純正も経過時間の数字は動かさず、静かに入れ替える
+                            Text(
+                                text = mainPart + centisPart,
+                                style = if (isCompact) {
+                                    MaterialTheme.typography.displayMedium.tabularNums()
+                                } else {
+                                    MaterialTheme.typography.displayLarge.heroClock()
+                                },
+                                // まだ計測していないときは地に近い色にして、動いていないことを見て分かるようにする
+                                color = if (state.runState == StopwatchRunState.IDLE) {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                            )
+                        }
+                        LapRow(
+                            laps = laps,
+                            modifier = Modifier.padding(horizontal = SCREEN_HORIZONTAL_PADDING),
+                        )
+                    }
+
+                    StopwatchControls(
+                        runState = state.runState,
+                        onStart = viewModel::start,
+                        onPause = viewModel::pause,
+                        onResume = viewModel::resume,
+                        onReset = viewModel::reset,
+                        onLap = viewModel::lap,
+                        buttonHeight = buttonHeight,
+                        buttonSpacing = buttonSpacing,
+                        // 純正の開始ボタンは画面の下端に張り付かず、少し上に浮いている
+                        modifier = Modifier.padding(
+                            start = SCREEN_HORIZONTAL_PADDING,
+                            end = SCREEN_HORIZONTAL_PADDING,
+                            bottom = controlsBottomPadding,
+                        ),
+                    )
+                }
             }
-            LapRow(
-                laps = laps,
-                modifier = Modifier.padding(horizontal = SCREEN_HORIZONTAL_PADDING),
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            StopwatchControls(
-                runState = state.runState,
-                onStart = viewModel::start,
-                onPause = viewModel::pause,
-                onResume = viewModel::resume,
-                onReset = viewModel::reset,
-                onLap = viewModel::lap,
-                // 純正の開始ボタンは画面の下端に張り付かず、少し上に浮いている
-                modifier = Modifier.padding(
-                    start = SCREEN_HORIZONTAL_PADDING,
-                    end = SCREEN_HORIZONTAL_PADDING,
-                    bottom = 96.dp,
-                ),
-            )
         }
     }
 }
@@ -181,9 +218,9 @@ private fun rememberTickingNow(isRunning: Boolean): Pair<Long, Long> {
 }
 
 /**
- * 縦に並ぶ3つの巨大な操作ボタン(高さ104dp)。上段はIDLE/RUNNING/PAUSEDに応じて
- * 開始・一時停止・再開のいずれかへ切り替わる「主役」のボタンで、動作中(RUNNING)の
- * 一時停止だけerror色で目立たせる(docs/OFFICIAL_UI.md「ストップウォッチ」)。
+ * 縦に並ぶ3つの操作ボタン。上段はIDLE/RUNNING/PAUSEDに応じて開始・一時停止・再開のいずれかへ切り替わる
+ * 「主役」のボタンで、動作中(RUNNING)の一時停止だけerror色で目立たせる(docs/OFFICIAL_UI.md「ストップウォッチ」)。
+ * 狭い画面ではbuttonHeightとbuttonSpacingを縮めて全体が収まりやすくする。
  * リセットはPAUSEDのときだけ、ラップはRUNNINGのときだけ押せる(元の実装の状態遷移をそのまま維持)。
  */
 @Composable
@@ -194,6 +231,8 @@ private fun StopwatchControls(
     onResume: () -> Unit,
     onReset: () -> Unit,
     onLap: () -> Unit,
+    buttonHeight: Dp = CONTROL_BUTTON_HEIGHT,
+    buttonSpacing: Dp = 12.dp,
     modifier: Modifier = Modifier,
 ) {
     val isRunning = runState == StopwatchRunState.RUNNING
@@ -221,7 +260,7 @@ private fun StopwatchControls(
         transitionProgress,
     )
 
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(buttonSpacing)) {
         // 一時停止(=停止)のときだけerror色。開始・再開は主要な操作なのでprimaryを使う
         // (docs/OFFICIAL_UI.md「共通」の色対応表)。切り替え時はanimateFloatAsStateで滑らかに遷移する
         ControlButton(
@@ -229,6 +268,7 @@ private fun StopwatchControls(
             onClick = primaryAction,
             containerColor = primaryContainerColor,
             contentColor = primaryContentColor,
+            buttonHeight = buttonHeight,
         )
         // まだ計測していないときは「開始」だけを出す。純正も同じで、押せないボタンを並べない。
         // 一度でも動かした後は、止める・戻す・刻むの3つが要る
@@ -239,6 +279,7 @@ private fun StopwatchControls(
                 enabled = runState == StopwatchRunState.PAUSED,
                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 contentColor = MaterialTheme.colorScheme.onSurface,
+                buttonHeight = buttonHeight,
             )
             ControlButton(
                 label = stringResource(R.string.stopwatch_lap),
@@ -246,13 +287,14 @@ private fun StopwatchControls(
                 enabled = isRunning,
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 contentColor = MaterialTheme.colorScheme.onSurface,
+                buttonHeight = buttonHeight,
             )
         }
     }
 }
 
-// 3つの操作ボタンに共通する見た目(高さ104dp・完全な丸角)だけをまとめた小さな部品。
-// 呼び出し箇所がStopwatchControls内の3箇所のみのため、汎用コンポーネント化はしない
+// 3つの操作ボタンに共通する見た目(完全な丸角)だけをまとめた小さな部品。
+// buttonHeightにより通常時と画面高不足時のサイズ切り替えに対応する。
 @Composable
 private fun ControlButton(
     label: String,
@@ -260,6 +302,7 @@ private fun ControlButton(
     containerColor: Color,
     contentColor: Color,
     enabled: Boolean = true,
+    buttonHeight: Dp = CONTROL_BUTTON_HEIGHT,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     Button(
@@ -270,7 +313,7 @@ private fun ControlButton(
         colors = ButtonDefaults.buttonColors(containerColor = containerColor, contentColor = contentColor),
         modifier = Modifier
             .fillMaxWidth()
-            .height(CONTROL_BUTTON_HEIGHT)
+            .height(buttonHeight)
             .pressScaleEffect(interactionSource),
     ) {
         Text(label, style = MaterialTheme.typography.titleLarge)

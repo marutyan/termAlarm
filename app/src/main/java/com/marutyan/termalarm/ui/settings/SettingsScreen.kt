@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -51,6 +52,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.theme.COMPACT_SCREEN_HEIGHT_THRESHOLD
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.alarm.SoundFadeIn
 import com.marutyan.termalarm.domain.AlarmDismissMethod
@@ -117,88 +119,106 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
             )
         },
     ) { padding ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState()),
+                .padding(padding),
         ) {
-            SettingsSection(title = stringResource(R.string.settings_section_alarm)) {
-                SettingsValueRow(
-                    label = stringResource(R.string.settings_dismiss_method_title),
-                    value = dismissMethodLabel(settings.dismissMethod),
-                    onClick = { openDialog = SettingsDialog.DISMISS_METHOD },
-                )
-                SettingsValueRow(
-                    label = stringResource(R.string.settings_auto_stop_title),
-                    value = stringResource(R.string.interval_minutes_label, settings.autoStopMinutes),
-                    onClick = { openDialog = SettingsDialog.AUTO_STOP },
-                )
-                SettingsValueRow(
-                    label = stringResource(R.string.settings_snooze_length_title),
-                    value = stringResource(R.string.interval_minutes_label, settings.defaultSnoozeMinutes),
-                    onClick = { openDialog = SettingsDialog.SNOOZE_LENGTH },
-                )
-                SettingsValueRow(
-                    label = stringResource(R.string.settings_fade_in_title),
-                    value = formatSeconds(settings.alarmFadeInSeconds),
-                    onClick = { openDialog = SettingsDialog.ALARM_FADE_IN },
-                )
-                SettingsValueRow(
-                    label = stringResource(R.string.settings_volume_button_title),
-                    value = volumeButtonLabel(settings.volumeButtonAction),
-                    onClick = { openDialog = SettingsDialog.VOLUME_BUTTON },
-                )
-                SettingsValueRow(
-                    label = stringResource(R.string.settings_week_start_title),
-                    value = weekStartLabel(settings.weekStart),
-                    onClick = { openDialog = SettingsDialog.WEEK_START },
-                )
-                AlarmVolumeRow()
-            }
+            val isCompact = maxHeight < COMPACT_SCREEN_HEIGHT_THRESHOLD
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                SettingsSection(title = stringResource(R.string.settings_section_alarm), isCompact = isCompact) {
+                    SettingsValueRow(
+                        label = stringResource(R.string.settings_dismiss_method_title),
+                        value = dismissMethodLabel(settings.dismissMethod),
+                        onClick = { openDialog = SettingsDialog.DISMISS_METHOD },
+                        isCompact = isCompact,
+                    )
+                    SettingsValueRow(
+                        label = stringResource(R.string.settings_auto_stop_title),
+                        value = stringResource(R.string.interval_minutes_label, settings.autoStopMinutes),
+                        onClick = { openDialog = SettingsDialog.AUTO_STOP },
+                        isCompact = isCompact,
+                    )
+                    SettingsValueRow(
+                        label = stringResource(R.string.settings_snooze_length_title),
+                        value = stringResource(R.string.interval_minutes_label, settings.defaultSnoozeMinutes),
+                        onClick = { openDialog = SettingsDialog.SNOOZE_LENGTH },
+                        isCompact = isCompact,
+                    )
+                    SettingsValueRow(
+                        label = stringResource(R.string.settings_fade_in_title),
+                        value = formatSeconds(settings.alarmFadeInSeconds),
+                        onClick = { openDialog = SettingsDialog.ALARM_FADE_IN },
+                        isCompact = isCompact,
+                    )
+                    SettingsValueRow(
+                        label = stringResource(R.string.settings_volume_button_title),
+                        value = volumeButtonLabel(settings.volumeButtonAction),
+                        onClick = { openDialog = SettingsDialog.VOLUME_BUTTON },
+                        isCompact = isCompact,
+                    )
+                    SettingsValueRow(
+                        label = stringResource(R.string.settings_week_start_title),
+                        value = weekStartLabel(settings.weekStart),
+                        onClick = { openDialog = SettingsDialog.WEEK_START },
+                        isCompact = isCompact,
+                    )
+                    AlarmVolumeRow(isCompact = isCompact)
+                }
 
-            SettingsSection(title = stringResource(R.string.settings_section_clock)) {
-                SettingsValueRow(
-                    label = stringResource(R.string.settings_clock_style_title),
-                    value = clockStyleLabel(clockDisplayMode),
-                    onClick = { openDialog = SettingsDialog.CLOCK_STYLE },
-                )
-                SettingsToggleRow(
-                    label = stringResource(R.string.settings_show_seconds_title),
-                    checked = settings.showClockSeconds,
-                    onCheckedChange = viewModel::setShowClockSeconds,
-                )
-                SettingsValueRow(
-                    label = stringResource(R.string.settings_date_time_title),
-                    value = null,
-                    onClick = { context.startActivity(Intent(AndroidSettings.ACTION_DATE_SETTINGS)) },
-                )
-            }
+                SettingsSection(title = stringResource(R.string.settings_section_clock), isCompact = isCompact) {
+                    SettingsValueRow(
+                        label = stringResource(R.string.settings_clock_style_title),
+                        value = clockStyleLabel(clockDisplayMode),
+                        onClick = { openDialog = SettingsDialog.CLOCK_STYLE },
+                        isCompact = isCompact,
+                    )
+                    SettingsToggleRow(
+                        label = stringResource(R.string.settings_show_seconds_title),
+                        checked = settings.showClockSeconds,
+                        onCheckedChange = viewModel::setShowClockSeconds,
+                        isCompact = isCompact,
+                    )
+                    SettingsValueRow(
+                        label = stringResource(R.string.settings_date_time_title),
+                        value = null,
+                        onClick = { context.startActivity(Intent(AndroidSettings.ACTION_DATE_SETTINGS)) },
+                        isCompact = isCompact,
+                    )
+                }
 
-            SettingsSection(title = stringResource(R.string.settings_section_timer), showDivider = false) {
-                SettingsValueRow(
-                    label = stringResource(R.string.settings_timer_sound_title),
-                    value = timerSoundLabel(context, settings.timerSoundUri),
-                    onClick = {
-                        val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
-                            putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
-                            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
-                            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
-                            settings.timerSoundUri?.let { putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, it.toUri()) }
-                        }
-                        timerSoundPickerLauncher.launch(intent)
-                    },
-                )
-                SettingsValueRow(
-                    label = stringResource(R.string.settings_fade_in_title),
-                    value = formatSeconds(settings.timerFadeInSeconds),
-                    onClick = { openDialog = SettingsDialog.TIMER_FADE_IN },
-                )
-                SettingsToggleRow(
-                    label = stringResource(R.string.settings_timer_vibration_title),
-                    checked = settings.timerVibration,
-                    onCheckedChange = viewModel::setTimerVibration,
-                )
+                SettingsSection(title = stringResource(R.string.settings_section_timer), showDivider = false, isCompact = isCompact) {
+                    SettingsValueRow(
+                        label = stringResource(R.string.settings_timer_sound_title),
+                        value = timerSoundLabel(context, settings.timerSoundUri),
+                        onClick = {
+                            val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                                putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                                settings.timerSoundUri?.let { putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, it.toUri()) }
+                            }
+                            timerSoundPickerLauncher.launch(intent)
+                        },
+                        isCompact = isCompact,
+                    )
+                    SettingsValueRow(
+                        label = stringResource(R.string.settings_fade_in_title),
+                        value = formatSeconds(settings.timerFadeInSeconds),
+                        onClick = { openDialog = SettingsDialog.TIMER_FADE_IN },
+                        isCompact = isCompact,
+                    )
+                    SettingsToggleRow(
+                        label = stringResource(R.string.settings_timer_vibration_title),
+                        checked = settings.timerVibration,
+                        onCheckedChange = viewModel::setTimerVibration,
+                        isCompact = isCompact,
+                    )
+                }
             }
         }
     }
@@ -266,20 +286,24 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
     }
 }
 
-// セクション見出し + 行の並び + 区切り線。モックのpadding(見出し24/8, 行24/14, 区切り線上マージン8)を再現する
+// セクション見出し + 行の並び + 区切り線。モックのpadding(見出し24/8, 行24/14, 区切り線上マージン8)を再現する。
+// 狭い画面(isCompact=true)では上下の余白を詰めてスクロールしやすくする。
 @Composable
-private fun SettingsSection(title: String, showDivider: Boolean = true, content: @Composable () -> Unit) {
+private fun SettingsSection(title: String, showDivider: Boolean = true, isCompact: Boolean = false, content: @Composable () -> Unit) {
+    val topPadding = if (isCompact) 12.dp else 24.dp
+    val bottomPadding = if (isCompact) 4.dp else 8.dp
+    val dividerTop = if (isCompact) 4.dp else 8.dp
     Column {
         Text(
             text = title,
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 8.dp),
+            modifier = Modifier.padding(start = 24.dp, top = topPadding, end = 24.dp, bottom = bottomPadding),
         )
         content()
         if (showDivider) {
             HorizontalDivider(
-                modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp),
+                modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = dividerTop),
                 color = MaterialTheme.colorScheme.outlineVariant,
             )
         }
@@ -288,13 +312,14 @@ private fun SettingsSection(title: String, showDivider: Boolean = true, content:
 
 // 値を表示し、タップでダイアログや外部画面を開く行。value=nullなら値行を出さない(「日付と時刻の変更」用)
 @Composable
-private fun SettingsValueRow(label: String, value: String?, onClick: () -> Unit) {
+private fun SettingsValueRow(label: String, value: String?, onClick: () -> Unit, isCompact: Boolean = false) {
+    val verticalPadding = if (isCompact) 8.dp else 14.dp
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
             .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 14.dp),
+            .padding(horizontal = 24.dp, vertical = verticalPadding),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -308,13 +333,14 @@ private fun SettingsValueRow(label: String, value: String?, onClick: () -> Unit)
 
 // 切り替え(Switch)の行。行全体をタップしても切り替わるようにする
 @Composable
-private fun SettingsToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun SettingsToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit, isCompact: Boolean = false) {
+    val verticalPadding = if (isCompact) 8.dp else 14.dp
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
             .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 24.dp, vertical = 14.dp),
+            .padding(horizontal = 24.dp, vertical = verticalPadding),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(text = label, style = MaterialTheme.typography.bodyLarge)
@@ -330,7 +356,7 @@ private fun SettingsToggleRow(label: String, checked: Boolean, onCheckedChange: 
 // (docs/OFFICIAL_SETTINGS.md「追記: 音量スライダーの挙動」)。動かすたびに鳴らすと騒がしいので
 // onValueChangeFinished(ドラッグ終了時)だけで鳴らし、画面を離れたら止める。
 @Composable
-private fun AlarmVolumeRow() {
+private fun AlarmVolumeRow(isCompact: Boolean = false) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
@@ -338,8 +364,9 @@ private fun AlarmVolumeRow() {
     var volume by remember { mutableFloatStateOf(audioManager.getStreamVolume(AudioManager.STREAM_ALARM).toFloat()) }
     val previewPlayer = remember { AlarmVolumePreviewPlayer(context) }
     DisposableEffect(Unit) { onDispose { previewPlayer.stop() } }
+    val verticalPadding = if (isCompact) 4.dp else 8.dp
 
-    Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
+    Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = verticalPadding)) {
         Text(
             text = stringResource(R.string.settings_volume_title),
             style = MaterialTheme.typography.bodyMedium,

@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -56,7 +57,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.marutyan.termalarm.R
+import com.marutyan.termalarm.ui.theme.COMPACT_SCREEN_HEIGHT_THRESHOLD
 import com.marutyan.termalarm.ui.theme.alarmCardClock
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.marutyan.termalarm.domain.AlarmSchedule
@@ -128,87 +131,97 @@ fun AlarmEditScreen(
             )
         },
     ) { padding ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+                .padding(padding),
         ) {
-            TimeRangeRow(
-                startMinutes = uiState.startMinutes,
-                endMinutes = uiState.endMinutes,
-                onStartClick = { showStartPicker = true },
-                onEndClick = { showEndPicker = true },
-            )
+            val isCompact = maxHeight < COMPACT_SCREEN_HEIGHT_THRESHOLD
+            val itemSpacing = if (isCompact) 12.dp else 20.dp
+            val bottomSpacerHeight = if (isCompact) 12.dp else 24.dp
 
-            IntervalSection(
-                intervalMinutes = uiState.intervalMinutes,
-                useCustomInterval = uiState.useCustomInterval,
-                onSelectPreset = viewModel::selectPresetInterval,
-                onSelectCustom = viewModel::selectCustomInterval,
-                onCustomIntervalChange = viewModel::setCustomInterval,
-            )
-
-            PreviewBanner(
-                startMinutes = uiState.startMinutes,
-                endMinutes = uiState.endMinutes,
-                intervalMinutes = uiState.intervalMinutes,
-                isValid = uiState.validationError == null,
-            )
-
-            uiState.validationError?.let { error ->
-                Text(
-                    text = stringResource(validationMessageRes(error)),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(itemSpacing),
+            ) {
+                TimeRangeRow(
+                    startMinutes = uiState.startMinutes,
+                    endMinutes = uiState.endMinutes,
+                    onStartClick = { showStartPicker = true },
+                    onEndClick = { showEndPicker = true },
+                    isCompact = isCompact,
                 )
-            }
 
-            RepeatDaysSection(selectedDays = uiState.repeatDays, weekStart = weekStart, onToggleDay = viewModel::toggleDay)
+                IntervalSection(
+                    intervalMinutes = uiState.intervalMinutes,
+                    useCustomInterval = uiState.useCustomInterval,
+                    onSelectPreset = viewModel::selectPresetInterval,
+                    onSelectCustom = viewModel::selectCustomInterval,
+                    onCustomIntervalChange = viewModel::setCustomInterval,
+                )
 
-            GeneralSettingsSection(
-                label = uiState.label,
-                soundLabel = soundLabel,
-                vibrate = uiState.vibrate,
-                onLabelClick = { showLabelDialog = true },
-                onSoundClick = {
-                    val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
-                        putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
-                        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
-                        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
-                        uiState.soundUri?.let { putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, it.toUri()) }
-                    }
-                    soundPickerLauncher.launch(intent)
-                },
-                onVibrateChange = viewModel::setVibrate,
-            )
+                PreviewBanner(
+                    startMinutes = uiState.startMinutes,
+                    endMinutes = uiState.endMinutes,
+                    intervalMinutes = uiState.intervalMinutes,
+                    isValid = uiState.validationError == null,
+                )
 
-            DifficultToStopSection(
-                skipRequiresApp = uiState.skipRequiresApp,
-                skipGame = uiState.skipGame,
-                snoozeEnabled = uiState.snoozeEnabled,
-                snoozeMinutes = uiState.snoozeMinutes,
-                onSkipRequiresAppChange = viewModel::setSkipRequiresApp,
-                onSkipGameChange = viewModel::setSkipGame,
-                onSnoozeEnabledChange = viewModel::setSnoozeEnabled,
-                onSnoozeMinutesChange = viewModel::setSnoozeMinutes,
-            )
-
-            if (uiState.id != null) {
-                OutlinedButton(
-                    onClick = { showDeleteConfirm = true },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                ) {
-                    Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.size(8.dp))
-                    Text(stringResource(R.string.delete_alarm))
+                uiState.validationError?.let { error ->
+                    Text(
+                        text = stringResource(validationMessageRes(error)),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
-            }
 
-            Spacer(Modifier.height(24.dp))
+                RepeatDaysSection(selectedDays = uiState.repeatDays, weekStart = weekStart, onToggleDay = viewModel::toggleDay)
+
+                GeneralSettingsSection(
+                    label = uiState.label,
+                    soundLabel = soundLabel,
+                    vibrate = uiState.vibrate,
+                    onLabelClick = { showLabelDialog = true },
+                    onSoundClick = {
+                        val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                            uiState.soundUri?.let { putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, it.toUri()) }
+                        }
+                        soundPickerLauncher.launch(intent)
+                    },
+                    onVibrateChange = viewModel::setVibrate,
+                )
+
+                DifficultToStopSection(
+                    skipRequiresApp = uiState.skipRequiresApp,
+                    skipGame = uiState.skipGame,
+                    snoozeEnabled = uiState.snoozeEnabled,
+                    snoozeMinutes = uiState.snoozeMinutes,
+                    onSkipRequiresAppChange = viewModel::setSkipRequiresApp,
+                    onSkipGameChange = viewModel::setSkipGame,
+                    onSnoozeEnabledChange = viewModel::setSnoozeEnabled,
+                    onSnoozeMinutesChange = viewModel::setSnoozeMinutes,
+                )
+
+                if (uiState.id != null) {
+                    OutlinedButton(
+                        onClick = { showDeleteConfirm = true },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    ) {
+                        Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.size(8.dp))
+                        Text(stringResource(R.string.delete_alarm))
+                    }
+                }
+
+                Spacer(Modifier.height(bottomSpacerHeight))
+            }
         }
     }
 
@@ -256,16 +269,23 @@ private fun validationMessageRes(error: AlarmEditValidationError): Int = when (e
     AlarmEditValidationError.SNOOZE_OUT_OF_RANGE -> R.string.error_snooze_out_of_range
 }
 
-// 開始・終了時刻の2枚のカード
+// 開始・終了時刻の2枚のカード。狭い画面(isCompact=true)ではカード内の余白と文字を詰める。
 @Composable
-private fun TimeRangeRow(startMinutes: Int, endMinutes: Int, onStartClick: () -> Unit, onEndClick: () -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+private fun TimeRangeRow(
+    startMinutes: Int,
+    endMinutes: Int,
+    onStartClick: () -> Unit,
+    onEndClick: () -> Unit,
+    isCompact: Boolean = false,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(if (isCompact) 8.dp else 12.dp)) {
         TimeCard(
             label = stringResource(R.string.start_time),
             minutes = startMinutes,
             highlighted = true,
             modifier = Modifier.weight(1f),
             onClick = onStartClick,
+            isCompact = isCompact,
         )
         TimeCard(
             label = stringResource(R.string.end_time),
@@ -273,26 +293,40 @@ private fun TimeRangeRow(startMinutes: Int, endMinutes: Int, onStartClick: () ->
             highlighted = false,
             modifier = Modifier.weight(1f),
             onClick = onEndClick,
+            isCompact = isCompact,
         )
     }
 }
 
 @Composable
-private fun TimeCard(label: String, minutes: Int, highlighted: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun TimeCard(
+    label: String,
+    minutes: Int,
+    highlighted: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    isCompact: Boolean = false,
+) {
     val containerColor = if (highlighted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
     val contentColor = if (highlighted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+    val cardPadding = if (isCompact) 10.dp else 16.dp
+    val textStyle = if (isCompact) {
+        MaterialTheme.typography.titleLarge.alarmCardClock().copy(fontSize = 32.sp, lineHeight = 38.sp)
+    } else {
+        MaterialTheme.typography.displayLarge.alarmCardClock()
+    }
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(if (isCompact) 16.dp else 24.dp))
             .background(containerColor)
             .clickable(onClick = onClick)
-            .padding(16.dp),
+            .padding(cardPadding),
     ) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = contentColor)
-        // 一覧のカードと同じ大きさにする。ここが一番よく見る値なので小さくしない
+        // 一覧のカードと同じ大きさにする。狭い画面でははみ出しを防ぐため一段階小さくする
         Text(
             text = formatClockMinutes(minutes),
-            style = MaterialTheme.typography.displayLarge.alarmCardClock(),
+            style = textStyle,
             color = contentColor,
             maxLines = 1,
             softWrap = false,

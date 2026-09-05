@@ -349,3 +349,28 @@ NotificationManagerCompat.from(context).canPostPromotedNotifications()  // 投�
 | キーの1行目の上端 | 画面の高さの36%の位置 |
 | 開始ボタン | 直径78dp、画面の中央 |
 | 下部ナビ | **テンキーを出している間も見えている** |
+
+
+## 純正のコードから読めること・読めないこと
+
+`jadx` で純正のAPKを丸ごと逆コンパイルした（8680ファイル）。分かったのは次のとおり。
+
+### 読める
+
+- **通知の作り方**。`Notification` はプラットフォームのAPIなので名前が残る。
+  `MetricStyle`、`requestPromotedOngoing`、`preferSmallIcon` はこれで見つけた。
+- **サービスの使い方**。`TimerService` が `FIRE_TIMER` のときだけ起動することが読めた。
+- **マニフェスト**。受け付けるIntentや権限の一覧。
+
+### 読めない
+
+- **画面の寸法**。UIは完全にJetpack Composeで書かれており、
+  クラス名も数値も難読化で潰れている。`androidx.compose.ui.unit.Dp` を扱うクラスが
+  1つも見つからず、`82.0f` のような値も残っていない。
+- **動きの秒数や曲線**。同じ理由で読めない。
+
+### 結論
+
+**寸法は実機から測るしかない。** `adb shell uiautomator dump` で
+要素ごとの位置と大きさが取れるので、それを唯一の物差しとする。
+画像から目分量で測ると外す（実際に2回外した）。
