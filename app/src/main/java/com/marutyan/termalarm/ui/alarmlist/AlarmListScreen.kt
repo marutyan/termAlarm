@@ -63,6 +63,10 @@ import com.marutyan.termalarm.domain.WeekStart
 import com.marutyan.termalarm.ui.common.formatClockMinutes
 import java.time.DayOfWeek
 
+// 曜日の丸の大きさ。7つ並べるため、カードの内側(327dp)に収まる範囲でいちばん大きくしている。
+// 48dpだと9dpはみ出す
+private val DAY_CHIP_SIZE = 44.dp
+
 // 週の始まり(設定「週の始まり」)に合わせて曜日チップの並び順を決める。DayOfWeek.entriesは月曜始まりの
 // 固定順のため、日曜始まりのときだけ日曜を先頭に回転させる。ui/alarmedit/AlarmEditScreen.ktからも使う
 internal fun orderedDaysOfWeek(weekStart: WeekStart): List<DayOfWeek> = when (weekStart) {
@@ -302,7 +306,7 @@ private fun AlarmCard(
                 val on = day in schedule.repeatDays
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(DAY_CHIP_SIZE)
                         .clip(CircleShape)
                         .background(if (on) MaterialTheme.colorScheme.primary else Color.Transparent)
                         .clickable { onToggleDay(day) },
@@ -310,7 +314,7 @@ private fun AlarmCard(
                 ) {
                     Text(
                         text = dayLabel(day),
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.titleMedium,
                         color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
