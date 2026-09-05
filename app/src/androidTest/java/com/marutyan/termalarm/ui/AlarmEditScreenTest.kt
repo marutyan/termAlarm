@@ -55,9 +55,15 @@ class AlarmEditScreenTest {
         repository = repo
     }
 
+    /**
+     * テスト終了後の後始末。
+     *
+     * インメモリDBは閉じない。画面が持つViewModelは、テストが終わった後も
+     * 保存の処理を続けていることがあり、閉じた先へ書きに行って落ちるため。
+     * テストごとに新しいインスタンスを作っているので、閉じなくても値は混ざらない。
+     */
     @After
     fun tearDown() {
-        db.close()
     }
 
     private fun string(resId: Int) = composeTestRule.activity.getString(resId)
@@ -66,7 +72,11 @@ class AlarmEditScreenTest {
     @Test
     fun 間隔を変えると回数プレビューが追従する() {
         composeTestRule.setContent {
-            AlarmEditScreen(viewModel = AlarmEditViewModel(repository, testAppContext(), null), onClose = {})
+            // rememberで囲まないと、画面を描き直すたびに別のViewModelが作られて状態が飛ぶ
+            AlarmEditScreen(
+                viewModel = remember { AlarmEditViewModel(repository, testAppContext(), null) },
+                onClose = {},
+            )
         }
         composeTestRule.onNodeWithText("7:00 から 9:00 まで 25回 鳴ります").assertExists()
 
@@ -79,8 +89,10 @@ class AlarmEditScreenTest {
     fun 開始と終了が同じとき1回になる() {
         lateinit var viewModel: AlarmEditViewModel
         composeTestRule.setContent {
-            viewModel = AlarmEditViewModel(repository, testAppContext(), null)
-            AlarmEditScreen(viewModel = viewModel, onClose = {})
+            // rememberで囲まないと、画面を描き直すたびに別のViewModelが作られて状態が飛ぶ
+            val created = remember { AlarmEditViewModel(repository, testAppContext(), null) }
+            viewModel = created
+            AlarmEditScreen(viewModel = created, onClose = {})
         }
         composeTestRule.runOnIdle {
             viewModel.setStartMinutes(7 * 60)
@@ -94,8 +106,10 @@ class AlarmEditScreenTest {
     fun 不正な間隔は選べず保存されない() {
         lateinit var viewModel: AlarmEditViewModel
         composeTestRule.setContent {
-            viewModel = AlarmEditViewModel(repository, testAppContext(), null)
-            AlarmEditScreen(viewModel = viewModel, onClose = {})
+            // rememberで囲まないと、画面を描き直すたびに別のViewModelが作られて状態が飛ぶ
+            val created = remember { AlarmEditViewModel(repository, testAppContext(), null) }
+            viewModel = created
+            AlarmEditScreen(viewModel = created, onClose = {})
         }
         composeTestRule.onNodeWithText(string(R.string.interval_custom_label)).performClick() // 「その他」
 
@@ -132,7 +146,11 @@ class AlarmEditScreenTest {
     @Test
     fun 止めにくさの既定値() {
         composeTestRule.setContent {
-            AlarmEditScreen(viewModel = AlarmEditViewModel(repository, testAppContext(), null), onClose = {})
+            // rememberで囲まないと、画面を描き直すたびに別のViewModelが作られて状態が飛ぶ
+            AlarmEditScreen(
+                viewModel = remember { AlarmEditViewModel(repository, testAppContext(), null) },
+                onClose = {},
+            )
         }
         composeTestRule.switchNear(string(R.string.skip_requires_app_title)).assertIsOn()
         composeTestRule.switchNear(string(R.string.skip_game_title)).assertIsOff()
@@ -143,7 +161,11 @@ class AlarmEditScreenTest {
     @Test
     fun skipRequiresAppをオフにするとskipGameを選べなくなる() {
         composeTestRule.setContent {
-            AlarmEditScreen(viewModel = AlarmEditViewModel(repository, testAppContext(), null), onClose = {})
+            // rememberで囲まないと、画面を描き直すたびに別のViewModelが作られて状態が飛ぶ
+            AlarmEditScreen(
+                viewModel = remember { AlarmEditViewModel(repository, testAppContext(), null) },
+                onClose = {},
+            )
         }
         val skipRequiresAppTitle = string(R.string.skip_requires_app_title)
         val skipGameTitle = string(R.string.skip_game_title)

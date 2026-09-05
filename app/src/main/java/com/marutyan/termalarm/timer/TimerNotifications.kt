@@ -10,6 +10,7 @@ import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import androidx.annotation.RequiresApi
 import com.marutyan.termalarm.MainActivity
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.TimerRunState
@@ -31,10 +32,6 @@ import java.time.Duration
  * 通知を出し直せるようにするため。
  */
 object TimerNotifications {
-
-    // MetricStyle(通知へ残り時間を任せる仕組み)が使えるようになったAndroidの版。
-    // 定数が古い端末向けのSDKに無いため、数値で持つ
-    private const val METRIC_STYLE_SDK_INT = 37
 
     /**
      * いまのタイマー一覧に合わせて通知を出し直す。1件も無ければ消す。
@@ -113,11 +110,27 @@ object TimerNotifications {
         nowElapsed: Long,
         nowWall: Long,
     ) {
-        if (Build.VERSION.SDK_INT < METRIC_STYLE_SDK_INT) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) {
             applyChronometerFallback(builder, main, nowElapsed, nowWall)
             builder.setContentText(context.getString(statusTextRes(main.runState)))
             return
         }
+        applyMetricStyle(context, builder, timers, main, nowElapsed, nowWall)
+    }
+
+    /**
+     * 残り時間の表示を端末へ任せ、ステータスバーへも出す。
+     * MetricStyleはAndroid 17(CINNAMON_BUN)からの仕組みなので、呼び出し側で版を確かめること。
+     */
+    @RequiresApi(Build.VERSION_CODES.CINNAMON_BUN)
+    private fun applyMetricStyle(
+        context: Context,
+        builder: Notification.Builder,
+        timers: List<TimerState>,
+        main: TimerState,
+        nowElapsed: Long,
+        nowWall: Long,
+    ) {
         // 主役を先頭に置く。ステータスバーの狭い場所へ出すのは先頭の1つだけになる
         val ordered = listOf(main) + timers.filter { it.id != main.id }
         val style = Notification.MetricStyle()
@@ -143,6 +156,7 @@ object TimerNotifications {
     }
 
     /** タイマー1件を、通知が数を数えられる形へ変える。 */
+    @RequiresApi(Build.VERSION_CODES.CINNAMON_BUN)
     private fun metricOf(
         context: Context,
         timer: TimerState,
