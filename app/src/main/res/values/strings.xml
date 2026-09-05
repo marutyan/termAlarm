@@ -17,6 +17,15 @@
     <string name="ringing_remaining_count">この時間帯であと %1$d 回鳴ります</string>
     <!-- 鳴動画面: 次回の鳴動時刻の表示 -->
     <string name="ringing_next_time">次は %1$s</string>
+    <!-- 鳴動中の通知本文。「7:05（日）・あと24回」のように、鳴っている時刻とタームの残り回数を並べる -->
+    <string name="ringing_notification_text_with_remaining">%1$s・あと%2$d回</string>
+
+    <!-- 鳴る前に出す「次のアラーム」通知のチャンネル名。設定アプリの通知チャンネル一覧に表示される -->
+    <string name="upcoming_channel_name">次のアラーム</string>
+    <!-- 「次のアラーム」通知のタイトル -->
+    <string name="upcoming_notification_title">次のアラーム</string>
+    <!-- 「次のアラーム」通知の本文。次に鳴る時刻と、そのタームで残っている回数を並べる -->
+    <string name="upcoming_notification_text_with_remaining">%1$s・あと%2$d回</string>
 
     <!-- 共通 -->
     <string name="back">戻る</string>

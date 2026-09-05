@@ -1,6 +1,7 @@
 package com.marutyan.termalarm.alarm
 
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -19,6 +20,8 @@ import com.marutyan.termalarm.notification.NotificationChannels
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
+import com.marutyan.termalarm.domain.canEndTodaySession
+import com.marutyan.termalarm.domain.remainingOccurrenceCount
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +33,8 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * アラーム鳴動中だけ生存するフォアグラウンドサービス。音とバイブを鳴らし、全画面通知で
@@ -61,7 +66,7 @@ class RingingService : Service() {
                 val requestedMinutes = intent.getIntExtra(EXTRA_SNOOZE_MINUTES, -1)
                 stopRinging { id -> snoozeOrStop(id, requestedMinutes) }
             }
-            ACTION_SKIP -> stopRinging { id -> AlarmScheduler.onSkippedFromRingingScreen(this, id, occurrenceAt()) }
+            ACTION_SKIP -> stopRinging { id -> AlarmScheduler.onSessionEnded(this, id, occurrenceAt()) }
             else -> startRinging(intent)
         }
         return START_NOT_STICKY
@@ -86,7 +91,9 @@ class RingingService : Service() {
             // 鳴動セッション開始時に一度だけ設定を読む。鳴動中に設定画面から値が変わることは想定しないため、
             // 都度DBへ問い合わせず、この時点の値をセッション終了まで使い続ける
             val settings = settingsRepository().observe().first()
-            startForegroundNotification()
+            startForegroundNotification(schedule)
+            // 鳴り始めた時点で「次のアラーム」の予告は役目を終える。次回分は停止・スヌーズ後に出し直される
+            AlarmNotifications.cancelUpcoming(this@RingingService, id)
             playSound(schedule, settings.alarmFadeInSeconds)
             if (schedule.vibrate) startVibration()
             scheduleAutoStop(settings.autoStopMinutes)
@@ -126,6 +133,9 @@ class RingingService : Service() {
         vibrator?.cancel()
         vibrator = null
 
+        // 通知の操作ボタンから止めた場合、ロック画面に出ている鳴動画面が取り残されるため閉じさせる
+        sendBroadcast(Intent(ACTION_RINGING_FINISHED).setPackage(packageName))
+
         scope.launch {
             if (id != -1L) reschedule(id)
             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -145,17 +155,40 @@ class RingingService : Service() {
         vibrator = AlarmVibration.start(this)
     }
 
-    private fun startForegroundNotification() {
+    /**
+     * 鳴動中に出す通知。純正の時計アプリと同じく、タイトルにアラームの名前、本文に鳴っている時刻を出し、
+     * 展開するとスヌーズと停止を押せるようにする。純正が1回分の操作しか持たないのに対し、
+     * このアプリは時間帯（ターム）で鳴らすため、本文へ残り回数を、操作へ「このタームを終了」を足す。
+     */
+    private fun startForegroundNotification(schedule: AlarmSchedule) {
         val fullScreenIntent = RingingActivity.fullScreenPendingIntent(this, currentAlarmId, currentTriggerAtMillis)
-        val notification = NotificationCompat.Builder(this, ensureChannel())
+        val builder = NotificationCompat.Builder(this, ensureChannel())
             .setSmallIcon(R.drawable.ic_stat_alarm)
-            .setContentTitle(getString(R.string.ringing_notification_title))
+            .setContentTitle(schedule.label.ifBlank { getString(R.string.ringing_notification_title) })
+            .setContentText(ringingText(schedule))
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
+            .setLocalOnly(true)
+            // 5分間隔のタームでは通知が何度も出し直されるため、音や振動の合図は最初の1回だけにする
+            .setOnlyAlertOnce(true)
+            .setShowWhen(false)
             .setFullScreenIntent(fullScreenIntent, true)
             .setContentIntent(fullScreenIntent)
-            .build()
+
+        // 操作の並びは純正に合わせてスヌーズ・停止の順にする
+        val snoozeMinutes = schedule.snoozeMinutes
+        if (snoozeMinutes != null) {
+            builder.addAction(0, getString(R.string.ringing_snooze), servicePendingIntent(REQUEST_SNOOZE, snoozeIntent(this, snoozeMinutes)))
+        }
+        builder.addAction(0, getString(R.string.ringing_stop), servicePendingIntent(REQUEST_STOP, stopIntent(this)))
+        // 寝ぼけたまま押せてしまう事故を防ぐ設定(skipRequiresApp)のときは、鳴動画面と同じく操作を出さない
+        if (!schedule.skipRequiresApp && canEndTodaySession(schedule, occurrenceAt())) {
+            builder.addAction(0, getString(R.string.ringing_skip_today), servicePendingIntent(REQUEST_SKIP, skipIntent(this)))
+        }
+
+        val notification = builder.build()
         ServiceCompat.startForeground(
             this,
             NOTIFICATION_ID,
@@ -163,6 +196,20 @@ class RingingService : Service() {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
         )
     }
+
+    // 通知の本文。「7:05（日）・あと24回」のように、鳴っている時刻とタームの残り回数を並べる。
+    // 単発に退化しているアラーム（残り0回）では回数を出さず、純正と同じく時刻だけにする
+    private fun ringingText(schedule: AlarmSchedule): String {
+        val at = occurrenceAt()
+        val time = at.format(RINGING_TIME_FORMATTER)
+        val remaining = remainingOccurrenceCount(schedule, at)
+        return if (remaining > 0) getString(R.string.ringing_notification_text_with_remaining, time, remaining) else time
+    }
+
+    // 通知の操作ボタンから、このサービス自身へIntentを送り返すためのPendingIntent。
+    // 押したボタンと違う操作が走らないよう、操作ごとに別のrequestCodeを与えて確実に別物として扱わせる
+    private fun servicePendingIntent(requestCode: Int, intent: Intent): PendingIntent =
+        PendingIntent.getService(this, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
     // 通知チャンネルは一度だけ作成すればよい。音はサービス側のMediaPlayerが鳴らすため、
     // チャンネル自体の音源はnullにする（docs/SPEC.md「チャンネル側では音を鳴らさない」）
@@ -188,6 +235,19 @@ class RingingService : Service() {
     companion object {
         private const val CHANNEL_ID = "ringing"
         private const val NOTIFICATION_ID = 1001
+
+        // 通知の操作ボタンごとに割り当てるrequestCode。同じ値を使い回すと押したボタンと違う操作が走りうる
+        private const val REQUEST_SNOOZE = 1
+        private const val REQUEST_STOP = 2
+        private const val REQUEST_SKIP = 3
+
+        // 鳴動画面(RingingActivity)へ「もう鳴っていないので閉じてよい」と伝えるための合図。
+        // 自アプリ内でのみ送受信する（受け取り側はRECEIVER_NOT_EXPORTEDで登録する）
+        const val ACTION_RINGING_FINISHED = "com.marutyan.termalarm.alarm.action.RINGING_FINISHED"
+
+        // 通知の本文に出す鳴動時刻の書式。純正の「3:45 (日)」に合わせ、時刻と曜日を1行で示す
+        private val RINGING_TIME_FORMATTER: DateTimeFormatter =
+            DateTimeFormatter.ofPattern("H:mm（E）", Locale.JAPANESE)
 
         const val ACTION_STOP = "com.marutyan.termalarm.alarm.action.STOP"
         const val ACTION_SNOOZE = "com.marutyan.termalarm.alarm.action.SNOOZE"

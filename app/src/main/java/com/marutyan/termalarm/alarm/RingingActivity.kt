@@ -1,6 +1,8 @@
 package com.marutyan.termalarm.alarm
 
 import android.app.KeyguardManager
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -45,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.Repositories
@@ -76,9 +79,24 @@ class RingingActivity : ComponentActivity() {
     // 起動時の1回読みで十分とする(RingingServiceと同じ方針)。読み込み前はAppSettings()の既定値で表示する
     private var settings by mutableStateOf(AppSettings())
 
+    /**
+     * 通知の操作ボタンからアラームを止めたときに、この画面を閉じるための受け口。
+     * 画面上のボタンで止めた場合は自分でfinish()するため、この経路は通知側からの操作だけに使う。
+     */
+    private val ringingFinishedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) = finish()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setupLockScreenDisplay()
+
+        ContextCompat.registerReceiver(
+            this,
+            ringingFinishedReceiver,
+            IntentFilter(RingingService.ACTION_RINGING_FINISHED),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
 
         val alarmId = intent.getLongExtra(EXTRA_ALARM_ID, -1L)
         val triggerAtMillis = intent.getLongExtra(EXTRA_TRIGGER_AT_MILLIS, System.currentTimeMillis())
@@ -100,6 +118,11 @@ class RingingActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(ringingFinishedReceiver)
     }
 
     /**
