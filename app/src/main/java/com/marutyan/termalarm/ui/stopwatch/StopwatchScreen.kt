@@ -73,12 +73,17 @@ import kotlinx.coroutines.launch
 // 1/100秒表示の見た目上の滑らかさを保ちつつ再描画回数を1/10に抑えられるため、この値を採用した。
 private const val TICK_INTERVAL_RUNNING_MILLIS = 100L
 
-// 操作ボタンの高さと左右余白。純正の実測値そのまま(docs/OFFICIAL_UI.md「ストップウォッチ」)
-private val CONTROL_BUTTON_HEIGHT = 104.dp
+// 操作ボタンの高さ・間隔・左右余白。純正の実測値そのまま(docs/OFFICIAL_UI.md「ストップウォッチ」)。
+// 純正は主な操作(開始・停止)だけを大きくし、リセットとラップはひと回り小さくしている
+private val PRIMARY_BUTTON_HEIGHT = 129.dp
+private val SECONDARY_BUTTON_HEIGHT = 89.dp
+private val CONTROL_BUTTON_SPACING = 7.dp
+private val SCREEN_HORIZONTAL_PADDING = 16.dp
 
-// 画面の高さが狭いときに使う操作ボタンの高さ。分割画面でも3つのボタンが収まるように小さくする
-private val COMPACT_CONTROL_BUTTON_HEIGHT = 56.dp
-private val SCREEN_HORIZONTAL_PADDING = 13.dp
+// 画面の高さが狭いときに使う操作ボタンの高さ。分割画面でも3つのボタンが収まるように小さくする。
+// 主と副の大小関係は純正と同じ比率のまま保つ
+private val COMPACT_PRIMARY_BUTTON_HEIGHT = 56.dp
+private val COMPACT_SECONDARY_BUTTON_HEIGHT = 44.dp
 
 /**
  * ストップウォッチタブの画面。design/tabs/Stopwatch.dc.htmlを再現する。画面上部に余白を詰めた特大の経過時間、
@@ -122,10 +127,11 @@ fun StopwatchScreen(
         ) {
             val screenMaxHeight = maxHeight
             val isCompact = screenMaxHeight < COMPACT_SCREEN_HEIGHT_THRESHOLD
-            val buttonHeight = if (isCompact) COMPACT_CONTROL_BUTTON_HEIGHT else CONTROL_BUTTON_HEIGHT
+            val primaryButtonHeight = if (isCompact) COMPACT_PRIMARY_BUTTON_HEIGHT else PRIMARY_BUTTON_HEIGHT
+            val secondaryButtonHeight = if (isCompact) COMPACT_SECONDARY_BUTTON_HEIGHT else SECONDARY_BUTTON_HEIGHT
             val controlsBottomPadding = if (isCompact) 16.dp else 96.dp
             val timeVerticalPadding = if (isCompact) 4.dp else 8.dp
-            val buttonSpacing = if (isCompact) 8.dp else 12.dp
+            val buttonSpacing = if (isCompact) 8.dp else CONTROL_BUTTON_SPACING
 
             Column(
                 modifier = Modifier
@@ -181,7 +187,8 @@ fun StopwatchScreen(
                         onResume = viewModel::resume,
                         onReset = viewModel::reset,
                         onLap = viewModel::lap,
-                        buttonHeight = buttonHeight,
+                        primaryButtonHeight = primaryButtonHeight,
+                        secondaryButtonHeight = secondaryButtonHeight,
                         buttonSpacing = buttonSpacing,
                         // 純正の開始ボタンは画面の下端に張り付かず、少し上に浮いている
                         modifier = Modifier.padding(
@@ -231,15 +238,17 @@ private fun StopwatchControls(
     onResume: () -> Unit,
     onReset: () -> Unit,
     onLap: () -> Unit,
-    buttonHeight: Dp = CONTROL_BUTTON_HEIGHT,
-    buttonSpacing: Dp = 12.dp,
+    primaryButtonHeight: Dp = PRIMARY_BUTTON_HEIGHT,
+    secondaryButtonHeight: Dp = SECONDARY_BUTTON_HEIGHT,
+    buttonSpacing: Dp = CONTROL_BUTTON_SPACING,
     modifier: Modifier = Modifier,
 ) {
     val isRunning = runState == StopwatchRunState.RUNNING
     val (primaryLabel, primaryAction) = when (runState) {
+        // 純正の文字は「開始」と「停止」の2つだけ。止めた後の再開も「開始」と出す
         StopwatchRunState.IDLE -> R.string.stopwatch_start to onStart
         StopwatchRunState.RUNNING -> R.string.stopwatch_pause to onPause
-        StopwatchRunState.PAUSED -> R.string.stopwatch_resume to onResume
+        StopwatchRunState.PAUSED -> R.string.stopwatch_start to onResume
     }
 
     // 開始・停止の切り替え時にボタンの色を滑らかに移行させるアニメーション値(0f: 通常, 1f: 停止操作)。
@@ -268,26 +277,26 @@ private fun StopwatchControls(
             onClick = primaryAction,
             containerColor = primaryContainerColor,
             contentColor = primaryContentColor,
-            buttonHeight = buttonHeight,
+            buttonHeight = primaryButtonHeight,
         )
         // まだ計測していないときは「開始」だけを出す。純正も同じで、押せないボタンを並べない。
         // 一度でも動かした後は、止める・戻す・刻むの3つが要る
         if (runState != StopwatchRunState.IDLE) {
+            // 純正はリセットとラップを同じ地の色で並べる。動作中でもリセットは押せる
             ControlButton(
                 label = stringResource(R.string.stopwatch_reset),
                 onClick = onReset,
-                enabled = runState == StopwatchRunState.PAUSED,
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                 contentColor = MaterialTheme.colorScheme.onSurface,
-                buttonHeight = buttonHeight,
+                buttonHeight = secondaryButtonHeight,
             )
             ControlButton(
                 label = stringResource(R.string.stopwatch_lap),
                 onClick = onLap,
                 enabled = isRunning,
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                 contentColor = MaterialTheme.colorScheme.onSurface,
-                buttonHeight = buttonHeight,
+                buttonHeight = secondaryButtonHeight,
             )
         }
     }
@@ -302,7 +311,7 @@ private fun ControlButton(
     containerColor: Color,
     contentColor: Color,
     enabled: Boolean = true,
-    buttonHeight: Dp = CONTROL_BUTTON_HEIGHT,
+    buttonHeight: Dp = PRIMARY_BUTTON_HEIGHT,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     Button(
@@ -337,8 +346,11 @@ private fun LapRow(laps: List<StopwatchLap>, modifier: Modifier = Modifier) {
         if (laps.isNotEmpty()) listState.animateScrollToItem(laps.lastIndex)
     }
 
+    // 全部が一度に収まっているときは、押しても何も起きない矢印を出さない(純正も出さない)
+    val canScroll = listState.canScrollBackward || listState.canScrollForward
+
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+        if (canScroll) Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
             LapScrollButton(
                 icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                 contentDescription = stringResource(R.string.stopwatch_lap_scroll_previous),

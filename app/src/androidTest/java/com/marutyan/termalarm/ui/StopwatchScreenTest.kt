@@ -139,7 +139,7 @@ class StopwatchScreenTest {
         }
         setScreen()
         composeTestRule.onNodeWithText(formatElapsed(5_000L, includeCentiseconds = true)).assertExists()
-        composeTestRule.onNodeWithText(string(R.string.stopwatch_resume)).performClick()
+        composeTestRule.onNodeWithText(string(R.string.stopwatch_start)).performClick()
 
         composeTestRule.waitUntil(5_000) { runBlocking { repository.getStateOnce().runState == StopwatchRunState.RUNNING } }
         composeTestRule.onNodeWithText(string(R.string.stopwatch_pause)).assertExists()

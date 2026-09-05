@@ -9,8 +9,10 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 
 private val LightColors = lightColorScheme(
     primary = LightPrimary,
@@ -42,7 +44,8 @@ fun TermAlarmTheme(
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            val dynamic = if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            dynamic.withSystemErrorColors(darkTheme)
         }
         darkTheme -> DarkColors
         else -> LightColors
@@ -53,5 +56,28 @@ fun TermAlarmTheme(
         motionScheme = MotionScheme.expressive(),
         typography = AppTypography,
         content = content,
+    )
+}
+
+/**
+ * 壁紙由来の配色にも、端末が持つ注意色(error)を反映させる。
+ *
+ * Composeの動的配色はerrorだけ壁紙を反映せず、既定の淡いピンクのままになる。
+ * 一方、純正の時計アプリはストップウォッチの「停止」などに端末のerror色をそのまま使うため、
+ * このままでは同じ端末でも色が食い違う。Android 14以降は端末のerror色を資源から読めるので、
+ * 読めるときだけ差し替えて純正と同じ見た目に揃える。
+ */
+@Composable
+private fun ColorScheme.withSystemErrorColors(darkTheme: Boolean): ColorScheme {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return this
+    return copy(
+        error = colorResource(if (darkTheme) android.R.color.system_error_dark else android.R.color.system_error_light),
+        onError = colorResource(if (darkTheme) android.R.color.system_on_error_dark else android.R.color.system_on_error_light),
+        errorContainer = colorResource(
+            if (darkTheme) android.R.color.system_error_container_dark else android.R.color.system_error_container_light,
+        ),
+        onErrorContainer = colorResource(
+            if (darkTheme) android.R.color.system_on_error_container_dark else android.R.color.system_on_error_container_light,
+        ),
     )
 }
