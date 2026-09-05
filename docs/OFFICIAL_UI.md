@@ -374,3 +374,31 @@ NotificationManagerCompat.from(context).canPostPromotedNotifications()  // 投�
 **寸法は実機から測るしかない。** `adb shell uiautomator dump` で
 要素ごとの位置と大きさが取れるので、それを唯一の物差しとする。
 画像から目分量で測ると外す（実際に2回外した）。
+
+
+## 実機の画面を一時的に狭めるときの注意
+
+分割画面での崩れを確かめるため `wm size` を使うことがある。
+**このとき、画面の密度も一緒に変わる。** `wm size reset` はサイズしか戻さない。
+
+必ず両方を戻すこと。戻し忘れると、端末全体の文字とアイコンが小さいままになる。
+
+```sh
+# 前に記録しておく
+adb shell wm size
+adb shell wm density
+adb shell settings get secure display_density_forced
+
+# 狭める
+adb shell wm size 1080x1200
+
+# 終わったら必ず両方戻す
+adb shell wm size reset
+adb shell wm density reset
+
+# 確かめる（display_density_forced が空になっていること）
+adb shell wm density
+adb shell settings get secure display_density_forced
+```
+
+`font_scale`（文字の大きさ）は利用者の設定なので、決して触らない。
