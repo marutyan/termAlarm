@@ -125,7 +125,7 @@ class StopwatchForegroundService : Service() {
         /**
          * RUNNINGになったかもしれないタイミングで呼ぶ。サービス自身が不要になったら自分で止まる設計なので、
          * 呼び出し側(ui/stopwatch, StopwatchRescheduleReceiver)は「開始・再開・再起動直後」など
-         * 複数箇所から重複して呼んでも安全(timer機能のTimerForegroundService.ensureRunningと同じ考え方)。
+         * 複数箇所から重複して呼んでも安全。
          */
         fun ensureRunning(context: Context) {
             ContextCompat.startForegroundService(context, Intent(context, StopwatchForegroundService::class.java))

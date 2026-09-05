@@ -105,17 +105,6 @@ abstract class AlarmDatabase : RoomDatabase() {
         }
 
         /** アプリ全体の設定を保存するテーブルを追加する */
-        /**
-         * 時計に秒を出す設定の既定を、出さないから出すへ変える。
-         * 純正の時計は秒まで出しており、そちらを既定にすると決めたため
-         * (利用者の指示、2026年9月5日)。すでに保存されている行も合わせて書き換える。
-         */
-        val MIGRATION_6_7 = object : Migration(6, 7) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("UPDATE `app_settings` SET `showClockSeconds` = 1")
-            }
-        }
-
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
@@ -132,6 +121,17 @@ abstract class AlarmDatabase : RoomDatabase() {
                         "`timerFadeInSeconds` REAL NOT NULL, " +
                         "`timerVibration` INTEGER NOT NULL)",
                 )
+            }
+        }
+
+        /**
+         * 時計に秒を出す設定の既定を、出さないから出すへ変える。
+         * 純正の時計は秒まで出しており、そちらを既定にすると決めたため
+         * (利用者の指示、2026年9月5日)。すでに保存されている行も合わせて書き換える。
+         */
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("UPDATE `app_settings` SET `showClockSeconds` = 1")
             }
         }
 

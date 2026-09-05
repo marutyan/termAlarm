@@ -9,6 +9,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.marutyan.termalarm.R
+import com.marutyan.termalarm.ui.theme.CLOCK_MODE_TRANSITION_DURATION_MS
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.ClockSettingsRepository
 import com.marutyan.termalarm.data.SettingsRepository
@@ -140,6 +141,9 @@ class ClockScreenTest {
         val saved = runBlocking { repository.observeDisplayMode().first() }
         assertEquals(ClockDisplayMode.DIGITAL, saved)
 
+        // 保存が終わっても、画面はまだ切り替わりの途中でありうる。
+        // 切り替えに動きを付けてあるため、その分だけクロックを進めてから確かめる
+        composeTestRule.mainClock.advanceTimeBy(CLOCK_MODE_TRANSITION_DURATION_MS.toLong() * 2)
         composeTestRule.onNodeWithText(string(R.string.clock_display_mode_digital)).assertIsSelected()
 
         val now = ZonedDateTime.now()

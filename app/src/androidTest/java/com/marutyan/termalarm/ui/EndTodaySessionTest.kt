@@ -147,7 +147,11 @@ class EndTodaySessionTest {
         val id = runBlocking { repository.add(defaultTestSchedule(skipGame = true, startMinutes = 0, endMinutes = 23 * 60 + 59)) }
         lateinit var viewModel: SkipGameViewModel
         composeTestRule.setContent {
-            viewModel = remember { SkipGameViewModel(repository, testAppContext(), id, hasShakeSensor = false) }
+            // 出題を固定する。乱数のままだと、問題文と選択肢に同じ文字が出て
+                // 押す先を決められない回があり、実行のたびに結果が変わっていた
+                viewModel = remember {
+                    SkipGameViewModel(repository, testAppContext(), id, hasShakeSensor = false, random = Random(0))
+                }
             SkipGameScreen(viewModel = viewModel, onClose = {})
         }
         composeTestRule.waitUntil(5_000) { viewModel.uiState.question != null }

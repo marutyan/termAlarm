@@ -58,7 +58,7 @@ android {
     }
 }
 
-// RoomのスキーマJSON出力先。将来のマイグレーション検証のためコミット対象としてapp/schemas/へ残す
+// RoomのスキーマJSON出力先。マイグレーション検証のためコミット対象としてapp/schemas/へ残す
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
@@ -87,6 +87,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.room.testing)
+    // room-testingが読むスキーマJSONの解析に使う
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

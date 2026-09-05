@@ -148,11 +148,13 @@ TermAlarmは、鳴らす時刻をひとつ指定するのではなく、時刻�
 - `SCHEDULE_EXACT_ALARM` (maxSdkVersion=32): Android 12/12L向けの正確なアラーム予約（`AlarmScheduler`）
 - `USE_EXACT_ALARM`: Android 13以降向けの正確なアラーム予約（`AlarmScheduler`）
 - `POST_NOTIFICATIONS`: 鳴動通知、タイマー/ストップウォッチの通知表示（`NotificationPermission`, 各通知生成処理）
+- `POST_PROMOTED_NOTIFICATIONS`: タイマーの残り時間をステータスバーへ出す（`TimerNotifications`）。
+  実行時に許可を求める種類ではなく、宣言するだけで効く
 - `RECEIVE_BOOT_COMPLETED`: 端末再起動時のアラーム・タイマー・ストップウォッチの復元（各RescheduleReceiver）
-- `FOREGROUND_SERVICE`: フォアグラウンドサービスの実行（`RingingService`, `TimerForegroundService`, `StopwatchForegroundService`）
-- `FOREGROUND_SERVICE_MEDIA_PLAYBACK`: 音声再生を行うフォアグラウンドサービス用（`RingingService`, `TimerForegroundService`）
+- `FOREGROUND_SERVICE`: フォアグラウンドサービスの実行（`RingingService`, `TimerRingingService`, `StopwatchForegroundService`）
+- `FOREGROUND_SERVICE_MEDIA_PLAYBACK`: 音声再生を行うフォアグラウンドサービス用（`RingingService`, `TimerRingingService`）
 - `FOREGROUND_SERVICE_SPECIAL_USE`: ストップウォッチ用フォアグラウンドサービス（`StopwatchForegroundService`）
-- `VIBRATE`: アラームおよびタイマー鳴動時のバイブレーション（`RingingService`, `TimerForegroundService`）
+- `VIBRATE`: アラームおよびタイマー鳴動時のバイブレーション（`RingingService`, `TimerRingingService`）
 - `WAKE_LOCK`: アラームおよびタイマー発火時の端末スリープ解除（`AlarmTriggerReceiver`, `TimerTriggerReceiver`）
 - `USE_FULL_SCREEN_INTENT`: ロック画面上での鳴動画面表示用全画面インテント（`RingingService`）
 

@@ -2,7 +2,7 @@ package com.marutyan.termalarm.timer
 
 /**
  * 残り時間(ミリ秒)を "5:00" / "1:05:00" のような表示用文字列へ変換する。Android非依存の純粋な整形処理で、
- * フォアグラウンド通知(timer/TimerForegroundService)とタイマー画面(ui/timer)の両方から使う
+ * 通知(timer/TimerNotifications)とタイマー画面(ui/timer)の両方から使う
  * 共通の書式（値を複数箇所に持たないための1箇所化）。
  */
 fun formatDuration(millis: Long): String {

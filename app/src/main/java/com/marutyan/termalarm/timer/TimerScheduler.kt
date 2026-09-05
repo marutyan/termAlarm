@@ -11,9 +11,11 @@ import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.remainingMillis
 
 /**
- * タイマー完了時刻のAlarmManager予約・解除を担う。TimerForegroundServiceの1秒ごとのtickだけに頼ると
- * Dozeなどでtickが遅れた場合にサービスプロセスごと止まっていると気付けないため、完了予定時刻ちょうどに
- * 端末を起こす保険としてAlarmManagerを使う（docs/SPEC.md「タイマータブ」の完了通知）。
+ * タイマーの完了時刻をAlarmManagerへ予約する。
+ *
+ * 動作中のタイマーはサービスを持たない（純正の時計アプリと同じ作り、docs/OFFICIAL_UI.md参照）。
+ * 残り時間は通知の仕組みが数え、期限が来たことを知るのはこの予約だけが担う。
+ * 予約が届くとTimerTriggerReceiverが鳴動へ移す。
  *
  * setAlarmClock()ではなくsetExactAndAllowWhileIdle()を使う。setAlarmClock()はステータスバーの
  * 「次のアラーム」表示や画面ロック解除の扱いなど“ユーザーが次に起こされる時刻”を表す特別な予約枠で、
