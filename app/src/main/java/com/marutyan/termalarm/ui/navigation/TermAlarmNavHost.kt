@@ -45,10 +45,12 @@ import com.marutyan.termalarm.ui.stopwatch.StopwatchViewModelFactory
 import com.marutyan.termalarm.ui.timer.TimerScreen
 import com.marutyan.termalarm.ui.timer.TimerViewModel
 import com.marutyan.termalarm.ui.timer.TimerViewModelFactory
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.ui.res.stringResource
 import com.marutyan.termalarm.R
+import com.marutyan.termalarm.ui.theme.screenPopFadeSpec
 import com.marutyan.termalarm.ui.theme.tabFadeSpec
 
 private const val ROUTE_LIST = "list"
@@ -113,8 +115,9 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
         // 横に動くと、押した場所と違うところが動いて見えて落ち着かない
         enterTransition = { fadeIn(animationSpec = tabFadeSpec()) },
         exitTransition = { fadeOut(animationSpec = tabFadeSpec()) },
-        popEnterTransition = { fadeIn(animationSpec = tabFadeSpec()) },
-        popExitTransition = { fadeOut(animationSpec = tabFadeSpec()) },
+        // 戻るときは待たせない。前の画面はそのまま出し、閉じる画面だけがすっと消える
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { fadeOut(animationSpec = screenPopFadeSpec()) },
     ) {
         composable(ROUTE_LIST) {
             val viewModel: AlarmListViewModel = viewModel(factory = AlarmListViewModelFactory(repository, context))

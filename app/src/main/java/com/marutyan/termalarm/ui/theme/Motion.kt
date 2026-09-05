@@ -19,6 +19,10 @@ import androidx.compose.ui.unit.dp
 // 薄く消えて薄く現れるだけなので短くてよい。長いと閉じたのに残っているように見える。
 const val TAB_TRANSITION_DURATION_MS = 150
 
+// 戻るときの時間(ミリ秒)。開いた画面を閉じる操作は、待たされる感じが無いようにごく短くする。
+// 出てくる側は動かさず、閉じる側だけがすっと消える
+const val SCREEN_POP_DURATION_MS = 70
+
 // タイマー新規追加画面の表示・非表示アニメーション時間(ミリ秒)。下からの出現と上への消去に合わせるために定義する。
 const val TIMER_ADD_TRANSITION_DURATION_MS = 300
 
@@ -46,6 +50,15 @@ const val ALARM_COLOR_TRANSITION_DURATION_MS = 250
  */
 fun tabFadeSpec(): TweenSpec<Float> = tween(
     durationMillis = TAB_TRANSITION_DURATION_MS,
+    easing = LinearEasing,
+)
+
+/**
+ * 戻るときに、閉じる画面を消すAnimationSpecを生成する。
+ * ほとんど動かさず、押した直後に前の画面が見えるようにする。
+ */
+fun screenPopFadeSpec(): TweenSpec<Float> = tween(
+    durationMillis = SCREEN_POP_DURATION_MS,
     easing = LinearEasing,
 )
 

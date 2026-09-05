@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -80,6 +81,12 @@ private val SECONDARY_BUTTON_HEIGHT = 89.dp
 private val CONTROL_BUTTON_SPACING = 7.dp
 private val SCREEN_HORIZONTAL_PADDING = 16.dp
 
+// 経過時間の上に置く余白。画面の上端から少し下げて置く
+private val TIME_TOP_PADDING = 56.dp
+
+// ラップを左右へ送る矢印ボタンの大きさ。矢印が出ていない間も、この高さだけ場所を空けておく
+private val LAP_SCROLL_BUTTON_SIZE = 48.dp
+
 // 画面の高さが狭いときに使う操作ボタンの高さ。分割画面でも3つのボタンが収まるように小さくする。
 // 主と副の大小関係は純正と同じ比率のまま保つ
 private val COMPACT_PRIMARY_BUTTON_HEIGHT = 56.dp
@@ -130,7 +137,9 @@ fun StopwatchScreen(
             val primaryButtonHeight = if (isCompact) COMPACT_PRIMARY_BUTTON_HEIGHT else PRIMARY_BUTTON_HEIGHT
             val secondaryButtonHeight = if (isCompact) COMPACT_SECONDARY_BUTTON_HEIGHT else SECONDARY_BUTTON_HEIGHT
             val controlsBottomPadding = if (isCompact) 16.dp else 96.dp
-            val timeVerticalPadding = if (isCompact) 4.dp else 8.dp
+            // 経過時間は画面の上端に近すぎると窮屈に見える。上へ余白を足して少し下げる
+            val timeTopPadding = if (isCompact) 8.dp else TIME_TOP_PADDING
+            val timeBottomPadding = if (isCompact) 4.dp else 8.dp
             val buttonSpacing = if (isCompact) 8.dp else CONTROL_BUTTON_SPACING
 
             Column(
@@ -155,7 +164,7 @@ fun StopwatchScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = timeVerticalPadding),
+                                .padding(top = timeTopPadding, bottom = timeBottomPadding),
                             contentAlignment = Alignment.Center,
                         ) {
                             // 数字は動かさない。純正も経過時間の数字は動かさず、静かに入れ替える
@@ -350,17 +359,24 @@ private fun LapRow(laps: List<StopwatchLap>, modifier: Modifier = Modifier) {
     val canScroll = listState.canScrollBackward || listState.canScrollForward
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (canScroll) Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-            LapScrollButton(
-                icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = stringResource(R.string.stopwatch_lap_scroll_previous),
-                onClick = { scope.launch { listState.animateScrollToItem(maxOf(0, listState.firstVisibleItemIndex - 1)) } },
-            )
-            LapScrollButton(
-                icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = stringResource(R.string.stopwatch_lap_scroll_next),
-                onClick = { scope.launch { listState.animateScrollToItem(minOf(laps.lastIndex, listState.firstVisibleItemIndex + 1)) } },
-            )
+        // 矢印は4件目から現れる。そのとき下のカードが押し下がって見えないよう、
+        // 矢印が無い間もこの行の高さだけは空けておく
+        Row(
+            modifier = Modifier.fillMaxWidth().height(LAP_SCROLL_BUTTON_SIZE),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+        ) {
+            if (canScroll) {
+                LapScrollButton(
+                    icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    contentDescription = stringResource(R.string.stopwatch_lap_scroll_previous),
+                    onClick = { scope.launch { listState.animateScrollToItem(maxOf(0, listState.firstVisibleItemIndex - 1)) } },
+                )
+                LapScrollButton(
+                    icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = stringResource(R.string.stopwatch_lap_scroll_next),
+                    onClick = { scope.launch { listState.animateScrollToItem(minOf(laps.lastIndex, listState.firstVisibleItemIndex + 1)) } },
+                )
+            }
         }
         // 端まで詰めると、スクロールした時に隣のカードが切れて見える。左右へ余白を置く
         LazyRow(
@@ -379,6 +395,7 @@ private fun LapRow(laps: List<StopwatchLap>, modifier: Modifier = Modifier) {
 private fun LapScrollButton(icon: ImageVector, contentDescription: String, onClick: () -> Unit) {
     IconButton(
         onClick = onClick,
+        modifier = Modifier.size(LAP_SCROLL_BUTTON_SIZE),
         colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
     ) {
         Icon(icon, contentDescription = contentDescription, tint = MaterialTheme.colorScheme.onSurfaceVariant)

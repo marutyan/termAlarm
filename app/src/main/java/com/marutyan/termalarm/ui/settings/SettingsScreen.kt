@@ -2,7 +2,10 @@ package com.marutyan.termalarm.ui.settings
 
 import android.content.Context
 import android.content.Intent
+import android.database.ContentObserver
 import android.media.AudioManager
+import android.os.Handler
+import android.os.Looper
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
@@ -353,8 +356,10 @@ private fun SettingsToggleRow(label: String, checked: Boolean, onCheckedChange: 
 }
 
 // アラームの音量スライダー。アプリ側に値を持たず、端末のSTREAM_ALARMを直接読み書きする
-// (docs/OFFICIAL_SETTINGS.md「アラームの音量」)。ハードウェアの音量ボタンによる変更は
-// この画面を開き直すまで反映されない(簡易な実装として許容する)。
+// (docs/OFFICIAL_SETTINGS.md「アラームの音量」)。
+//
+// 端末の音量が別の場所(設定アプリや、鳴っている最中の音量ボタン)で変わることがあるため、
+// 音量の保存先であるSettings.Systemを見張り、変わったらこのスライダーも動かす。
 //
 // 純正と同じく、指を離した時点でその音量の試聴音を鳴らす。数字だけでは大きさが分からないため
 // (docs/OFFICIAL_SETTINGS.md「追記: 音量スライダーの挙動」)。動かすたびに鳴らすと騒がしいので
@@ -368,6 +373,17 @@ private fun AlarmVolumeRow(isCompact: Boolean = false) {
     var volume by remember { mutableFloatStateOf(audioManager.getStreamVolume(AudioManager.STREAM_ALARM).toFloat()) }
     val previewPlayer = remember { AlarmVolumePreviewPlayer(context) }
     DisposableEffect(Unit) { onDispose { previewPlayer.stop() } }
+
+    // 端末側で音量が変わったら、このスライダーも合わせる
+    DisposableEffect(context) {
+        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                volume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM).toFloat()
+            }
+        }
+        context.contentResolver.registerContentObserver(AndroidSettings.System.CONTENT_URI, true, observer)
+        onDispose { context.contentResolver.unregisterContentObserver(observer) }
+    }
     val verticalPadding = if (isCompact) 4.dp else 8.dp
 
     Row(
