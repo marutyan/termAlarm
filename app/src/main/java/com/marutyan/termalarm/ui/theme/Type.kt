@@ -88,3 +88,14 @@ fun TextStyle.subHeroClock(): TextStyle = copy(
     lineHeight = 88.sp,
     fontFeatureSettings = "tnum",
 )
+
+/**
+ * アラーム一覧のカードに出す時刻。
+ * このアプリは「7:00 – 9:00」のように時刻を2つ並べるため、画面いっぱいの大きさは使えない。
+ * 純正のアラームは約33spだが、利用者の希望でひと回り大きくしている。
+ */
+fun TextStyle.alarmCardClock(): TextStyle = copy(
+    fontSize = 44.sp,
+    lineHeight = 52.sp,
+    fontFeatureSettings = "tnum",
+)

@@ -353,10 +353,10 @@ private fun IntervalSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(stringResource(R.string.interval_section_title), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        // 左詰めにすると右へ余白が寄って偏って見えるため、幅いっぱいに散らす
+        // 行ごとに中央へ寄せる。端から端へ散らすと、2行目に少数のボタンが残ったとき左右へ離れて偏る
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             INTERVAL_PRESETS_MINUTES.forEach { minutes ->

@@ -23,7 +23,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import com.marutyan.termalarm.ui.theme.heroClock
+import com.marutyan.termalarm.ui.theme.alarmCardClock
 import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ShortNavigationBar
@@ -129,7 +129,12 @@ fun AlarmListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddAlarm) {
+            // 純正と同じ明るい色にする。暗い画面ではprimaryが明るい側の色になる
+            FloatingActionButton(
+                onClick = onAddAlarm,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ) {
                 Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_alarm))
             }
         },
@@ -157,6 +162,8 @@ fun AlarmListScreen(
                                 // skipGameがtrueならその場でゲーム画面へ遷移し、falseなら確認ダイアログを出す
                                 if (schedule.skipGame) onNavigateToSkipGame(schedule.id) else pendingSkipTarget = schedule
                             },
+                            // 追加・削除・並び替えのときに、その場で入れ替わらず動いて見えるようにする
+                            modifier = Modifier.animateItem(),
                         )
                     }
                 }
@@ -201,11 +208,12 @@ private fun AlarmCard(
     onToggleEnabled: (Boolean) -> Unit,
     onClick: () -> Unit,
     onRequestEndTodaySession: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val isSingle = schedule.startMinutes == schedule.endMinutes
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(28.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -214,18 +222,37 @@ private fun AlarmCard(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (isSingle) {
-                    Text(
-                        text = formatClockMinutes(schedule.startMinutes),
-                        style = MaterialTheme.typography.displayLarge.heroClock(),
-                    )
+            // weightを付けないと、長い時刻が右のスイッチへ重なって読めなくなる
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                // 開始と終了をつないだ1つの文にする。別々のTextへ分けると折り返し位置が揃わない
+                val timeText = if (isSingle) {
+                    formatClockMinutes(schedule.startMinutes)
                 } else {
-                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(text = formatClockMinutes(schedule.startMinutes), style = MaterialTheme.typography.displayLarge.heroClock())
-                        Text(text = "–", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(text = formatClockMinutes(schedule.endMinutes), style = MaterialTheme.typography.displayLarge.heroClock())
-                    }
+                    formatClockMinutes(schedule.startMinutes) + "–" + formatClockMinutes(schedule.endMinutes)
+                }
+                Text(
+                    text = timeText,
+                    style = MaterialTheme.typography.displayLarge.alarmCardClock(),
+                    // 動いていないアラームは地に近い色にして、一覧の中で沈ませる
+                    color = if (schedule.enabled) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    maxLines = 1,
+                    softWrap = false,
+                )
+                // 名前を付けたアラームは、何のためのものか一覧で分かるように出す
+                if (schedule.label.isNotBlank()) {
+                    Text(
+                        text = schedule.label,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (schedule.enabled) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(
