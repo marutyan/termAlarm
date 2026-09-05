@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,6 +56,9 @@ import com.marutyan.termalarm.domain.StopwatchLap
 import com.marutyan.termalarm.domain.StopwatchRunState
 import com.marutyan.termalarm.domain.elapsedMillis
 import com.marutyan.termalarm.stopwatch.formatElapsed
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.marutyan.termalarm.ui.theme.SlideAnimatedDigits
+import com.marutyan.termalarm.ui.theme.pressScaleEffect
 import com.marutyan.termalarm.ui.theme.tabularNums
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -108,20 +112,31 @@ fun StopwatchScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            Text(
-                text = formatElapsed(elapsed, includeCentiseconds = true),
-                style = MaterialTheme.typography.displayLarge.heroClock(),
-                // まだ計測していないときは地に近い色にして、動いていないことを見て分かるようにする
-                color = if (state.runState == StopwatchRunState.IDLE) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
+            val formatted = formatElapsed(elapsed, includeCentiseconds = true)
+            val dotIndex = formatted.indexOf('.')
+            val (mainPart, centisPart) = if (dotIndex >= 0) {
+                formatted.substring(0, dotIndex) to formatted.substring(dotIndex)
+            } else {
+                formatted to ""
+            }
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
-                textAlign = TextAlign.Center,
-            )
+                contentAlignment = Alignment.Center,
+            ) {
+                SlideAnimatedDigits(
+                    text = mainPart,
+                    staticSuffix = centisPart,
+                    style = MaterialTheme.typography.displayLarge.heroClock(),
+                    // まだ計測していないときは地に近い色にして、動いていないことを見て分かるようにする
+                    color = if (state.runState == StopwatchRunState.IDLE) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                )
+            }
             LapRow(
                 laps = laps,
                 modifier = Modifier.padding(horizontal = SCREEN_HORIZONTAL_PADDING),
@@ -138,7 +153,7 @@ fun StopwatchScreen(
                 modifier = Modifier.padding(
                     start = SCREEN_HORIZONTAL_PADDING,
                     end = SCREEN_HORIZONTAL_PADDING,
-                    bottom = 48.dp,
+                    bottom = 96.dp,
                 ),
             )
         }
@@ -247,12 +262,17 @@ private fun ControlButton(
     contentColor: Color,
     enabled: Boolean = true,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     Button(
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(percent = 50),
+        interactionSource = interactionSource,
         colors = ButtonDefaults.buttonColors(containerColor = containerColor, contentColor = contentColor),
-        modifier = Modifier.fillMaxWidth().height(CONTROL_BUTTON_HEIGHT),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(CONTROL_BUTTON_HEIGHT)
+            .pressScaleEffect(interactionSource),
     ) {
         Text(label, style = MaterialTheme.typography.titleLarge)
     }
@@ -288,7 +308,12 @@ private fun LapRow(laps: List<StopwatchLap>, modifier: Modifier = Modifier) {
                 onClick = { scope.launch { listState.animateScrollToItem(minOf(laps.lastIndex, listState.firstVisibleItemIndex + 1)) } },
             )
         }
-        LazyRow(state = listState, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        // 端まで詰めると、スクロールした時に隣のカードが切れて見える。左右へ余白を置く
+        LazyRow(
+            state = listState,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp),
+        ) {
             itemsIndexed(laps, key = { _, lap -> lap.lapNumber }) { index, lap ->
                 LapCard(lap, isLatest = index == laps.lastIndex)
             }
@@ -320,7 +345,7 @@ private fun LapCard(lap: StopwatchLap, isLatest: Boolean) {
         ),
     ) {
         Column(
-            modifier = Modifier.width(96.dp).padding(vertical = 14.dp, horizontal = 8.dp),
+            modifier = Modifier.width(84.dp).padding(vertical = 16.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {

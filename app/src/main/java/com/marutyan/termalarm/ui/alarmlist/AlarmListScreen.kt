@@ -22,8 +22,10 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.material3.MaterialTheme
 import com.marutyan.termalarm.ui.theme.alarmCardClock
+import com.marutyan.termalarm.ui.theme.alarmColorAnimationSpec
 import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ShortNavigationBar
@@ -73,6 +75,9 @@ internal fun orderedDaysOfWeek(weekStart: WeekStart): List<DayOfWeek> = when (we
  * 残り時間や当日終了の可否は時刻とともに変わるため、画面を触らなくても表示が追従するようにする。
  * 秒までは表示しないので、次の分の頭に合わせて起こすことで無駄な再計算を避ける。
  */
+// 右下の追加ボタンの大きさ。純正の実測値に合わせている
+private val FAB_SIZE = 65.dp
+
 @Composable
 private fun rememberCurrentMinute(): ZonedDateTime {
     var now by remember { mutableStateOf(ZonedDateTime.now()) }
@@ -134,6 +139,8 @@ fun AlarmListScreen(
                 onClick = onAddAlarm,
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
+                // 純正を実測すると65dp。既定のままでは45dpしかなく、押す場所として小さい
+                modifier = Modifier.size(FAB_SIZE),
             ) {
                 Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_alarm))
             }
@@ -230,15 +237,20 @@ private fun AlarmCard(
                 } else {
                     formatClockMinutes(schedule.startMinutes) + "–" + formatClockMinutes(schedule.endMinutes)
                 }
-                Text(
-                    text = timeText,
-                    style = MaterialTheme.typography.displayLarge.alarmCardClock(),
-                    // 動いていないアラームは地に近い色にして、一覧の中で沈ませる
-                    color = if (schedule.enabled) {
+                // アラームの有効・無効切り替え時に文字色を滑らかに補間する
+                val textColor by animateColorAsState(
+                    targetValue = if (schedule.enabled) {
                         MaterialTheme.colorScheme.onSurface
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },
+                    animationSpec = alarmColorAnimationSpec(),
+                    label = "AlarmTextColor",
+                )
+                Text(
+                    text = timeText,
+                    style = MaterialTheme.typography.displayLarge.alarmCardClock(),
+                    color = textColor,
                     maxLines = 1,
                     softWrap = false,
                 )
@@ -247,11 +259,7 @@ private fun AlarmCard(
                     Text(
                         text = schedule.label,
                         style = MaterialTheme.typography.titleMedium,
-                        color = if (schedule.enabled) {
-                            MaterialTheme.colorScheme.onSurface
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
+                        color = textColor,
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

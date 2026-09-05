@@ -152,6 +152,8 @@
     <string name="timer_notification_line_running">%1$s のこり %2$s</string>
     <string name="timer_notification_line_paused">%1$s 一時停止中 %2$s</string>
     <string name="timer_notification_line_finished">%1$s 完了</string>
+    <!-- タイムアップ時にステータスバーのチップへ出す短い文字（setShortCriticalText用） -->
+    <string name="timer_notification_short_finished">タイムアップ</string>
     <!-- 一覧画面: 次のアラームまでの残り時間(有効なアラームのみ表示) -->
     <string name="remaining_time_less_than_minute">あと1分未満</string>
     <string name="remaining_time_minutes">あと%1$d分</string>
@@ -165,8 +167,8 @@
     <string name="stopwatch_reset">リセット</string>
     <string name="stopwatch_lap">ラップ</string>
     <!-- ラップ一覧の行: ラップ番号とその時点の合計 -->
-    <string name="stopwatch_lap_number">ラップ %1$d</string>
-    <string name="stopwatch_lap_total">合計 %1$s</string>
+    <string name="stopwatch_lap_number">%1$d</string>
+    <string name="stopwatch_lap_total">%1$s</string>
     <!-- ラップ一覧(横並びカード)の左右送りボタン -->
     <string name="stopwatch_lap_scroll_previous">前のラップへ</string>
     <string name="stopwatch_lap_scroll_next">次のラップへ</string>

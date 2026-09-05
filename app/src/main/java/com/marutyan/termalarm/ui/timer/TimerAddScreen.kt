@@ -35,16 +35,19 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.ui.theme.keypadInput
+import com.marutyan.termalarm.ui.theme.pressScaleEffect
 import com.marutyan.termalarm.ui.theme.tabularNums
 
-// 純正のテンキーで押しやすい大きさを確保するためのキー直径。
-// docs/OFFICIAL_UI.mdの「押せる大きさを確保する（1辺72dp以上）」を満たす値とする。
-private val KEY_SIZE = 76.dp
+// テンキーのキー直径。純正は画面の幅をほぼ使い切る大きさで並べる。
+// 3列と間隔2つで 104*3 + 14*2 = 340dp となり、幅360dpの端末でも左右に余白が残る。
+private val KEY_SIZE = 104.dp
 
-// テンキーのキー間の余白。3列並べたときに画面幅(360dp〜392dp)へバランスよく収まるサイズとする。
-private val KEY_SPACING = 16.dp
+// キーどうしの間隔
+private val KEY_SPACING = 14.dp
 
 /**
  * タイマー新規追加画面。純正の時計アプリと同じく、3列×4行の円形テンキーで右から数字を詰めて
@@ -72,10 +75,10 @@ fun TimerAddScreen(onStart: (hours: Int, minutes: Int, seconds: Int) -> Unit, on
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 24.dp, vertical = 24.dp),
+                .padding(horizontal = 12.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // 上部の入力中時間表示
+            // 上部の入力中時間表示。純正は画面の上の方へ大きく出す
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -267,11 +270,15 @@ private fun KeypadButton(
     onClick: () -> Unit,
     contentDescription: String? = null,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     Surface(
         onClick = onClick,
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = Modifier.size(KEY_SIZE),
+        interactionSource = interactionSource,
+        modifier = Modifier
+            .size(KEY_SIZE)
+            .pressScaleEffect(interactionSource),
     ) {
         Box(
             contentAlignment = Alignment.Center,
@@ -296,7 +303,7 @@ private fun KeypadButton(
 
 /**
  * テンキーの下に配置する操作ボタン行（取り消しと開始）。
- * テンキーの幅に合わせて左右に配置し、片手でも押しやすくするために使う。
+ * テンキーの列に合わせ、×は左列の中心、▶は中央列の中心へ来るように配置する。
  */
 @Composable
 private fun TimerActionRow(
@@ -306,18 +313,23 @@ private fun TimerActionRow(
 ) {
     // テンキー全体の幅（KEY_SIZE * 3 + KEY_SPACING * 2）に合わせて配置する
     val keypadWidth = KEY_SIZE * 3 + KEY_SPACING * 2
+    val cancelInteractionSource = remember { MutableInteractionSource() }
+    val startInteractionSource = remember { MutableInteractionSource() }
 
     Row(
         modifier = Modifier.width(keypadWidth),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(KEY_SPACING),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 取り消し（×）
+        // 取り消し（×）: テンキーの左列中心に配置
         Surface(
             onClick = onClose,
             shape = CircleShape,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.size(KEY_SIZE),
+            interactionSource = cancelInteractionSource,
+            modifier = Modifier
+                .size(KEY_SIZE)
+                .pressScaleEffect(cancelInteractionSource),
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                 Icon(
@@ -328,23 +340,29 @@ private fun TimerActionRow(
             }
         }
 
-        // 開始（▶）
+        // 開始（▶）: テンキーの中央列中心に配置
         FilledIconButton(
             onClick = onStart,
             enabled = isStartEnabled,
             shape = CircleShape,
+            interactionSource = startInteractionSource,
             colors = IconButtonDefaults.filledIconButtonColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 disabledContentColor = MaterialTheme.colorScheme.outline,
             ),
-            modifier = Modifier.size(KEY_SIZE),
+            modifier = Modifier
+                .size(KEY_SIZE)
+                .pressScaleEffect(startInteractionSource),
         ) {
             Icon(
                 Icons.Filled.PlayArrow,
                 contentDescription = stringResource(R.string.timer_start),
             )
         }
+
+        // 右列の空きスペース
+        Spacer(modifier = Modifier.size(KEY_SIZE))
     }
 }
