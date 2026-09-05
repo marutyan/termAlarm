@@ -2,6 +2,7 @@ package com.marutyan.termalarm.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -103,10 +104,26 @@ fun TextStyle.alarmCardClock(): TextStyle = copy(
 /**
  * タイマーの追加画面で、入力中の時間を出す文字。
  * 「00h 00m 00s」を1行に収める必要があるため、画面の主役の時刻ほどは大きくできない。
- * 幅の計算から、この端末幅で収まる上限に近い値にしている。
+ * 数字6つと単位3つで、幅360dpの端末でもぎりぎり収まる値にしている。
  */
 fun TextStyle.keypadInput(): TextStyle = copy(
-    fontSize = 60.sp,
-    lineHeight = 68.sp,
+    fontSize = 72.sp,
+    lineHeight = 80.sp,
     fontFeatureSettings = "tnum",
 )
+
+/**
+ * 使える幅に収まる最大の大きさで時刻を出すための文字。
+ * 桁数は12/24時制や秒の有無で変わるので、決め打ちの大きさだと
+ * ある時間帯だけはみ出したり、逆に空きが目立ったりする。
+ *
+ * 数字1文字の幅はおよそ文字サイズの0.55倍、コロンは0.28倍として見積もる。
+ * 実測(純正は「6:31:20」7文字で幅180dp、高さ44dp)とほぼ一致する。
+ */
+fun TextStyle.fittingClock(availableWidth: Dp, charCount: Int): TextStyle {
+    // コロンは数字より細い。7文字なら2つ、5文字なら1つ入る
+    val colonCount = (charCount - 1) / 3
+    val widthPerSp = (charCount - colonCount) * 0.55f + colonCount * 0.28f
+    val size = (availableWidth.value / widthPerSp).coerceIn(48f, 120f).sp
+    return copy(fontSize = size, lineHeight = size * 1.1f, fontFeatureSettings = "tnum")
+}

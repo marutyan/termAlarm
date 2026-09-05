@@ -1,9 +1,13 @@
 package com.marutyan.termalarm.ui.clock
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -18,12 +22,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.theme.fittingClock
 import com.marutyan.termalarm.ui.theme.heroClock
 import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import com.marutyan.termalarm.R
@@ -31,6 +37,14 @@ import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AppSettings
 import com.marutyan.termalarm.domain.ClockDisplayMode
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+import com.marutyan.termalarm.ui.theme.SlideAnimatedDigits
+import com.marutyan.termalarm.ui.theme.clockModeAnimationSpec
 import com.marutyan.termalarm.ui.theme.tabularNums
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -78,17 +92,19 @@ fun ClockScreen(
         },
         bottomBar = bottomBar,
     ) { padding ->
+        // 純正は時刻を画面の上の方へ置く(実測で上端が画面の16%の位置)。
+        // 中央へ置くと、上に広い空きができて時刻が沈んで見える
         Column(
             modifier = Modifier.fillMaxSize().padding(padding),
-            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            Spacer(modifier = Modifier.height(24.dp))
             MainClock(mode = displayMode, time = now, showSeconds = appSettings.showClockSeconds)
             Text(
                 text = now.format(DATE_FORMATTER),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 32.dp, bottom = 32.dp),
+                modifier = Modifier.padding(top = 24.dp, bottom = 32.dp),
             )
             DisplayModeToggle(mode = displayMode, onModeChange = viewModel::setDisplayMode)
         }
@@ -99,27 +115,45 @@ fun ClockScreen(
 // showSecondsは設定「時刻に秒を表示」(デジタルは秒の文字、アナログは秒針の表示可否に反映する)
 @Composable
 private fun MainClock(mode: ClockDisplayMode, time: ZonedDateTime, showSeconds: Boolean) {
-    when (mode) {
-        ClockDisplayMode.ANALOG -> AnalogClockFace(time = time, showSeconds = showSeconds, modifier = Modifier.size(320.dp))
-        ClockDisplayMode.DIGITAL -> DigitalClockFace(time = time, showSeconds = showSeconds)
+    AnimatedContent(
+        targetState = mode,
+        transitionSpec = {
+            (scaleIn(initialScale = 0.8f, animationSpec = clockModeAnimationSpec()) + fadeIn(animationSpec = clockModeAnimationSpec()))
+                .togetherWith(scaleOut(targetScale = 0.8f, animationSpec = clockModeAnimationSpec()) + fadeOut(animationSpec = clockModeAnimationSpec()))
+        },
+        label = "ClockModeTransition",
+    ) { currentMode ->
+        when (currentMode) {
+            ClockDisplayMode.ANALOG -> AnalogClockFace(time = time, showSeconds = showSeconds, modifier = Modifier.size(320.dp))
+            ClockDisplayMode.DIGITAL -> DigitalClockFace(time = time, showSeconds = showSeconds)
+        }
     }
 }
 
-// デジタル時計。時:分を大きく、秒はひと回り小さく添える(design/tabs/ClockDigital.dc.html)
+/**
+ * デジタル時計。
+ * 純正は「6:31:20」のように秒まで同じ大きさで1行に並べる。秒だけ小さくすると別物に見える。
+ * 文字の大きさは画面の幅から決める。桁数は時刻帯や12/24時制で変わるため、固定値だと
+ * ある時間帯だけはみ出したり、逆に小さすぎたりする。
+ */
 @Composable
 private fun DigitalClockFace(time: ZonedDateTime, showSeconds: Boolean) {
-    Row(verticalAlignment = Alignment.Bottom) {
-        Text(
-            text = time.format(HOUR_MINUTE_FORMATTER),
-            style = MaterialTheme.typography.displayLarge.heroClock(),
+    val text = if (showSeconds) {
+        time.format(HOUR_MINUTE_FORMATTER) + ":" + time.format(SECOND_FORMATTER)
+    } else {
+        time.format(HOUR_MINUTE_FORMATTER)
+    }
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        SlideAnimatedDigits(
+            text = text,
+            style = MaterialTheme.typography.displayLarge.fittingClock(maxWidth, text.length),
+            color = MaterialTheme.colorScheme.onSurface,
         )
-        if (showSeconds) {
-            Text(
-                text = ":" + time.format(SECOND_FORMATTER),
-                style = MaterialTheme.typography.headlineLarge.tabularNums(),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
     }
 }
 

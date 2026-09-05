@@ -43,7 +43,8 @@ data class AppSettings(
     val alarmFadeInSeconds: Int = 5,
     val volumeButtonAction: VolumeButtonAction = VolumeButtonAction.ADJUST_VOLUME,
     val weekStart: WeekStart = WeekStart.SUNDAY,
-    val showClockSeconds: Boolean = false,
+    // 純正の時計は秒まで出す。それに合わせて既定を出す側にしている
+    val showClockSeconds: Boolean = true,
     // システムの音選択(RingtoneManager)で選んだUriの文字列表現。nullは既定のアラーム音を意味する
     val timerSoundUri: String? = null,
     val timerFadeInSeconds: Float = 1.5f,
