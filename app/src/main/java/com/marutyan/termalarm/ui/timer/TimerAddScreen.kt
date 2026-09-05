@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -57,9 +58,6 @@ private val KEY_SPACING = 3.dp
 // 開始ボタンの直径。純正を実機で測ると78dpだった（docs/OFFICIAL_UI.md「テンキー画面」）
 private val START_BUTTON_SIZE = 78.dp
 
-// キーの1行目の上端が画面の高さに占める割合。純正の実測値(36%)に基づく
-private const val KEYPAD_TOP_RATIO = 0.36f
-
 /**
  * タイマー新規追加画面。純正の時計アプリと同じく、3列×4行の円形テンキーで右から数字を詰めて
  * 時分秒を入力する(docs/OFFICIAL_UI.md「タイマー / 追加画面はテンキー」)。
@@ -97,22 +95,20 @@ fun TimerAddScreen(
         contentAlignment = Alignment.TopCenter,
     ) {
         val isCompact = maxHeight < COMPACT_SCREEN_HEIGHT_THRESHOLD
-        // 純正はテンキー1行目の上端が画面高さの36%の位置。TimerDisplayの高さ(約76dp)と間隔を引いて上部余白を導出する。
-        // 狭い画面(isCompact)では上部余白を最小限にしてスクロール量を抑える。
-        val displayHeightEstimate = if (isCompact) 52.dp else 76.dp
+        // 入力中の時間とテンキーの間隔。狭い画面では詰める
         val displayToKeypadSpacing = if (isCompact) 8.dp else 16.dp
-        val keypadTargetTop = maxHeight * KEYPAD_TOP_RATIO
-        val topSpacerHeight = if (isCompact) {
-            4.dp
-        } else {
-            (keypadTargetTop - displayHeightEstimate - displayToKeypadSpacing).coerceAtLeast(8.dp)
-        }
+        // 中央寄せにしたうえで、上へ少しだけ余白を置く。
+        // 純正もテンキーが画面の中ほどに来る
+        val topSpacerHeight = if (isCompact) 4.dp else 16.dp
         val keypadToActionSpacing = if (isCompact) 12.dp else 20.dp
         val bottomSpacerHeight = if (isCompact) 8.dp else 16.dp
 
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            // 縦に余りがあるときは中身を中央へ寄せる。上に詰めると下が大きく空いて落ち着かない。
+            // 縦が足りないときは上から詰めて、スクロールで下まで届くようにする
+            modifier = Modifier.fillMaxWidth().heightIn(min = maxHeight),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
             Spacer(modifier = Modifier.height(topSpacerHeight))
 
