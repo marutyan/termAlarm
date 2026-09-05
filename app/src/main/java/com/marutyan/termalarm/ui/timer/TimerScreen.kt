@@ -95,6 +95,9 @@ fun TimerScreen(
 
     val timers by viewModel.timers.collectAsStateWithLifecycle()
     val (nowElapsed, nowWall) = rememberTickingNow()
+    val sortedTimers = remember(timers, nowElapsed, nowWall) {
+        sortTimers(timers, nowElapsed, nowWall)
+    }
 
     Scaffold(
         topBar = {
@@ -116,7 +119,7 @@ fun TimerScreen(
         },
         bottomBar = bottomBar,
     ) { padding ->
-        if (timers.isEmpty()) {
+        if (sortedTimers.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
                     text = stringResource(R.string.timer_list_empty),
@@ -130,7 +133,7 @@ fun TimerScreen(
                 contentPadding = PaddingValues(horizontal = 13.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                items(timers, key = { it.id }) { timer ->
+                items(sortedTimers, key = { it.id }) { timer ->
                     TimerCard(
                         timer = timer,
                         nowElapsed = nowElapsed,
@@ -250,7 +253,7 @@ private fun TimerCard(
 }
 
 // 円形の進捗リング。Canvasへ背景の全周弧(track)と残り時間の弧(progress)を重ねて描くだけの
-// シンプルな実装で、アニメーションや汎用化はしない(呼び出し箇所がTimerCard内の1箇所のみのため)。
+// シンプルな実装で、汎用化はしない(呼び出し箇所がTimerCard内の1箇所のみのため)。
 @Composable
 private fun TimerRing(progress: Float, trackColor: Color, progressColor: Color) {
     val strokeWidthPx = with(LocalDensity.current) { RING_STROKE_WIDTH.toPx() }
@@ -311,3 +314,27 @@ private fun PlayPauseButton(isRunning: Boolean, onClick: () -> Unit) {
         }
     }
 }
+
+/**
+ * タイマー一覧を「次に鳴る順（残り時間が短い順）」に並べ替える。
+ * 鳴動中(FINISHED)を最優先、次に動作中(RUNNING)を残り時間の昇順、一時停止中(PAUSED)は
+ * 計測が止まっており動作中タイマーの視認性を邪魔しないよう末尾にまとめて残り時間の昇順で並べる。
+ */
+private fun sortTimers(
+    timers: List<TimerState>,
+    nowElapsed: Long,
+    nowWall: Long,
+): List<TimerState> = timers.sortedWith(
+    compareBy<TimerState> { timer ->
+        when (timer.runState) {
+            TimerRunState.FINISHED -> 0
+            TimerRunState.RUNNING -> 1
+            TimerRunState.PAUSED -> 2
+        }
+    }.thenBy { timer ->
+        remainingMillis(timer, nowElapsed, nowWall)
+    }.thenBy { timer ->
+        timer.id
+    },
+)
+

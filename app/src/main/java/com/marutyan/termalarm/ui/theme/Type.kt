@@ -67,22 +67,24 @@ fun TextStyle.tabularNums(): TextStyle = copy(fontFeatureSettings = "tnum")
 /**
  * 画面の主役になる時刻の文字。
  *
- * 純正の時計アプリを実機で撮って数字の高さを測ったところ、世界時計とストップウォッチが44dp、
- * タイマーの残り時間が40dpだった。Material 3で最も大きいdisplayLarge(57sp)でも数字は41dp
- * にしかならず、displayMedium(45sp)では32dpと純正の3/4以下になる。実測に合わせて専用の
- * 大きさを持つ。
+ * 純正の時計アプリを実機で撮り、数字の帯の高さを測って合わせている。
+ * ストップウォッチの経過時間と世界時計の時刻はどちらも44dpだった。
  *
- * 数字の高さは文字サイズのおよそ0.72倍になるため、44dpには61sp、40dpには56spが要る。
+ * 61spで試したところ31dpにしかならず、純正の70%の大きさだった。
+ * 実測から逆算して87spにしている。Material 3で最も大きいdisplayLarge(57sp)
+ * でも足りないため、専用の大きさを持つ。
  */
 fun TextStyle.heroClock(): TextStyle = copy(
-    fontSize = 61.sp,
-    lineHeight = 68.sp,
+    fontSize = 87.sp,
+    lineHeight = 96.sp,
     fontFeatureSettings = "tnum",
 )
 
-/** 主役の時刻より一段小さい表示。タイマーの残り時間など */
+/**
+ * リングの中に収める時刻。純正のタイマーは高さ40dpだったので、それに合わせる。
+ */
 fun TextStyle.subHeroClock(): TextStyle = copy(
-    fontSize = 56.sp,
-    lineHeight = 62.sp,
+    fontSize = 79.sp,
+    lineHeight = 88.sp,
     fontFeatureSettings = "tnum",
 )

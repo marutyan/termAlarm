@@ -1,11 +1,14 @@
 package com.marutyan.termalarm.ui.stopwatch
 
 import android.os.SystemClock
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -65,10 +69,10 @@ private val CONTROL_BUTTON_HEIGHT = 104.dp
 private val SCREEN_HORIZONTAL_PADDING = 13.dp
 
 /**
- * ストップウォッチタブの画面。design/tabs/Stopwatch.dc.htmlを再現する。画面上部に特大の経過時間、
- * その下に横並びのラップカード、残りの領域に縦3つの巨大な操作ボタンを置く
- * (docs/OFFICIAL_UI.md「ストップウォッチ」)。経過時間の表示は動作中(RUNNING)のときだけ100msごとに
- * 更新し、一時停止中/未開始は再描画しない。
+ * ストップウォッチタブの画面。design/tabs/Stopwatch.dc.htmlを再現する。画面上部に余白を詰めた特大の経過時間、
+ * その下に横並びのラップカード、最下部に固定された縦3つの巨大な操作ボタンを置く
+ * (docs/OFFICIAL_UI.md「ストップウォッチ」)。ラップを刻んでもボタンが押し下げられないよう画面下部に固定する。
+ * 経過時間の表示は動作中(RUNNING)のときだけ100msごとに更新し、一時停止中/未開始は再描画しない。
  */
 @Composable
 fun StopwatchScreen(
@@ -99,14 +103,24 @@ fun StopwatchScreen(
         },
         bottomBar = bottomBar,
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
             Text(
                 text = formatElapsed(elapsed, includeCentiseconds = true),
                 style = MaterialTheme.typography.displayLarge.heroClock(),
-                modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
                 textAlign = TextAlign.Center,
             )
-            LapRow(laps = laps, modifier = Modifier.padding(horizontal = SCREEN_HORIZONTAL_PADDING))
+            LapRow(
+                laps = laps,
+                modifier = Modifier.padding(horizontal = SCREEN_HORIZONTAL_PADDING),
+            )
+            Spacer(modifier = Modifier.weight(1f))
             StopwatchControls(
                 runState = state.runState,
                 onStart = viewModel::start,
@@ -114,7 +128,11 @@ fun StopwatchScreen(
                 onResume = viewModel::resume,
                 onReset = viewModel::reset,
                 onLap = viewModel::lap,
-                modifier = Modifier.padding(top = 32.dp, start = SCREEN_HORIZONTAL_PADDING, end = SCREEN_HORIZONTAL_PADDING),
+                modifier = Modifier.padding(
+                    start = SCREEN_HORIZONTAL_PADDING,
+                    end = SCREEN_HORIZONTAL_PADDING,
+                    bottom = 16.dp,
+                ),
             )
         }
     }
@@ -164,14 +182,32 @@ private fun StopwatchControls(
         StopwatchRunState.PAUSED -> R.string.stopwatch_resume to onResume
     }
 
+    // 開始・停止の切り替え時にボタンの色を滑らかに移行させるアニメーション値(0f: 通常, 1f: 停止操作)。
+    // 状態変化の瞬間だけ200msで補間し、常時動き続けず電池を消費しないようにする。
+    val transitionProgress by animateFloatAsState(
+        targetValue = if (isRunning) 1f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "StopwatchButtonTransition",
+    )
+    val primaryContainerColor = lerp(
+        MaterialTheme.colorScheme.primaryContainer,
+        MaterialTheme.colorScheme.error,
+        transitionProgress,
+    )
+    val primaryContentColor = lerp(
+        MaterialTheme.colorScheme.onPrimaryContainer,
+        MaterialTheme.colorScheme.onError,
+        transitionProgress,
+    )
+
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // 一時停止(=停止)のときだけerror色。開始・再開は「主要な操作ボタン」としてprimaryContainerを使う
-        // (docs/OFFICIAL_UI.md「共通」の色対応表)
+        // (docs/OFFICIAL_UI.md「共通」の色対応表)。切り替え時はanimateFloatAsStateで滑らかに遷移する
         ControlButton(
             label = stringResource(primaryLabel),
             onClick = primaryAction,
-            containerColor = if (isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primaryContainer,
-            contentColor = if (isRunning) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimaryContainer,
+            containerColor = primaryContainerColor,
+            contentColor = primaryContentColor,
         )
         ControlButton(
             label = stringResource(R.string.stopwatch_reset),
