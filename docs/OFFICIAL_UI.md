@@ -207,6 +207,52 @@ Material 3 で最も大きい `displayLarge` は57spで、数字の高さは41dp
 タイマーが動いている間、ステータスバーの左に丸いチップが出る。
 砂時計のアイコンと残り時間（`00:44`）が入る。
 
+### 純正が使っている仕組み
+
+実機で純正の通知の中身を調べた（`adb shell dumpsys notification --noredact`）。
+
+```
+pkg=com.google.android.deskclock
+channel=Timers v2
+flags=ONGOING_EVENT|LOCAL_ONLY|PROMOTED_ONGOING
+vis=PUBLIC
+template=android.app.Notification$MetricStyle
+```
+
+読み取れること。
+
+| 項目 | 値 | 意味 |
+|---|---|---|
+| `PROMOTED_ONGOING` | 立っている | ステータスバーへ出す扱いになっている |
+| `LOCAL_ONLY` | 立っている | この端末の中だけで出す |
+| `vis=PUBLIC` | | ロック画面でも中身を隠さない |
+| `MetricStyle` | | 残り時間を端末側に数えさせる仕組み |
+
+`MetricStyle` は Android 17 で使えるようになった。
+`Notification.Metric.TimeDifference.forTimer(ゼロになる時刻, 書式)` に
+「残り時間が尽きる時刻」を渡すと、端末が数を数える。
+アプリが1秒ごとに数字を書き込む必要がなく、ゼロを過ぎると自動でマイナスへ伸びる。
+
+次を揃えると、通知の見た目は純正と同じになる。
+
+1. 種類が `CATEGORY_STOPWATCH`（`CATEGORY_ALARM` では対象外）
+2. `setRequestPromotedOngoing(true)` を呼ぶ
+3. `MetricStyle` で残り時間を渡す
+
+ただし `PROMOTED_ONGOING` のフラグは立たず、ステータスバーのチップは出ない。
+純正の通知には `FOREGROUND_SERVICE` の印が無く、こちらには有る。この違いが残る。
+純正はサービスと通知を切り離しているとみられる。
+
+`setColorized(true)` も試したが、フラグは立たず、
+かわりに `FOREGROUND_SERVICE` の印が消える副作用だけが出たため戻した。
+
+**未解決。** 通知そのものは純正と同じ見た目になっているため、
+チップだけのために通知を2本立てにするかは、利用者の判断を待つ。
+
+チャンネルの重要度が `IMPORTANCE_LOW` だと「サイレント」欄へ入る。
+`IMPORTANCE_DEFAULT` にした上で、チャンネルへ `setSound(null, null)` を指定すると、
+通常の欄に出て音は鳴らない。重要度は後から上げられないため、チャンネルIDを変える必要がある。
+
 ## アラーム一覧
 
 - 見出しで区切る。「起床」（太陽のアイコン付き）と「その他」
