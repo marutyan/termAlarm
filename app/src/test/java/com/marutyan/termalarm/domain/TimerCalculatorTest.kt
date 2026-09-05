@@ -130,4 +130,37 @@ class TimerCalculatorTest {
         // RUNNING以外は対象外でそのまま返る
         assertEquals(paused, rebased)
     }
+
+    // --- 画面を描き直す間隔 ---
+    // 通知に出る秒とずれないよう、残り時間が次の秒へ変わる瞬間に合わせる
+
+    @Test
+    fun `残り時間の端数だけ待って描き直す`() {
+        // 残り10.4秒。次に表示が10秒から9秒へ変わるのは0.4秒後
+        val timer = startTimer(id = 1L, label = "t", durationMillis = 10_400L, nowElapsedRealtime = 0L, nowWallClockMillis = 0L)
+        assertEquals(400L, millisUntilNextSecondBoundary(listOf(timer), 0L, 0L))
+        // 0.3秒進むと、残りは0.1秒
+        assertEquals(100L, millisUntilNextSecondBoundary(listOf(timer), 300L, 300L))
+    }
+
+    @Test
+    fun `ちょうど区切りのときは1秒待つ`() {
+        val timer = startTimer(id = 1L, label = "t", durationMillis = 10_000L, nowElapsedRealtime = 0L, nowWallClockMillis = 0L)
+        assertEquals(1000L, millisUntilNextSecondBoundary(listOf(timer), 0L, 0L))
+    }
+
+    @Test
+    fun `複数あるときは いちばん早く変わるものに合わせる`() {
+        val a = startTimer(id = 1L, label = "a", durationMillis = 10_700L, nowElapsedRealtime = 0L, nowWallClockMillis = 0L)
+        val b = startTimer(id = 2L, label = "b", durationMillis = 30_200L, nowElapsedRealtime = 0L, nowWallClockMillis = 0L)
+        assertEquals(200L, millisUntilNextSecondBoundary(listOf(a, b), 0L, 0L))
+    }
+
+    @Test
+    fun `動いているタイマーが無ければ1秒待つ`() {
+        val running = startTimer(id = 1L, label = "t", durationMillis = 10_400L, nowElapsedRealtime = 0L, nowWallClockMillis = 0L)
+        val paused = pauseTimer(running, nowElapsedRealtime = 0L, nowWallClockMillis = 0L)
+        assertEquals(1000L, millisUntilNextSecondBoundary(listOf(paused), 0L, 0L))
+        assertEquals(1000L, millisUntilNextSecondBoundary(emptyList(), 0L, 0L))
+    }
 }

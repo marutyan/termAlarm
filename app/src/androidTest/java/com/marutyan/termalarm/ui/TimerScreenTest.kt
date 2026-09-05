@@ -155,12 +155,14 @@ class TimerScreenTest {
         // 保存はコルーチンで進むため、Composeのクロックを進めるだけでは終わらない。
         // 保存の完了を確かめてから、画面の描き直しを進める
         awaitRunState(id, TimerRunState.PAUSED)
-        composeTestRule.mainClock.advanceTimeBy(1_000)
+        // 画面は「残り時間が次の秒へ変わる瞬間」に合わせて描き直すため、
+        // 1秒分を確実に跨げるだけクロックを進める
+        composeTestRule.mainClock.advanceTimeBy(2_000)
         composeTestRule.onNodeWithContentDescription(string(R.string.timer_resume)).assertExists()
 
         composeTestRule.onNodeWithContentDescription(string(R.string.timer_resume)).performClick()
         awaitRunState(id, TimerRunState.RUNNING)
-        composeTestRule.mainClock.advanceTimeBy(1_000)
+        composeTestRule.mainClock.advanceTimeBy(2_000)
         // 再開後のUI再描画(recomposition)を完了させるためクロックを進める
         composeTestRule.mainClock.advanceTimeBy(500)
         composeTestRule.onNodeWithContentDescription(string(R.string.timer_pause)).assertExists()

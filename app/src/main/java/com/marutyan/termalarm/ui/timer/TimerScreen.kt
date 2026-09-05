@@ -78,6 +78,7 @@ import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
+import com.marutyan.termalarm.domain.millisUntilNextSecondBoundary
 import com.marutyan.termalarm.domain.overdueMillis
 import com.marutyan.termalarm.domain.remainingMillis
 import com.marutyan.termalarm.ui.theme.tabularNums
@@ -135,6 +136,9 @@ fun TimerScreen(
     bottomBar: @Composable () -> Unit,
 ) {
     var showAddScreen by rememberSaveable { mutableStateOf(false) }
+    val timers by viewModel.timers.collectAsStateWithLifecycle()
+    // 通知に出る秒と画面の秒を合わせる。詳しくはrememberTickingNowを参照
+    val tickingNow = rememberTickingNow(timers)
 
     AnimatedContent(
         targetState = showAddScreen,
@@ -156,7 +160,7 @@ fun TimerScreen(
             )
         } else {
             val timers by viewModel.timers.collectAsStateWithLifecycle()
-            val (nowElapsed, nowWall) = rememberTickingNow()
+            val (nowElapsed, nowWall) = tickingNow
             val sortedTimers = remember(timers, nowElapsed, nowWall) {
                 sortTimers(timers, nowElapsed, nowWall)
             }
@@ -225,23 +229,27 @@ fun TimerScreen(
 }
 
 /**
- * 1秒ごとに更新される(elapsedRealtime, wallClock)のペア。domain.remainingMillis()の再計算だけに使い、
- * DBへは書き込まない(ui/alarmlist/AlarmListScreen.ktのrememberCurrentMinute()を分単位→秒単位に
- * 合わせて作り直したもの。実装は共有せずタイマー画面専用として持つ)。
+ * 残り時間の表示に使う「今」。画面が見えている間だけ進める。
+ * 再計算に使うだけで、データベースへは書き込まない。
+ *
+ * ただ1秒ごとに数えると、通知に出る秒と画面の秒が最大1秒ずれる。
+ * 通知は「残り時間が尽きる時刻」から逆算して数えるため、こちらの起動時刻とは関係がない。
+ * 残り時間が次の秒へ変わる瞬間に合わせて描き直すことで、通知と同じ数字を出す。
  */
 @Composable
-private fun rememberTickingNow(): Pair<Long, Long> {
+private fun rememberTickingNow(timers: List<TimerState>): Pair<Long, Long> {
     var nowElapsed by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     var nowWall by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(timers) {
         while (true) {
-            delay(1000)
+            delay(millisUntilNextSecondBoundary(timers, SystemClock.elapsedRealtime(), System.currentTimeMillis()))
             nowElapsed = SystemClock.elapsedRealtime()
             nowWall = System.currentTimeMillis()
         }
     }
     return nowElapsed to nowWall
 }
+
 
 /**
  * タイマー1件のカード。純正の時計アプリに合わせて左右余白13dp・角丸28dpのカードに、

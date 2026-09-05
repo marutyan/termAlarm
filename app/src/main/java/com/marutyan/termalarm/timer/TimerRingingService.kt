@@ -9,11 +9,10 @@ import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
-import android.os.VibrationEffect
 import android.os.Vibrator
-import android.os.VibratorManager
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import com.marutyan.termalarm.alarm.AlarmVibration
 import com.marutyan.termalarm.alarm.SoundFadeIn
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.SettingsRepository
@@ -109,46 +108,16 @@ class TimerRingingService : Service() {
         val uri = settings.timerSoundUri?.let(Uri::parse)
             ?: RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM)
             ?: return
-        val player = MediaPlayer().apply {
-            // マナーモードでも鳴らすため、通知/メディアではなくALARM用途を明示する
-            setAudioAttributes(SoundFadeIn.alarmAudioAttributes())
-            isLooping = true
-            setVolume(0f, 0f)
-            runCatching {
-                setDataSource(this@TimerRingingService, uri)
-                prepare()
-                setVolume(SoundFadeIn.START_VOLUME, SoundFadeIn.START_VOLUME)
-                start()
-            }
-        }
+        // 起きている人へ知らせるだけなので、上げきる時間はアラームより短い(既定1.5秒)
+        val player = SoundFadeIn.startRinging(this, scope, uri, settings.timerFadeInSeconds) ?: return
         ringingPlayers[id] = player
-        fadeIn(player)
         if (settings.timerVibration) startVibrationIfNeeded()
-    }
-
-    // 設定「徐々に音量を上げる」の秒数(既定1.5秒、起きている人へ知らせるだけなのでアラームより短い)で
-    // 上げきる。0秒(なし)なら最初から最大音量にする
-    private fun fadeIn(player: MediaPlayer) {
-        val duration = SoundFadeIn.durationMillisOrNull(settings.timerFadeInSeconds)
-        if (duration == null) {
-            player.setVolume(1f, 1f)
-            return
-        }
-        SoundFadeIn.start(scope, player, duration)
     }
 
     // 鳴動中のタイマーが1つも無い状態からバイブを始める。既に鳴動中のタイマーがあれば重ねて始めない
     private fun startVibrationIfNeeded() {
         if (vibrator != null) return
-        val pattern = longArrayOf(0, 1000, 1000)
-        val v = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            getSystemService(VibratorManager::class.java).defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        }
-        v.vibrate(VibrationEffect.createWaveform(pattern, 1))
-        vibrator = v
+        vibrator = AlarmVibration.start(this)
     }
 
     private fun stopRingingFor(id: Long) {

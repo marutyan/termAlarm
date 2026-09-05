@@ -11,9 +11,7 @@ import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
-import android.os.VibrationEffect
 import android.os.Vibrator
-import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.marutyan.termalarm.R
@@ -22,8 +20,8 @@ import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -42,10 +40,11 @@ import java.time.ZonedDateTime
 class RingingService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // 無操作のまま一定時間が過ぎたら自動で止めるための予約
+    private var timeoutJob: Job? = null
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
-    private var timeoutJob: Job? = null
-    private var fadeInJob: Job? = null
     private var currentAlarmId: Long = -1L
     private var currentTriggerAtMillis: Long = -1L
 
@@ -122,7 +121,6 @@ class RingingService : Service() {
     private fun stopRinging(reschedule: suspend (Long) -> Unit) {
         val id = currentAlarmId
         timeoutJob?.cancel()
-        fadeInJob?.cancel()
         mediaPlayer?.let { player -> runCatching { player.stop() }; player.release() }
         mediaPlayer = null
         vibrator?.cancel()
@@ -139,44 +137,12 @@ class RingingService : Service() {
         val uri: Uri = schedule.soundUri?.let(Uri::parse)
             ?: RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM)
             ?: return
-        val player = MediaPlayer()
-        mediaPlayer = player
-        player.apply {
-            // マナーモードでも鳴る必要があるため、通知/メディアではなくALARM用途を明示する（docs/SPEC.md「鳴動」節）
-            setAudioAttributes(SoundFadeIn.alarmAudioAttributes())
-            isLooping = true
-            // フェードイン開始時点の音量。鳴り始めから聞こえる必要があるため0にはしない
-            setVolume(SoundFadeIn.START_VOLUME, SoundFadeIn.START_VOLUME)
-        }
-        runCatching {
-            player.setDataSource(this@RingingService, uri)
-            player.prepare()
-            player.start()
-        }.onSuccess { startFadeIn(player, fadeInSeconds) }
-    }
-
-    // 寝ている人を起こすため、設定「徐々に音量を上げる」の秒数(既定5秒)かけてゆっくり音量を上げる。
-    // 0秒(なし)なら最初から最大音量にする
-    private fun startFadeIn(player: MediaPlayer, fadeInSeconds: Int) {
-        val duration = SoundFadeIn.durationMillisOrNull(fadeInSeconds)
-        if (duration == null) {
-            player.setVolume(1f, 1f)
-            return
-        }
-        fadeInJob = SoundFadeIn.start(scope, player, duration)
+        // 寝ている人を起こすため、設定「徐々に音量を上げる」の秒数(既定5秒)かけて音量を上げる
+        mediaPlayer = SoundFadeIn.startRinging(this, scope, uri, fadeInSeconds)
     }
 
     private fun startVibration() {
-        // 1秒鳴動→1秒休止を無操作タイムアウトまで繰り返すパターン
-        val pattern = longArrayOf(0, 1000, 1000)
-        vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // API31以降はVibratorManager経由での取得が推奨される
-            getSystemService(VibratorManager::class.java).defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        }
-        vibrator?.vibrate(VibrationEffect.createWaveform(pattern, 1))
+        vibrator = AlarmVibration.start(this)
     }
 
     private fun startForegroundNotification() {
@@ -223,7 +189,6 @@ class RingingService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         timeoutJob?.cancel()
-        fadeInJob?.cancel()
         mediaPlayer?.let { player -> runCatching { player.stop() }; player.release() }
         vibrator?.cancel()
         scope.cancel()
