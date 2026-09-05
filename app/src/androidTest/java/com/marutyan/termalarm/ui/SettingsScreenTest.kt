@@ -5,6 +5,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasAnySibling
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
@@ -134,7 +135,7 @@ class SettingsScreenTest {
 
         val saved = runBlocking { settingsRepository.observe().first() }
         assertEquals(5, saved.autoStopMinutes)
-        composeTestRule.onNodeWithText("5分").assertExists()
+        composeTestRule.onNode(hasText(string(R.string.settings_auto_stop_title)) and hasText("5分")).assertExists()
     }
 
     // スヌーズの長さのダイアログを開いて値を選択すると画面とRepositoryに保存されることを保証する
@@ -151,7 +152,7 @@ class SettingsScreenTest {
 
         val saved = runBlocking { settingsRepository.observe().first() }
         assertEquals(10, saved.defaultSnoozeMinutes)
-        composeTestRule.onNodeWithText("10分").assertExists()
+        composeTestRule.onNode(hasText(string(R.string.settings_snooze_length_title)) and hasText("10分")).assertExists()
     }
 
     // 音量ボタン動作のダイアログを開いて選択すると画面とRepositoryに保存されることを保証する
@@ -291,7 +292,7 @@ class SettingsScreenTest {
         setScreen(onBack = { backCalled = true })
 
         val title = string(R.string.settings_title)
-        composeTestRule.onNode(hasClickAction() and hasAnySibling(hasText(title))).performClick()
+        composeTestRule.onNode(hasClickAction() and hasAnySibling(hasAnyDescendant(hasText(title)))).performClick()
 
         assertTrue("戻るボタンタップでonBackが呼ばれること", backCalled)
     }

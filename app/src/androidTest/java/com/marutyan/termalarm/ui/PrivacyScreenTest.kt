@@ -2,6 +2,7 @@ package com.marutyan.termalarm.ui
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasAnySibling
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
@@ -54,7 +55,7 @@ class PrivacyScreenTest {
         }
 
         val title = string(R.string.privacy_policy_title)
-        composeTestRule.onNode(hasClickAction() and hasAnySibling(hasText(title))).performClick()
+        composeTestRule.onNode(hasClickAction() and hasAnySibling(hasAnyDescendant(hasText(title)))).performClick()
 
         assertTrue("戻るボタンタップでonBackが呼ばれること", backCalled)
     }
