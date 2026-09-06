@@ -6,6 +6,8 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.Easing
@@ -38,6 +40,9 @@ const val SCREEN_SLIDE_DURATION_MS = 450
 const val SCREEN_FADE_DURATION_MS = 83
 const val SCREEN_OPEN_FADE_DELAY_MS = 50
 const val SCREEN_CLOSE_FADE_DELAY_MS = 35
+
+// 端の引っ張りで戻すとき、閉じる画面が縮む倍率。純正を実機で測ると0.900だった
+const val PREDICTIVE_POP_SCALE = 0.9f
 
 // タイマー新規追加画面の表示・非表示アニメーション時間(ミリ秒)。下からの出現と上への消去に合わせるために定義する。
 const val TIMER_ADD_TRANSITION_DURATION_MS = 300
@@ -99,6 +104,18 @@ fun screenOpenExit(slidePx: Int): ExitTransition =
 /** 戻るとき、戻り先。左から96dp滑って戻るだけで、透明度は変えない */
 fun screenCloseEnter(slidePx: Int): EnterTransition =
     slideInHorizontally(animationSpec = screenSlideSpec()) { -slidePx }
+
+/**
+ * 端の引っ張りで戻すとき、閉じる側。指の進みに合わせて0.9倍まで縮む。
+ *
+ * 純正の設定画面は別のActivityなので、端末が画面ごと縮める仕組みがそのまま出る。
+ * 実機で測ると縮小率は0.900で、Androidが推奨する値と同じだった。
+ * こちらは同じ画面の中で切り替えるため、同じ見え方になるよう自分で縮める。
+ */
+fun screenPredictivePopExit(): ExitTransition = scaleOut(
+    targetScale = PREDICTIVE_POP_SCALE,
+    transformOrigin = TransformOrigin(pivotFractionX = 0.5f, pivotFractionY = 0.5f),
+)
 
 /** 戻るとき、閉じる側。右へ96dp滑りながら、少し遅れて短くフェードアウトする */
 fun screenCloseExit(slidePx: Int): ExitTransition =

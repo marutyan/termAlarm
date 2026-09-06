@@ -57,6 +57,7 @@ import com.marutyan.termalarm.ui.theme.SCREEN_SLIDE_DISTANCE_DP
 import com.marutyan.termalarm.ui.theme.screenCloseEnter
 import com.marutyan.termalarm.ui.theme.screenCloseExit
 import com.marutyan.termalarm.ui.theme.screenOpenEnter
+import com.marutyan.termalarm.ui.theme.screenPredictivePopExit
 import com.marutyan.termalarm.ui.theme.screenOpenExit
 import com.marutyan.termalarm.ui.theme.tabFadeSpec
 
@@ -127,6 +128,11 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
         exitTransition = { fadeOut(animationSpec = tabFadeSpec()) },
         popEnterTransition = { EnterTransition.None },
         popExitTransition = { ExitTransition.None },
+        // 端の引っ張りで戻すときは、横へ滑らせず、閉じる画面を縮めるだけにする。
+        // 純正はここで端末が画面ごと縮める動きになるため、それに合わせている。
+        // 戻り先は動かさない。動かすと二重になって落ち着かない
+        predictivePopEnterTransition = { _ -> EnterTransition.None },
+        predictivePopExitTransition = { _ -> screenPredictivePopExit() },
     ) {
         composable(ROUTE_LIST) {
             val viewModel: AlarmListViewModel = viewModel(factory = AlarmListViewModelFactory(repository, context))
