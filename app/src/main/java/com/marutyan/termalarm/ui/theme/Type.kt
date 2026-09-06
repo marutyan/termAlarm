@@ -112,18 +112,3 @@ fun TextStyle.keypadInput(): TextStyle = copy(
     fontFeatureSettings = "tnum",
 )
 
-/**
- * 使える幅に収まる最大の大きさで時刻を出すための文字。
- * 桁数は12/24時制や秒の有無で変わるので、決め打ちの大きさだと
- * ある時間帯だけはみ出したり、逆に空きが目立ったりする。
- *
- * 数字1文字の幅はおよそ文字サイズの0.55倍、コロンは0.28倍として見積もる。
- * 実測(純正は「6:31:20」7文字で幅180dp、高さ44dp)とほぼ一致する。
- */
-fun TextStyle.fittingClock(availableWidth: Dp, charCount: Int): TextStyle {
-    // コロンは数字より細い。7文字なら2つ、5文字なら1つ入る
-    val colonCount = (charCount - 1) / 3
-    val widthPerSp = (charCount - colonCount) * 0.55f + colonCount * 0.28f
-    val size = (availableWidth.value / widthPerSp).coerceIn(48f, 120f).sp
-    return copy(fontSize = size, lineHeight = size * 1.1f, fontFeatureSettings = "tnum")
-}

@@ -61,6 +61,7 @@ import com.marutyan.termalarm.domain.remainingTimeUntilNextTrigger
 import com.marutyan.termalarm.domain.scheduleSummary
 import com.marutyan.termalarm.domain.WeekStart
 import com.marutyan.termalarm.ui.common.formatClockMinutes
+import com.marutyan.termalarm.ui.common.clockTimePattern
 import java.time.DayOfWeek
 
 // 曜日の丸の大きさ。7つ並べても、カードの内側(413dp = 画面485dp − 左右の余白16dp×2 − カード内側20dp×2)に
@@ -234,14 +235,16 @@ private fun AlarmCard(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
+        // 端末の「24時間表示」設定に合わせた時刻の書式。設定が変わればその場で切り替わる
+        val timePattern = clockTimePattern()
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             // weightを付けないと、長い時刻が右のスイッチへ重なって読めなくなる
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 // 開始と終了をつないだ1つの文にする。別々のTextへ分けると折り返し位置が揃わない
                 val timeText = if (isSingle) {
-                    formatClockMinutes(schedule.startMinutes)
+                    formatClockMinutes(schedule.startMinutes, timePattern)
                 } else {
-                    formatClockMinutes(schedule.startMinutes) + "–" + formatClockMinutes(schedule.endMinutes)
+                    formatClockMinutes(schedule.startMinutes, timePattern) + "–" + formatClockMinutes(schedule.endMinutes, timePattern)
                 }
                 // アラームの有効・無効切り替え時に文字色を滑らかに補間する
                 val textColor by animateColorAsState(

@@ -67,6 +67,7 @@ import com.marutyan.termalarm.domain.WeekStart
 import com.marutyan.termalarm.domain.occurrenceCount
 import com.marutyan.termalarm.ui.alarmlist.orderedDaysOfWeek
 import com.marutyan.termalarm.ui.common.formatClockMinutes
+import com.marutyan.termalarm.ui.common.clockTimePattern
 import com.marutyan.termalarm.ui.theme.tabularNums
 import java.time.DayOfWeek
 import kotlin.math.roundToInt
@@ -325,7 +326,7 @@ private fun TimeCard(
         Text(label, style = MaterialTheme.typography.labelMedium, color = contentColor)
         // 一覧のカードと同じ大きさにする。狭い画面でははみ出しを防ぐため一段階小さくする
         Text(
-            text = formatClockMinutes(minutes),
+            text = formatClockMinutes(minutes, clockTimePattern()),
             style = textStyle,
             color = contentColor,
             maxLines = 1,
@@ -424,10 +425,11 @@ private fun PreviewBanner(startMinutes: Int, endMinutes: Int, intervalMinutes: I
         )
     }
     val count = occurrenceCount(schedule)
+    val pattern = clockTimePattern()
     val message = if (startMinutes == endMinutes) {
-        stringResource(R.string.preview_single, formatClockMinutes(startMinutes))
+        stringResource(R.string.preview_single, formatClockMinutes(startMinutes, pattern))
     } else {
-        stringResource(R.string.preview_range, formatClockMinutes(startMinutes), formatClockMinutes(endMinutes), count)
+        stringResource(R.string.preview_range, formatClockMinutes(startMinutes, pattern), formatClockMinutes(endMinutes, pattern), count)
     }
     Row(
         modifier = Modifier

@@ -58,6 +58,7 @@ import com.marutyan.termalarm.domain.AppSettings
 import com.marutyan.termalarm.domain.VolumeButtonAction
 import com.marutyan.termalarm.domain.nextTrigger
 import com.marutyan.termalarm.domain.remainingOccurrenceCount
+import com.marutyan.termalarm.ui.common.clockTimePattern
 import com.marutyan.termalarm.ui.theme.TermAlarmTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -258,7 +259,9 @@ private fun RingingContent(
     onSnooze: (Int) -> Unit,
     onSkipToday: () -> Unit,
 ) {
-    val timeFormatter = remember { DateTimeFormatter.ofPattern("H:mm") }
+    // 端末の「24時間表示」設定に合わせる。純正も同じくシステムに任せている
+    val timePattern = clockTimePattern()
+    val timeFormatter = remember(timePattern) { DateTimeFormatter.ofPattern(timePattern, Locale.getDefault()) }
     val dateFormatter = remember { DateTimeFormatter.ofPattern("M月d日（E）", Locale.JAPANESE) }
 
     Column(

@@ -30,10 +30,10 @@ class ClockHandAnglesTest {
     }
 
     @Test
-    fun `分針は秒の進みも反映する`() {
-        // 0分30秒は分針が0分と1分のちょうど中間(0度+3度)まで進む
+    fun `分針は秒では動かない`() {
+        // 純正と同じく分針は1分ごとに進む。秒が進んでも0分のままなら0度
         val angles = clockHandAngles(hour = 0, minute = 0, second = 30)
-        assertEquals(3f, angles.minuteDegrees, DELTA)
+        assertEquals(0f, angles.minuteDegrees, DELTA)
     }
 
     @Test
@@ -41,8 +41,8 @@ class ClockHandAnglesTest {
         val angles = clockHandAngles(hour = 10, minute = 9, second = 35)
         // 時針: (10 + 9/60) * 30
         assertEquals(304.5f, angles.hourDegrees, DELTA)
-        // 分針: (9 + 35/60) * 6
-        assertEquals(57.5f, angles.minuteDegrees, DELTA)
+        // 分針: 9 * 6(秒は混ぜない)
+        assertEquals(54f, angles.minuteDegrees, DELTA)
         // 秒針: 35 * 6
         assertEquals(210f, angles.secondDegrees, DELTA)
     }

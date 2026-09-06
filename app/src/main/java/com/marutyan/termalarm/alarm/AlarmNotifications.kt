@@ -11,6 +11,7 @@ import com.marutyan.termalarm.domain.AlarmSchedule
 import com.marutyan.termalarm.domain.canEndTodaySession
 import com.marutyan.termalarm.domain.remainingOccurrenceCount
 import com.marutyan.termalarm.notification.NotificationChannels
+import com.marutyan.termalarm.ui.common.clockTimePattern
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -24,9 +25,10 @@ import java.util.Locale
  */
 object AlarmNotifications {
 
-    // 通知に出す鳴動時刻の書式。純正の「3:45 (日)」に合わせ、時刻と曜日を1行で示す
-    private val TIME_FORMATTER: DateTimeFormatter =
-        DateTimeFormatter.ofPattern("H:mm（E）", Locale.JAPANESE)
+    // 通知に出す鳴動時刻の書式。純正の「3:45 (日)」に合わせ、時刻と曜日を1行で示す。
+    // 時刻の部分は端末の「24時間表示」設定に従う
+    private fun timeFormatter(): DateTimeFormatter =
+        DateTimeFormatter.ofPattern(clockTimePattern() + "（E）", Locale.getDefault())
 
     // 他の通知(鳴動中・タイマー・ストップウォッチ)と番号がぶつからないよう、事前通知だけのタグで分ける。
     // 同じタグの中ではアラームのidをそのまま通知番号に使い、1件のアラームにつき1件だけ出す
@@ -74,7 +76,7 @@ object AlarmNotifications {
      * 単発に退化しているアラーム（残り0回）では回数を出さず、純正と同じく時刻だけにする。
      */
     private fun upcomingText(context: Context, schedule: AlarmSchedule, next: ZonedDateTime): String {
-        val time = next.format(TIME_FORMATTER)
+        val time = next.format(timeFormatter())
         val remaining = remainingOccurrenceCount(schedule, next)
         return if (remaining > 0) {
             context.getString(R.string.upcoming_notification_text_with_remaining, time, remaining)

@@ -22,6 +22,7 @@ import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
 import com.marutyan.termalarm.domain.canEndTodaySession
 import com.marutyan.termalarm.domain.remainingOccurrenceCount
+import com.marutyan.termalarm.ui.common.clockTimePattern
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
@@ -201,7 +202,7 @@ class RingingService : Service() {
     // 単発に退化しているアラーム（残り0回）では回数を出さず、純正と同じく時刻だけにする
     private fun ringingText(schedule: AlarmSchedule): String {
         val at = occurrenceAt()
-        val time = at.format(RINGING_TIME_FORMATTER)
+        val time = at.format(ringingTimeFormatter())
         val remaining = remainingOccurrenceCount(schedule, at)
         return if (remaining > 0) getString(R.string.ringing_notification_text_with_remaining, time, remaining) else time
     }
@@ -245,9 +246,10 @@ class RingingService : Service() {
         // 自アプリ内でのみ送受信する（受け取り側はRECEIVER_NOT_EXPORTEDで登録する）
         const val ACTION_RINGING_FINISHED = "com.marutyan.termalarm.alarm.action.RINGING_FINISHED"
 
-        // 通知の本文に出す鳴動時刻の書式。純正の「3:45 (日)」に合わせ、時刻と曜日を1行で示す
-        private val RINGING_TIME_FORMATTER: DateTimeFormatter =
-            DateTimeFormatter.ofPattern("H:mm（E）", Locale.JAPANESE)
+        // 通知の本文に出す鳴動時刻の書式。純正の「3:45 (日)」に合わせ、時刻と曜日を1行で示す。
+        // 時刻の部分は端末の「24時間表示」設定に従う
+        private fun ringingTimeFormatter(): DateTimeFormatter =
+            DateTimeFormatter.ofPattern(clockTimePattern() + "（E）", Locale.getDefault())
 
         const val ACTION_STOP = "com.marutyan.termalarm.alarm.action.STOP"
         const val ACTION_SNOOZE = "com.marutyan.termalarm.alarm.action.SNOOZE"

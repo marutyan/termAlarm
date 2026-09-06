@@ -1,5 +1,9 @@
 package com.marutyan.termalarm.ui.clock
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Spacer
@@ -33,7 +37,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.marutyan.termalarm.ui.theme.COMPACT_SCREEN_HEIGHT_THRESHOLD
-import com.marutyan.termalarm.ui.theme.fittingClock
 import com.marutyan.termalarm.ui.theme.heroClock
 import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import com.marutyan.termalarm.R
@@ -52,13 +55,11 @@ import com.marutyan.termalarm.ui.theme.tabularNums
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import com.marutyan.termalarm.ui.common.clockTimePattern
 
 // 日付表示のフォーマット。「9月3日（木）」の形にする(RingingActivity.ktの終了時刻表示と同じ書式)
 private val DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("M月d日（E）", Locale.JAPANESE)
 
-// デジタル表示の時:分部分のフォーマット。秒はSECOND_FORMATTERで別に小さく添える
-private val HOUR_MINUTE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-private val SECOND_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("ss")
 
 /**
  * 時計タブの画面。世界時計をやめ、端末の現在時刻をアナログ/デジタルで大きく表示する
@@ -167,25 +168,30 @@ private fun MainClock(
  */
 @Composable
 private fun DigitalClockFace(time: ZonedDateTime, showSeconds: Boolean) {
-    val text = if (showSeconds) {
-        time.format(HOUR_MINUTE_FORMATTER) + ":" + time.format(SECOND_FORMATTER)
-    } else {
-        time.format(HOUR_MINUTE_FORMATTER)
-    }
-    BoxWithConstraints(
+    // 端末の「24時間表示」設定と地域に合わせる。純正も同じくシステムに任せている
+    val pattern = clockTimePattern(withSeconds = showSeconds)
+    val formatter = remember(pattern) { DateTimeFormatter.ofPattern(pattern, Locale.getDefault()) }
+    val text = time.format(formatter)
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
         // 秒が変わるたびに文字を動かさない。純正も時刻の数字は動かさず、静かに入れ替える。
-        // 1秒ごとに動くと目が休まらず、読み取りにくい
-        Text(
+        // 1秒ごとに動くと目が休まらず、読み取りにくい。
+        //
+        // 大きさは、実際に描いてみて1行に収まる最大を選ばせる。12時間表示の「午後3:52:30」のように
+        // 全角と数字が混ざると、文字数からの見積もりでは合わない
+        BasicText(
             text = text,
-            style = MaterialTheme.typography.displayLarge.fittingClock(maxWidth, text.length),
-            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.displayLarge.copy(
+                color = MaterialTheme.colorScheme.onSurface,
+                fontFeatureSettings = "tnum",
+            ),
             maxLines = 1,
             softWrap = false,
+            autoSize = TextAutoSize.StepBased(minFontSize = 48.sp, maxFontSize = 120.sp),
         )
     }
 }

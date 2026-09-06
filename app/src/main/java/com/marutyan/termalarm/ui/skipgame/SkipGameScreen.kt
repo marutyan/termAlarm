@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.GameQuestion
 import com.marutyan.termalarm.ui.common.formatClockMinutes
+import com.marutyan.termalarm.ui.common.clockTimePattern
 import com.marutyan.termalarm.ui.theme.tabularNums
 
 /**
@@ -113,10 +114,11 @@ fun SkipGameScreen(viewModel: SkipGameViewModel, onClose: () -> Unit) {
 // 正解すると何を止めるかを伝える案内バナー(design/SkipGame.dc.htmlの水色バナー)
 @Composable
 private fun SkipGameInfoBanner(startMinutes: Int, endMinutes: Int, totalOccurrences: Int) {
+    val pattern = clockTimePattern()
     val range = if (startMinutes == endMinutes) {
-        formatClockMinutes(startMinutes)
+        formatClockMinutes(startMinutes, pattern)
     } else {
-        "${formatClockMinutes(startMinutes)}–${formatClockMinutes(endMinutes)}"
+        "${formatClockMinutes(startMinutes, pattern)}–${formatClockMinutes(endMinutes, pattern)}"
     }
     Row(
         modifier = Modifier

@@ -575,3 +575,25 @@ aapt2 dump xmltree framework-res.apk --file res/interpolator/fast_out_extra_slow
 `android:enableOnBackInvokedCallback="true"` をマニフェストへ書いていないと、
 端末が画面ごと縮める動き（前の画面ではなく黒い地が見える）になる。
 書いておくと、アプリの中で上の「戻る」の動きが指の進み具合に合わせて再生される。
+
+## 純正のコードから読み取った、他の細かい仕様（2026年9月6日）
+
+逆コンパイルしたソースのうち`com/android/deskclock/`以下は難読化されておらず、
+次の実装がそのまま読める。
+
+| 場所 | 純正の実装 |
+|---|---|
+| `widget/AnalogClock.java` onDraw | 時針`(時 + 分/60) * 30`、分針`(分/60) * 360`、秒針`(秒/60) * 360`。**分針に秒を混ぜず、1分ごとに進める** |
+| `timer/TimerSetupView.java` | ⌫の**長押しで入力を全部消す**(347-355行目 onLongClick) |
+| `common/ui/texttime/TextTime.java` | 時刻の書式は`DateFormat.getBestDateTimePattern`。骨組みは24時間なら`Hm`/`Hms`、12時間なら`hma`/`hmsa`。`Settings.System.time_12_24`を監視して切り替える |
+| `settings/SettingsActivity.java` | 遷移を自前で指定していない。端末の既定のActivityアニメーションがそのまま出る |
+
+このうち12時間表記は**採らない**。このアプリは時間帯を「7:00–9:00」の範囲で見せるため、
+「午後3:00–午後5:00」のように午前・午後が付くと横に長く、読み取りづらくなる。
+常に24時間表記にし、地域ごとの区切り文字だけ端末に合わせる。
+
+### 読めないもの
+
+音量・バイブ・徐々に音量を上げる、の実数値やタイミングは`defpackage`の2〜3文字クラスに
+隠れていて読めない。`AlarmVolumePreference`のように、名前が残っているクラスから
+呼び先を辿れた場合だけ仕様が分かる。

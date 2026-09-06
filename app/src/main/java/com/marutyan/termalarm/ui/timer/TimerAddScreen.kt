@@ -40,6 +40,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material3.ripple
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.remember
 import com.marutyan.termalarm.R
@@ -154,6 +156,7 @@ fun TimerAddScreen(
                         inputDigits = inputDigits.dropLast(1)
                     }
                 },
+                onClearAll = { inputDigits = "" },
             )
 
             Spacer(modifier = Modifier.height(keypadToActionSpacing))
@@ -281,6 +284,7 @@ private fun TimerKeypad(
     onZero: () -> Unit,
     onDoubleZero: () -> Unit,
     onBackspace: () -> Unit,
+    onClearAll: () -> Unit,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(KEY_SPACING),
@@ -308,6 +312,8 @@ private fun TimerKeypad(
                 text = stringResource(R.string.timer_key_backspace),
                 contentDescription = stringResource(R.string.timer_backspace),
                 onClick = onBackspace,
+                // 純正は⌫の長押しで入力を全部消す。1桁ずつ消す手間を省くため
+                onLongClick = onClearAll,
             )
         }
     }
@@ -322,16 +328,21 @@ private fun KeypadButton(
     text: String,
     onClick: () -> Unit,
     contentDescription: String? = null,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     Surface(
-        onClick = onClick,
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        interactionSource = interactionSource,
         modifier = Modifier
             .size(KEY_SIZE)
-            .pressScaleEffect(interactionSource),
+            .pressScaleEffect(interactionSource)
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = ripple(),
+                onClick = onClick,
+                onLongClick = onLongClick,
+            ),
     ) {
         Box(
             contentAlignment = Alignment.Center,
