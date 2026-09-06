@@ -1,5 +1,14 @@
 package com.marutyan.termalarm.ui.theme
 
+import android.graphics.Path
+import android.view.animation.PathInterpolator
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -19,9 +28,16 @@ import androidx.compose.ui.unit.dp
 // 薄く消えて薄く現れるだけなので短くてよい。長いと閉じたのに残っているように見える。
 const val TAB_TRANSITION_DURATION_MS = 150
 
-// 戻るときの時間(ミリ秒)。開いた画面を閉じる操作は、待たされる感じが無いようにごく短くする。
-// 出てくる側は動かさず、閉じる側だけがすっと消える
-const val SCREEN_POP_DURATION_MS = 70
+// 画面を開く・閉じるときの動き。端末が持つ既定のActivityアニメーション
+// (framework-resのanim/activity_open_enterなど)から、そのままの値を写している。
+// 純正の時計アプリは設定画面を別のActivityとして開くため、この動きがそのまま出る。
+//
+// 中身は「96dp分だけ横へ滑らせる」だけで、消える側・現れる側のどちらかが短くフェードする。
+const val SCREEN_SLIDE_DISTANCE_DP = 96
+const val SCREEN_SLIDE_DURATION_MS = 450
+const val SCREEN_FADE_DURATION_MS = 83
+const val SCREEN_OPEN_FADE_DELAY_MS = 50
+const val SCREEN_CLOSE_FADE_DELAY_MS = 35
 
 // タイマー新規追加画面の表示・非表示アニメーション時間(ミリ秒)。下からの出現と上への消去に合わせるために定義する。
 const val TIMER_ADD_TRANSITION_DURATION_MS = 300
@@ -54,12 +70,50 @@ fun tabFadeSpec(): TweenSpec<Float> = tween(
 )
 
 /**
- * 戻るときに、閉じる画面を消すAnimationSpecを生成する。
- * ほとんど動かさず、押した直後に前の画面が見えるようにする。
+ * 端末の`fast_out_extra_slow_in`と同じ曲線。最初に速く動いて長く減速する、
+ * Androidが画面の出入りに使っている動き方。値はframework-resの定義そのまま。
  */
-fun screenPopFadeSpec(): TweenSpec<Float> = tween(
-    durationMillis = SCREEN_POP_DURATION_MS,
-    easing = LinearEasing,
+val FastOutExtraSlowIn: Easing = PathInterpolator(
+    Path().apply {
+        moveTo(0f, 0f)
+        cubicTo(0.05f, 0f, 0.133333f, 0.06f, 0.166666f, 0.4f)
+        cubicTo(0.208333f, 0.82f, 0.25f, 1f, 1f, 1f)
+    },
+).let { interpolator -> Easing { fraction -> interpolator.getInterpolation(fraction) } }
+
+/** 画面を開くとき、現れる側。右から96dp滑り込みながら、少し遅れて短くフェードインする */
+fun screenOpenEnter(slidePx: Int): EnterTransition =
+    slideInHorizontally(animationSpec = screenSlideSpec()) { slidePx } +
+        fadeIn(
+            animationSpec = tween(
+                durationMillis = SCREEN_FADE_DURATION_MS,
+                delayMillis = SCREEN_OPEN_FADE_DELAY_MS,
+                easing = LinearEasing,
+            ),
+        )
+
+/** 画面を開くとき、隠れる側。左へ96dp滑るだけで、透明度は変えない */
+fun screenOpenExit(slidePx: Int): ExitTransition =
+    slideOutHorizontally(animationSpec = screenSlideSpec()) { -slidePx }
+
+/** 戻るとき、戻り先。左から96dp滑って戻るだけで、透明度は変えない */
+fun screenCloseEnter(slidePx: Int): EnterTransition =
+    slideInHorizontally(animationSpec = screenSlideSpec()) { -slidePx }
+
+/** 戻るとき、閉じる側。右へ96dp滑りながら、少し遅れて短くフェードアウトする */
+fun screenCloseExit(slidePx: Int): ExitTransition =
+    slideOutHorizontally(animationSpec = screenSlideSpec()) { slidePx } +
+        fadeOut(
+            animationSpec = tween(
+                durationMillis = SCREEN_FADE_DURATION_MS,
+                delayMillis = SCREEN_CLOSE_FADE_DELAY_MS,
+                easing = LinearEasing,
+            ),
+        )
+
+private fun screenSlideSpec(): TweenSpec<IntOffset> = tween(
+    durationMillis = SCREEN_SLIDE_DURATION_MS,
+    easing = FastOutExtraSlowIn,
 )
 
 /**

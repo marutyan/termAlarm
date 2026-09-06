@@ -46,11 +46,18 @@ import com.marutyan.termalarm.ui.timer.TimerScreen
 import com.marutyan.termalarm.ui.timer.TimerViewModel
 import com.marutyan.termalarm.ui.timer.TimerViewModelFactory
 import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.ui.res.stringResource
 import com.marutyan.termalarm.R
-import com.marutyan.termalarm.ui.theme.screenPopFadeSpec
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
+import com.marutyan.termalarm.ui.theme.SCREEN_SLIDE_DISTANCE_DP
+import com.marutyan.termalarm.ui.theme.screenCloseEnter
+import com.marutyan.termalarm.ui.theme.screenCloseExit
+import com.marutyan.termalarm.ui.theme.screenOpenEnter
+import com.marutyan.termalarm.ui.theme.screenOpenExit
 import com.marutyan.termalarm.ui.theme.tabFadeSpec
 
 private const val ROUTE_LIST = "list"
@@ -108,6 +115,9 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
         }
     }
 
+    // 端末の既定と同じ96dpだけ横へ滑らせる。dpのままでは渡せないので画素へ直しておく
+    val slidePx = with(LocalDensity.current) { SCREEN_SLIDE_DISTANCE_DP.dp.roundToPx() }
+
     NavHost(
         navController = navController,
         startDestination = ROUTE_LIST,
@@ -115,9 +125,8 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
         // 横に動くと、押した場所と違うところが動いて見えて落ち着かない
         enterTransition = { fadeIn(animationSpec = tabFadeSpec()) },
         exitTransition = { fadeOut(animationSpec = tabFadeSpec()) },
-        // 戻るときは待たせない。前の画面はそのまま出し、閉じる画面だけがすっと消える
         popEnterTransition = { EnterTransition.None },
-        popExitTransition = { fadeOut(animationSpec = screenPopFadeSpec()) },
+        popExitTransition = { ExitTransition.None },
     ) {
         composable(ROUTE_LIST) {
             val viewModel: AlarmListViewModel = viewModel(factory = AlarmListViewModelFactory(repository, context))
@@ -178,6 +187,10 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
         composable(
             route = "$ROUTE_EDIT?$ARG_ALARM_ID={$ARG_ALARM_ID}",
             arguments = listOf(navArgument(ARG_ALARM_ID) { type = NavType.LongType; defaultValue = -1L }),
+            enterTransition = { screenOpenEnter(slidePx) },
+            exitTransition = { screenOpenExit(slidePx) },
+            popEnterTransition = { screenCloseEnter(slidePx) },
+            popExitTransition = { screenCloseExit(slidePx) },
         ) { backStackEntry ->
             val rawId = backStackEntry.arguments?.getLong(ARG_ALARM_ID) ?: -1L
             val alarmId = rawId.takeIf { it >= 0 }
@@ -187,12 +200,21 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
         composable(
             route = "$ROUTE_SKIP_GAME/{$ARG_ALARM_ID}",
             arguments = listOf(navArgument(ARG_ALARM_ID) { type = NavType.LongType }),
+            enterTransition = { screenOpenEnter(slidePx) },
+            exitTransition = { screenOpenExit(slidePx) },
+            popEnterTransition = { screenCloseEnter(slidePx) },
+            popExitTransition = { screenCloseExit(slidePx) },
         ) { backStackEntry ->
             val alarmId = backStackEntry.arguments?.getLong(ARG_ALARM_ID) ?: return@composable
             val viewModel: SkipGameViewModel = viewModel(factory = SkipGameViewModelFactory(repository, context, alarmId, hasShakeSensor))
             SkipGameScreen(viewModel = viewModel, onClose = { navController.popBackStack() })
         }
-        composable(ROUTE_SETTINGS) {
+        composable(ROUTE_SETTINGS,
+            enterTransition = { screenOpenEnter(slidePx) },
+            exitTransition = { screenOpenExit(slidePx) },
+            popEnterTransition = { screenCloseEnter(slidePx) },
+            popExitTransition = { screenCloseExit(slidePx) },
+        ) {
             // 設定は全体で1つなので、ここでRepositoryを組み立てて渡す
             val settingsRepository = remember {
                 Repositories.settings(context)
@@ -205,10 +227,20 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             )
             SettingsScreen(viewModel = viewModel, onBack = { navController.popBackStack() })
         }
-        composable(ROUTE_ABOUT) {
+        composable(ROUTE_ABOUT,
+            enterTransition = { screenOpenEnter(slidePx) },
+            exitTransition = { screenOpenExit(slidePx) },
+            popEnterTransition = { screenCloseEnter(slidePx) },
+            popExitTransition = { screenCloseExit(slidePx) },
+        ) {
             AboutScreen(onBack = { navController.popBackStack() })
         }
-        composable(ROUTE_PRIVACY) {
+        composable(ROUTE_PRIVACY,
+            enterTransition = { screenOpenEnter(slidePx) },
+            exitTransition = { screenOpenExit(slidePx) },
+            popEnterTransition = { screenCloseEnter(slidePx) },
+            popExitTransition = { screenCloseExit(slidePx) },
+        ) {
             PrivacyScreen(onBack = { navController.popBackStack() })
         }
     }

@@ -544,3 +544,34 @@ Android 14以降は資源から読めるので、テーマ側で読み替えて�
 
 前に書いた「輪311dp・ボタン101dp・アイコン39dp・線11dp」は、画面を一時的に
 狭めていたときの値で誤り。比は合っていたので、同じ比のまま値を入れ替えている。
+
+## 画面を開く・戻るときの動き（2026年9月6日、端末のframework-resから確認）
+
+純正の時計アプリは設定画面を別のActivityとして開くだけで、遷移を自分で指定していない
+（`com/android/deskclock/settings/SettingsActivity.java`に指定が無い）。
+つまり見えているのは端末の既定のActivityアニメーションそのもの。中身は次のとおり。
+
+| 場面 | 動き |
+|---|---|
+| 開く・現れる側 | 右から96dp滑り込む（450ms、`fast_out_extra_slow_in`）＋ 50ms遅れて83msでフェードイン（`linear`） |
+| 開く・隠れる側 | 左へ96dp滑る（450ms、同じ曲線）。透明度は変えない |
+| 戻る・戻り先 | 左から96dp滑って戻る（450ms、同じ曲線）。透明度は変えない |
+| 戻る・閉じる側 | 右へ96dp滑る（450ms、同じ曲線）＋ 35ms遅れて83msでフェードアウト（`linear`） |
+
+`fast_out_extra_slow_in`の曲線は `M 0,0 C 0.05,0 0.133333,0.06 0.166666,0.4 C 0.208333,0.82 0.25,1 1,1`。
+
+読み取り方:
+
+```bash
+adb pull /system/framework/framework-res.apk
+aapt2 dump xmltree framework-res.apk --file res/anim/activity_open_enter.xml
+aapt2 dump xmltree framework-res.apk --file res/interpolator/fast_out_extra_slow_in.xml
+```
+
+`toXDelta=16777120dp` のように出る値は、24bitの2の補数なので `0xFFFFA0 = -96` と読む。
+
+### 端の引っ張りで戻るとき
+
+`android:enableOnBackInvokedCallback="true"` をマニフェストへ書いていないと、
+端末が画面ごと縮める動き（前の画面ではなく黒い地が見える）になる。
+書いておくと、アプリの中で上の「戻る」の動きが指の進み具合に合わせて再生される。
