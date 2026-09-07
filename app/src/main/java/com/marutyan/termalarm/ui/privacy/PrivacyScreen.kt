@@ -54,10 +54,11 @@ private const val PRIVACY_POLICY_TEXT = """# TermAlarm プライバシーポリ�
 |---|---|
 | 正確なアラーム（`USE_EXACT_ALARM` / `SCHEDULE_EXACT_ALARM`） | 指定した時刻にアラームを鳴らすため。アラームアプリの中心的な機能です |
 | 通知（`POST_NOTIFICATIONS`） | アラームの鳴動と、タイマーやストップウォッチの経過を知らせるため |
+| 進行中の通知（`POST_PROMOTED_NOTIFICATIONS`） | 鳴っているアラームとタイマーの残り時間を、通知欄の上に出し続けるため |
 | 全画面通知（`USE_FULL_SCREEN_INTENT`） | 画面が消えているときに、アラームの画面を表示するため |
 | 起動完了の受信（`RECEIVE_BOOT_COMPLETED`） | 端末を再起動した後もアラームを鳴らすため |
 | バイブレーション（`VIBRATE`） | アラームで端末を振動させるため |
-| フォアグラウンドサービス（`FOREGROUND_SERVICE`、`FOREGROUND_SERVICE_MEDIA_PLAYBACK`） | アプリを閉じてもアラームを鳴らし続け、タイマーの計測を続けるため |
+| フォアグラウンドサービス（`FOREGROUND_SERVICE`、`FOREGROUND_SERVICE_MEDIA_PLAYBACK`、`FOREGROUND_SERVICE_SPECIAL_USE`） | アプリを閉じてもアラームを鳴らし続け、タイマーとストップウォッチの計測を続けるため |
 | スリープ解除（`WAKE_LOCK`） | アラームの時刻に端末を起こすため |
 
 **位置情報、連絡先、カメラ、マイク、ストレージへのアクセスは要求しません。**
