@@ -335,7 +335,12 @@ Google製フォントで統一する。
 - 画面が消灯またはロック中 → 鳴動画面が全画面で起動する
 - 画面を使用中 → ヘッドアップ通知として出る
 
-純正の時計アプリも同じ動作をする。`com.google.android.deskclock` の権限を調べると、
+純正の時計アプリも同じ動作をする。宣言している権限は端末から読める。
+
+```sh
+adb shell dumpsys package com.google.android.deskclock | grep -A30 "requested permissions"
+```
+
 このアプリと同じく `USE_FULL_SCREEN_INTENT` を使い、`SYSTEM_ALERT_WINDOW` は持っていない。
 
 使用中も全画面で覆うには `SYSTEM_ALERT_WINDOW`（他のアプリの上に表示）が要るが、
@@ -349,8 +354,13 @@ Activity起動の観点では「バックグラウンド」として扱われる
 
 # 純正アプリを置き換えるために必要なもの
 
-純正の時計アプリ（`com.google.android.deskclock`）が受け付けるインテントを調べ、
-このアプリに欠けているものを整理する。**アプリを開いて操作する以外の経路で使われるには、
+純正の時計アプリが受け付けるインテントを調べ、このアプリに欠けているものを整理する。
+受け口の一覧は端末から読める。
+
+```sh
+adb shell dumpsys package com.google.android.deskclock | grep -B2 -A6 "android.intent.action"
+```
+**アプリを開いて操作する以外の経路で使われるには、
 これらの受け口が要る。**
 
 ## インテント（最優先）

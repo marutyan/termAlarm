@@ -69,7 +69,7 @@ fun TextStyle.tabularNums(): TextStyle = copy(fontFeatureSettings = "tnum")
  * 画面の主役になる時刻の文字。
  *
  * 純正の時計アプリを実機で撮り、数字の帯の高さを測って合わせている。
- * ストップウォッチの経過時間と世界時計の時刻はどちらも44dpだった。
+ * ストップウォッチの経過時間と時計の時刻はどちらも44dpだった。
  *
  * 61spで試したところ31dpにしかならず、純正の70%の大きさだった。
  * 実測から逆算して87spにしている。Material 3で最も大きいdisplayLarge(57sp)

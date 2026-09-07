@@ -14,8 +14,8 @@ data class ClockHandAngles(
  * 時・分・秒から3本の針の角度を求める。
  *
  * 時針は分の進みを混ぜてなめらかに動かすが、分針は秒を混ぜず1分ごとに進める。
- * 純正の時計アプリも同じで、時針は`(時 + 分/60) * 30`、分針は`(分/60) * 360`としている
- * (com/android/deskclock/widget/AnalogClock.java の onDraw)。
+ * 実物のアナログ時計と同じ動きで、Androidの標準的な時計表示もこの数式を使っている。
+ * 時針は`(時 + 分/60) * 30`、分針は`(分/60) * 360`、秒針は`(秒/60) * 360`。
  */
 fun clockHandAngles(hour: Int, minute: Int, second: Int): ClockHandAngles = ClockHandAngles(
     hourDegrees = (hour % 12 + minute / 60f) * 30f,
