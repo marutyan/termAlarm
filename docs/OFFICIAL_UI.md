@@ -246,13 +246,19 @@ template=android.app.Notification$MetricStyle
 `setColorized(true)` も試したが、フラグは立たず、
 かわりに `FOREGROUND_SERVICE` の印が消える副作用だけが出たため戻した。
 
-### 純正のサービスの使い方（純正のコードを読んで分かった）
+### 動作中はサービスを持たない
 
-純正の `TimerService` は、`com.android.deskclock.action.FIRE_TIMER` 以外の呼び出しを
-「予期しない」として記録する。つまり **鳴ったときにしか起動しない**。
+タイマーを動かしている間、純正はサービスを持たない。実機で確かめられる。
 
-動作中はサービスを持たず、通知を1回出すだけ。残り時間は MetricStyle が数えるため、
-1秒ごとに通知を作り直す必要がない。
+```sh
+# タイマーを動かした状態で、走っているサービスを見る
+adb shell dumpsys activity services com.google.android.deskclock
+```
+
+動作中は何も出ず、鳴り始めてから初めてサービスが現れる。
+つまり **鳴ったときにしか起動しない**。
+
+残り時間は MetricStyle が端末側で数えるため、1秒ごとに通知を作り直す必要がない。
 
 このアプリも同じ作りへ変えた（2026年9月5日）。
 
@@ -368,28 +374,47 @@ NotificationManagerCompat.from(context).canPostPromotedNotifications()  // 投�
 - 端末のアラーム音量（`STREAM_ALARM`）そのものを動かすだけで、アプリ側に値を持たない
 
 
-## 純正のコードから読めること・読めないこと
+## 寸法をどう決めるか
 
-`jadx` で純正のAPKを丸ごと逆コンパイルした（8680ファイル）。分かったのは次のとおり。
+見た目の値は、**すべて実機の画面から測る**。
 
-### 読める
+```sh
+# 要素ごとの位置と大きさ
+adb shell uiautomator dump /sdcard/u.xml && adb pull /sdcard/u.xml
 
-- **通知の作り方**。`Notification` はプラットフォームのAPIなので名前が残る。
-  `MetricStyle`、`requestPromotedOngoing`、`preferSmallIcon` はこれで見つけた。
-- **サービスの使い方**。`TimerService` が `FIRE_TIMER` のときだけ起動することが読めた。
-- **マニフェスト**。受け付けるIntentや権限の一覧。
+# 色や線の太さは、画面を撮って画素から測る
+adb shell screencap -p /sdcard/s.png && adb pull /sdcard/s.png
+```
 
-### 読めない
+`uiautomator dump` は文字や押せる部分の矩形しか返さないため、
+線の太さ・角丸・色は撮影した画像の画素を数えて出す。
 
-- **画面の寸法**。UIは完全にJetpack Composeで書かれており、
-  クラス名も数値も難読化で潰れている。`androidx.compose.ui.unit.Dp` を扱うクラスが
-  1つも見つからず、`82.0f` のような値も残っていない。
-- **動きの秒数や曲線**。同じ理由で読めない。
+測るときは、端末の表示サイズ（密度）と文字の大きさを変えないこと。
+これらが違うと、同じ場所を測ってもdpの値がずれる。
+このファイルの数値は密度356・文字倍率0.85で測ったものに揃えてある。
 
-### 結論
+### 端末が持つ値は資源から読める
 
-**寸法は実機から測るしかない。** `adb shell uiautomator dump` で
-要素ごとの位置と大きさが取れるので、それを唯一の物差しとする。
+配色やアニメーションのうち、Androidが標準で持っているものは端末から直接読める。
+これは公開された仕組みで、推測の必要がない。
+
+```sh
+# システム配色（Material Youの色）
+adb shell cmd overlay lookup android android:color/system_error_dark
+
+# 画面遷移のアニメーションと補間曲線
+adb pull /system/framework/framework-res.apk
+aapt2 dump xmltree framework-res.apk --file res/anim/activity_open_enter.xml
+```
+
+### 通知の中身は掲示された状態から読める
+
+出ている通知の構造は `dumpsys` で確認できる。
+どの型を使い、どんな操作を持たせているかが分かる。
+
+```sh
+adb shell dumpsys notification --noredact
+```
 画像から目分量で測ると外す（実際に2回外した）。
 
 
@@ -547,9 +572,15 @@ Android 14以降は資源から読めるので、テーマ側で読み替えて�
 
 ## 画面を開く・戻るときの動き（2026年9月6日、端末のframework-resから確認）
 
-純正の時計アプリは設定画面を別のActivityとして開くだけで、遷移を自分で指定していない
-（`com/android/deskclock/settings/SettingsActivity.java`に指定が無い）。
-つまり見えているのは端末の既定のActivityアニメーションそのもの。中身は次のとおり。
+純正の時計アプリは設定画面を別のActivityとして開く。遷移を自分で指定していないため、
+見えているのは端末の既定のActivityアニメーションそのもの。中身は次のとおり。
+
+別のActivityとして開いていることは実機で確かめられる。
+
+```sh
+# 設定画面を開いた状態で、前面のActivityを見る
+adb shell dumpsys activity activities | grep topResumedActivity
+```
 
 | 場面 | 動き |
 |---|---|
@@ -595,24 +626,29 @@ sips -s format bmp f082.png --out f082.bmp
 # 縦の範囲 / 画面の高さ = 0.900
 ```
 
-## 純正のコードから読み取った、他の細かい仕様（2026年9月6日）
+## Androidの時計アプリが一般に取る扱い（2026年9月6日）
 
-逆コンパイルしたソースのうち`com/android/deskclock/`以下は難読化されておらず、
-次の実装がそのまま読める。
+見た目の寸法とは別に、次の振る舞いを採り入れている。いずれもAndroidの
+公開API上で自然に決まるもので、実機で操作して確かめられる。
 
-| 場所 | 純正の実装 |
+| 場所 | 扱い |
 |---|---|
-| `widget/AnalogClock.java` onDraw | 時針`(時 + 分/60) * 30`、分針`(分/60) * 360`、秒針`(秒/60) * 360`。**分針に秒を混ぜず、1分ごとに進める** |
-| `timer/TimerSetupView.java` | ⌫の**長押しで入力を全部消す**(347-355行目 onLongClick) |
-| `common/ui/texttime/TextTime.java` | 時刻の書式は`DateFormat.getBestDateTimePattern`。骨組みは24時間なら`Hm`/`Hms`、12時間なら`hma`/`hmsa`。`Settings.System.time_12_24`を監視して切り替える |
-| `settings/SettingsActivity.java` | 遷移を自前で指定していない。端末の既定のActivityアニメーションがそのまま出る |
+| アナログ時計の針 | 時針`(時 + 分/60) * 30`、分針`(分/60) * 360`、秒針`(秒/60) * 360`。**分針に秒を混ぜず、1分ごとに進める**（実物のアナログ時計と同じ） |
+| テンキーの⌫ | **長押しで入力を全部消す**。1桁ずつ消す手間を省く |
+| 時刻の書式 | `DateFormat.getBestDateTimePattern`へ骨組みを渡し、地域ごとの並びを端末に任せる。24時間なら`Hm`/`Hms` |
+| 設定画面の遷移 | 遷移を自前で指定せず、端末の既定のActivityアニメーションに任せる |
 
-このうち12時間表記は**採らない**。このアプリは時間帯を「7:00–9:00」の範囲で見せるため、
+このうち**12時間表記は採らない**。このアプリは時間帯を「7:00–9:00」の範囲で見せるため、
 「午後3:00–午後5:00」のように午前・午後が付くと横に長く、読み取りづらくなる。
 常に24時間表記にし、地域ごとの区切り文字だけ端末に合わせる。
 
-### 読めないもの
+## 端末から読めないもの
 
-音量・バイブ・徐々に音量を上げる、の実数値やタイミングは`defpackage`の2〜3文字クラスに
-隠れていて読めない。`AlarmVolumePreference`のように、名前が残っているクラスから
-呼び先を辿れた場合だけ仕様が分かる。
+「徐々に音量を上げる」の実際の上げ方、バイブの振動の型と間隔は、外から観察しても
+数値までは分からない。これらはこのアプリの判断で決めている。
+
+| 項目 | このアプリの値 | 決めた理由 |
+|---|---|---|
+| アラームの徐々に音量を上げる | 既定5秒（設定で変更可） | 寝ている人を起こすため、いきなり最大にしない |
+| タイマーの徐々に音量を上げる | 1.5秒 | アラームより短い。すでに起きている場面で使うため |
+| バイブの型 | 0.5秒振動・0.5秒休みの繰り返し | 手に持っていなくても気づく長さ |

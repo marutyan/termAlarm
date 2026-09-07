@@ -362,7 +362,7 @@ private fun SettingsToggleRow(label: String, checked: Boolean, onCheckedChange: 
 }
 
 /**
- * アラームの音量スライダー。純正の`AlarmVolumePreference`を逆コンパイルして分かった仕様に合わせている。
+ * アラームの音量スライダー。Androidの時計アプリが一般に取る扱いへ合わせている。
  *
  * - 値はアプリ側に持たず、端末のSTREAM_ALARMを直接読み書きする
  * - 下限は0ではなく端末が返す最小値。端末によってはアラームを完全に無音にできない
