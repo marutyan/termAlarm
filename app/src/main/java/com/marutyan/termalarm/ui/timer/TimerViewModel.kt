@@ -12,7 +12,7 @@ import com.marutyan.termalarm.domain.pauseTimer
 import com.marutyan.termalarm.domain.resetTimer
 import com.marutyan.termalarm.domain.resumeTimer
 import com.marutyan.termalarm.domain.startTimer
-import com.marutyan.termalarm.timer.TimerForegroundService
+import com.marutyan.termalarm.timer.TimerActions
 import com.marutyan.termalarm.timer.TimerScheduler
 import com.marutyan.termalarm.timer.formatDuration
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,7 +26,7 @@ private const val EXTEND_STEP_MILLIS = 60_000L
 /**
  * タイマータブの状態を持つViewModel。RepositoryのFlowをそのままUI状態として公開し、
  * 開始・一時停止・再開・延長・リセット・削除の各操作を仲介する。
- * Repositoryを変更した直後は必ずTimerScheduler.rescheduleとTimerForegroundService.ensureRunningを
+ * Repositoryを変更した直後は必ずTimerScheduler.rescheduleとTimerActions.refreshNotificationを
  * 呼び直す契約とする(alarm/AlarmListViewModelと同じ方針)。
  */
 class TimerViewModel(private val repository: TimerRepository, context: Context) : ViewModel() {
@@ -74,6 +74,8 @@ class TimerViewModel(private val repository: TimerRepository, context: Context) 
         viewModelScope.launch {
             repository.delete(id)
             TimerScheduler.cancel(appContext, id)
+            // 通知はTimerActionsに任せる。削除そのものは、この画面が持つRepositoryへ行う
+            TimerActions.refreshNotification(appContext)
         }
     }
 
@@ -87,10 +89,11 @@ class TimerViewModel(private val repository: TimerRepository, context: Context) 
         }
     }
 
-    // 状態変更のたびにAlarmManager予約とフォアグラウンドサービスの両方を最新の状態へ合わせ直す
+    // 状態を変えるたびに、完了時刻の予約と通知を合わせ直す。
+    // 動作中はサービスを持たないため、通知の出し直しはここが担う
     private suspend fun afterMutation(id: Long) {
         TimerScheduler.reschedule(appContext, id)
-        TimerForegroundService.ensureRunning(appContext)
+        TimerActions.refreshNotification(appContext)
     }
 }
 

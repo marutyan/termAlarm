@@ -3,13 +3,11 @@ package com.marutyan.termalarm.timer
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import com.marutyan.termalarm.notification.runAsync
 import android.os.SystemClock
-import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.TimerRepository
 import com.marutyan.termalarm.domain.rebaseTimerAfterReboot
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 /**
  * 端末再起動後にタイマーを復元する（docs/SPEC.md「端末を再起動した場合は、経過時間を復元して続ける」）。
@@ -21,22 +19,28 @@ import kotlinx.coroutines.launch
  */
 class TimerRescheduleReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        val pendingResult = goAsync()
-        CoroutineScope(Dispatchers.Default).launch {
-            try {
-                val repository = TimerRepository(AlarmDatabase.getInstance(context).timerDao())
-                val nowElapsed = SystemClock.elapsedRealtime()
-                val nowWall = System.currentTimeMillis()
-                repository.getAllRunningOnce().forEach { state ->
-                    val rebased = rebaseTimerAfterReboot(state, nowElapsed, nowWall)
-                    repository.update(rebased)
-                    TimerScheduler.reschedule(context, rebased.id)
-                }
-                if (repository.hasActiveTimer()) {
-                    TimerForegroundService.ensureRunning(context)
-                }
-            } finally {
-                pendingResult.finish()
+        // 外部アプリから偽のIntentが送られた場合に意図しない復元処理が走るのを防ぐため、
+        // AndroidManifest.xmlのintent-filterで定義された想定通りのaction (BOOT_COMPLETED) であるか検証する。
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED) {
+            return
+        }
+
+        // Receiverが受け取るContextは短命なので、アプリ全体のものへ持ち替える
+        val appContext = context.applicationContext
+        runAsync {
+            val repository = Repositories.timer(appContext)
+            val nowElapsed = SystemClock.elapsedRealtime()
+            val nowWall = System.currentTimeMillis()
+            repository.getAllRunningOnce().forEach { state ->
+                val rebased = rebaseTimerAfterReboot(state, nowElapsed, nowWall)
+                repository.update(rebased)
+                TimerScheduler.reschedule(appContext, rebased.id)
+            }
+            // 再起動をまたいで期限が過ぎていたタイマーは、ここで鳴動中へ移す
+            if (TimerActions.markDueTimersFinished(appContext)) {
+                TimerRingingService.start(appContext)
+            } else {
+                TimerActions.refreshNotification(appContext)
             }
         }
     }

@@ -38,6 +38,10 @@ import org.junit.Test
  */
 @OptIn(ExperimentalTestApi::class)
 class StopwatchScreenTest {
+    // 端末がスリープしていてもテストが動くようにする
+    @get:Rule
+    val screenWakeRule = ScreenWakeRule()
+
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
@@ -51,9 +55,15 @@ class StopwatchScreenTest {
         repository = repo
     }
 
+    /**
+     * テスト終了後の後始末。
+     *
+     * インメモリDBは閉じない。画面が持つViewModelは、テストが終わった後も
+     * 保存の処理を続けていることがあり、閉じた先へ書きに行って落ちるため。
+     * テストごとに新しいインスタンスを作っているので、閉じなくても値は混ざらない。
+     */
     @After
     fun tearDown() {
-        db.close()
     }
 
     private fun string(resId: Int) = composeTestRule.activity.getString(resId)
@@ -64,13 +74,15 @@ class StopwatchScreenTest {
         }
     }
 
-    // 何も操作していない(IDLE)とき、経過時間は0:00.00のまま、開始ボタンとラップ空表示が出ていることを保証する
+    // 何も操作していない(IDLE)とき、経過時間は00:00.00のまま、操作は「開始」だけであることを保証する。
+    // 純正と同じで、押せないリセットやラップを並べない
     @Test
     fun 何もしていないときの表示() {
         setScreen()
         composeTestRule.onNodeWithText(formatElapsed(0L, includeCentiseconds = true)).assertExists()
         composeTestRule.onNodeWithText(string(R.string.stopwatch_start)).assertExists()
-        composeTestRule.onNodeWithText(string(R.string.stopwatch_laps_empty)).assertExists()
+        composeTestRule.onNodeWithText(string(R.string.stopwatch_reset)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(string(R.string.stopwatch_lap)).assertDoesNotExist()
         composeTestRule.onNodeWithText(string(R.string.stopwatch_pause)).assertDoesNotExist()
     }
 
@@ -127,7 +139,7 @@ class StopwatchScreenTest {
         }
         setScreen()
         composeTestRule.onNodeWithText(formatElapsed(5_000L, includeCentiseconds = true)).assertExists()
-        composeTestRule.onNodeWithText(string(R.string.stopwatch_resume)).performClick()
+        composeTestRule.onNodeWithText(string(R.string.stopwatch_start)).performClick()
 
         composeTestRule.waitUntil(5_000) { runBlocking { repository.getStateOnce().runState == StopwatchRunState.RUNNING } }
         composeTestRule.onNodeWithText(string(R.string.stopwatch_pause)).assertExists()
@@ -153,7 +165,6 @@ class StopwatchScreenTest {
 
         val laps = runBlocking { repository.getLapsOnce() }
         assertEquals(2, laps.size)
-        composeTestRule.onNodeWithText(string(R.string.stopwatch_laps_empty)).assertDoesNotExist()
         laps.forEach { lap: StopwatchLap ->
             val numberText = composeTestRule.activity.getString(R.string.stopwatch_lap_number, lap.lapNumber)
             val totalText = composeTestRule.activity.getString(
@@ -183,13 +194,13 @@ class StopwatchScreenTest {
             repository.addLap(StopwatchLap(lapNumber = 1, lapMillis = 12_345L, totalMillis = 12_345L))
         }
         setScreen()
-        // 1件目のラップはlapMillis==totalMillisになるため、メイン表示とラップ行の両方が同じ文字列になる
+        // 1件目のラップはlapMillis==totalMillisになり、合計時間も接頭辞なく表示されるため、
+        // メイン表示・ラップ行のラップ時間・合計時間の3箇所が同じ文字列になる
         // (単一ノード前提のonNodeWithTextは使わない)
         assertTrue(
-            composeTestRule.onAllNodesWithText(formatElapsed(12_345L, includeCentiseconds = true))
-                .fetchSemanticsNodes().size == 2,
+            composeTestRule.onAllNodesWithText("00:12.34")
+                .fetchSemanticsNodes().size == 3,
         )
-        composeTestRule.onNodeWithText(string(R.string.stopwatch_laps_empty)).assertDoesNotExist()
 
         composeTestRule.onNodeWithText(string(R.string.stopwatch_reset)).performClick()
 
@@ -201,8 +212,7 @@ class StopwatchScreenTest {
         }
         val lapsAfterReset = runBlocking { repository.getLapsOnce() }
         assertTrue(lapsAfterReset.isEmpty())
-        composeTestRule.onNodeWithText(formatElapsed(0L, includeCentiseconds = true)).assertExists()
-        composeTestRule.onNodeWithText(string(R.string.stopwatch_laps_empty)).assertExists()
+        composeTestRule.onNodeWithText("00:00.00").assertExists()
         composeTestRule.onNodeWithText(string(R.string.stopwatch_start)).assertExists()
     }
 }

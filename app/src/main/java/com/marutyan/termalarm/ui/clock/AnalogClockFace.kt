@@ -8,6 +8,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
+import com.marutyan.termalarm.domain.clockHandAngles
 import java.time.ZonedDateTime
 import kotlin.math.cos
 import kotlin.math.min
@@ -18,23 +24,30 @@ private const val TICK_OUTER_RATIO = 0.94f
 private const val TICK_INNER_RATIO_HOUR = 0.82f
 private const val TICK_INNER_RATIO_MINUTE = 0.90f
 
+// 12/3/6/9の数字を置く位置の半径比率。時マーカーより内側、針の付け根よりは外側に置く
+private const val NUMERAL_RADIUS_RATIO = 0.68f
+
+// 数字を置く4方向(12時=0度起点、時計回り)。全時刻を入れると小さい画面で潰れるため代表の4つだけにする
+private val NUMERAL_HOURS = listOf(12, 3, 6, 9)
+
 /**
- * ライブラリを使わず`Canvas`で描くアナログ時計。針は秒単位で動けば十分(docs/SPEC.md「アナログ時計」)。
- * timeに渡した時刻の時・分・秒だけを見て針の角度を決めるため、どのタイムゾーンの時刻を渡しても
- * そのまま「その場所の今の時刻」を表す文字盤になる。
+ * ライブラリを使わず`Canvas`で描くアナログ時計。文字盤・60本の目盛り(5分ごとは太く長い)・
+ * 12/3/6/9の数字・時分秒針・中心の丸を描画する。timeに渡した時刻の時・分・秒だけを見て
+ * 針の角度を決めるため、どのタイムゾーンの時刻を渡してもそのまま「その場所の今の時刻」を表す文字盤になる。
  */
 @Composable
-fun AnalogClockFace(time: ZonedDateTime, modifier: Modifier = Modifier) {
+fun AnalogClockFace(time: ZonedDateTime, showSeconds: Boolean = true, modifier: Modifier = Modifier) {
     val faceColor = MaterialTheme.colorScheme.outline
+    val numeralColor = MaterialTheme.colorScheme.onSurfaceVariant
     val hourHandColor = MaterialTheme.colorScheme.onSurface
     val minuteHandColor = MaterialTheme.colorScheme.onSurface
     val secondHandColor = MaterialTheme.colorScheme.primary
     val centerColor = MaterialTheme.colorScheme.primary
 
-    // 12時間・60分・60秒の一周(360度)に対する現在位置の角度。分・秒の進みを次の針へ滑らかに反映する
-    val hourAngle = (time.hour % 12 + time.minute / 60f) * 30f
-    val minuteAngle = (time.minute + time.second / 60f) * 6f
-    val secondAngle = time.second * 6f
+    val angles = clockHandAngles(hour = time.hour, minute = time.minute, second = time.second)
+
+    val textMeasurer = rememberTextMeasurer()
+    val numeralStyle = MaterialTheme.typography.titleMedium.copy(color = numeralColor, textAlign = TextAlign.Center)
 
     Canvas(modifier = modifier) {
         val radius = min(size.width, size.height) / 2f
@@ -50,9 +63,15 @@ fun AnalogClockFace(time: ZonedDateTime, modifier: Modifier = Modifier) {
             drawTick(center, radius, angle, innerRatio, TICK_OUTER_RATIO, faceColor, if (isHourMark) radius * 0.02f else radius * 0.01f)
         }
 
-        drawHand(center, radius * 0.5f, hourAngle, hourHandColor, radius * 0.045f)
-        drawHand(center, radius * 0.72f, minuteAngle, minuteHandColor, radius * 0.03f)
-        drawHand(center, radius * 0.82f, secondAngle, secondHandColor, radius * 0.012f)
+        for (hourNumber in NUMERAL_HOURS) {
+            drawNumeral(textMeasurer, hourNumber.toString(), numeralStyle, center, (hourNumber % 12) * 30f, radius * NUMERAL_RADIUS_RATIO)
+        }
+
+        drawHand(center, radius * 0.5f, angles.hourDegrees, hourHandColor, radius * 0.045f)
+        drawHand(center, radius * 0.72f, angles.minuteDegrees, minuteHandColor, radius * 0.03f)
+        if (showSeconds) {
+            drawHand(center, radius * 0.82f, angles.secondDegrees, secondHandColor, radius * 0.012f)
+        }
         drawCircle(color = centerColor, radius = radius * 0.04f, center = center)
     }
 }
@@ -80,4 +99,22 @@ private fun DrawScope.drawTick(
     val start = Offset(center.x + radius * innerRatio * cosA, center.y + radius * innerRatio * sinA)
     val end = Offset(center.x + radius * outerRatio * cosA, center.y + radius * outerRatio * sinA)
     drawLine(color = color, start = start, end = end, strokeWidth = strokeWidth, cap = StrokeCap.Round)
+}
+
+// 中心からangle度・距離radiusの位置へ、テキストの中心が来るように数字を描く
+private fun DrawScope.drawNumeral(
+    textMeasurer: TextMeasurer,
+    text: String,
+    style: TextStyle,
+    center: Offset,
+    angleDegrees: Float,
+    radius: Float,
+) {
+    val layout = textMeasurer.measure(text, style)
+    val radians = Math.toRadians((angleDegrees - 90).toDouble())
+    val topLeft = Offset(
+        x = center.x + radius * cos(radians).toFloat() - layout.size.width / 2f,
+        y = center.y + radius * sin(radians).toFloat() - layout.size.height / 2f,
+    )
+    drawText(layout, topLeft = topLeft)
 }

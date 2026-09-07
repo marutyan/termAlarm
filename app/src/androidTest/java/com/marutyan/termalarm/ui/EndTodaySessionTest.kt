@@ -44,6 +44,10 @@ import org.junit.Test
  */
 @OptIn(ExperimentalTestApi::class)
 class EndTodaySessionTest {
+    // 端末がスリープしていてもテストが動くようにする
+    @get:Rule
+    val screenWakeRule = ScreenWakeRule()
+
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
@@ -57,9 +61,15 @@ class EndTodaySessionTest {
         repository = repo
     }
 
+    /**
+     * テスト終了後の後始末。
+     *
+     * インメモリDBは閉じない。画面が持つViewModelは、テストが終わった後も
+     * 保存の処理を続けていることがあり、閉じた先へ書きに行って落ちるため。
+     * テストごとに新しいインスタンスを作っているので、閉じなくても値は混ざらない。
+     */
     @After
     fun tearDown() {
-        db.close()
     }
 
     private fun string(resId: Int) = composeTestRule.activity.getString(resId)
@@ -67,7 +77,7 @@ class EndTodaySessionTest {
     // skipGame=falseのアラームは、一覧から「今日はもう止める」→確認ダイアログの承認だけでゲーム無しに完了することを保証する
     @Test
     fun skipGameがオフなら確認だけで当日終了する() {
-        val id = runBlocking { repository.add(defaultTestSchedule(skipGame = false)) }
+        val id = runBlocking { repository.add(defaultTestSchedule(skipGame = false, startMinutes = 0, endMinutes = 23 * 60 + 59)) }
         var navigatedToSkipGame = false
         composeTestRule.setContent {
             AlarmListScreen(
@@ -75,11 +85,15 @@ class EndTodaySessionTest {
                 onAddAlarm = {},
                 onEditAlarm = {},
                 onOpenAbout = {},
+                onOpenPrivacyPolicy = {},
+                onOpenSettings = {},
                 onNavigateToSkipGame = { navigatedToSkipGame = true },
                 exactAlarmBanner = {},
                 notificationPermissionBanner = {},
             )
         }
+        // 一覧のカードは動きを付けて出るため、押せる状態になるまで待つ
+        composeTestRule.waitUntilAtLeastOneExists(hasText(string(R.string.ringing_skip_today)), 5_000)
         composeTestRule.onNodeWithText(string(R.string.ringing_skip_today)).performClick()
         // skipGame=falseなのでゲーム画面へは遷移せず、確認ダイアログが出るはず
         assertTrue(!navigatedToSkipGame)
@@ -91,7 +105,7 @@ class EndTodaySessionTest {
     // skipGame=trueのアラームは、一覧の「今日はもう止める」から確認ダイアログを経ずゲーム画面へ遷移することを保証する
     @Test
     fun skipGameがオンならゲーム画面へ遷移する() {
-        runBlocking { repository.add(defaultTestSchedule(skipGame = true)) }
+        runBlocking { repository.add(defaultTestSchedule(skipGame = true, startMinutes = 0, endMinutes = 23 * 60 + 59)) }
         var navigatedId: Long? = null
         composeTestRule.setContent {
             AlarmListScreen(
@@ -99,11 +113,15 @@ class EndTodaySessionTest {
                 onAddAlarm = {},
                 onEditAlarm = {},
                 onOpenAbout = {},
+                onOpenPrivacyPolicy = {},
+                onOpenSettings = {},
                 onNavigateToSkipGame = { id -> navigatedId = id },
                 exactAlarmBanner = {},
                 notificationPermissionBanner = {},
             )
         }
+        // 一覧のカードは動きを付けて出るため、押せる状態になるまで待つ
+        composeTestRule.waitUntilAtLeastOneExists(hasText(string(R.string.ringing_skip_today)), 5_000)
         composeTestRule.onNodeWithText(string(R.string.ringing_skip_today)).performClick()
         // 確認ダイアログを経由せず直接遷移するので、確認ボタンは存在しない
         composeTestRule.onNodeWithText(string(R.string.end_today_session_confirm)).assertDoesNotExist()
@@ -113,7 +131,7 @@ class EndTodaySessionTest {
     // ゲームに正解すると当日終了(skippedSessionStartの書き込み)が実行されることを保証する
     @Test
     fun ゲームに正解すると当日終了が実行される() {
-        val id = runBlocking { repository.add(defaultTestSchedule(skipGame = true)) }
+        val id = runBlocking { repository.add(defaultTestSchedule(skipGame = true, startMinutes = 0, endMinutes = 23 * 60 + 59)) }
         lateinit var viewModel: SkipGameViewModel
         composeTestRule.setContent {
             viewModel = remember { SkipGameViewModel(repository, testAppContext(), id, hasShakeSensor = false, random = Random(0)) }
@@ -130,10 +148,14 @@ class EndTodaySessionTest {
     // ゲームに不正解のときは、当日終了が実行されないことを保証する
     @Test
     fun ゲームに不正解では当日終了が実行されない() {
-        val id = runBlocking { repository.add(defaultTestSchedule(skipGame = true)) }
+        val id = runBlocking { repository.add(defaultTestSchedule(skipGame = true, startMinutes = 0, endMinutes = 23 * 60 + 59)) }
         lateinit var viewModel: SkipGameViewModel
         composeTestRule.setContent {
-            viewModel = remember { SkipGameViewModel(repository, testAppContext(), id, hasShakeSensor = false) }
+            // 出題を固定する。乱数のままだと、問題文と選択肢に同じ文字が出て
+                // 押す先を決められない回があり、実行のたびに結果が変わっていた
+                viewModel = remember {
+                    SkipGameViewModel(repository, testAppContext(), id, hasShakeSensor = false, random = Random(0))
+                }
             SkipGameScreen(viewModel = viewModel, onClose = {})
         }
         composeTestRule.waitUntil(5_000) { viewModel.uiState.question != null }
@@ -175,7 +197,9 @@ class EndTodaySessionTest {
             // 最初のタップを2番目の数字にして順序を崩す。SequentialTapGameはこの場合onSubmitを呼ばず最初からやり直しになる
             is GameQuestion.SequentialTap -> composeTestRule.onNodeWithText("2").performClick()
             is GameQuestion.ColorWord -> {
-                val wrongChoice = question.choices.first { it != question.correctAnswer }
+                // 出題されている語そのものは画面に2つ(問題の文字と選択肢)出るため、目印として使えない。
+                // 色は6つあるので、正解でも出題語でもないものが必ず残る
+                val wrongChoice = question.choices.first { it != question.correctAnswer && it != question.word }
                 composeTestRule.onNodeWithText(wrongChoice).performClick()
             }
             is GameQuestion.ShakeDevice -> error("hasShakeSensor=falseのためSHAKE_DEVICEは出題されないはず")

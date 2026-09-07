@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.GameQuestion
 import com.marutyan.termalarm.ui.common.formatClockMinutes
+import com.marutyan.termalarm.ui.common.clockTimePattern
 import com.marutyan.termalarm.ui.theme.tabularNums
 
 /**
@@ -82,6 +83,8 @@ fun SkipGameScreen(viewModel: SkipGameViewModel, onClose: () -> Unit) {
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
+        // 案内は上に固定し、問題の部分だけをスクロールさせる。
+        // どちらも画面いっぱいを取ろうとすると、押し合ってボタンが重なる
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
             SkipGameInfoBanner(
                 startMinutes = uiState.startMinutes,
@@ -89,7 +92,10 @@ fun SkipGameScreen(viewModel: SkipGameViewModel, onClose: () -> Unit) {
                 totalOccurrences = uiState.totalOccurrences,
             )
             Column(
-                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 val question = uiState.question
@@ -108,10 +114,11 @@ fun SkipGameScreen(viewModel: SkipGameViewModel, onClose: () -> Unit) {
 // 正解すると何を止めるかを伝える案内バナー(design/SkipGame.dc.htmlの水色バナー)
 @Composable
 private fun SkipGameInfoBanner(startMinutes: Int, endMinutes: Int, totalOccurrences: Int) {
+    val pattern = clockTimePattern()
     val range = if (startMinutes == endMinutes) {
-        formatClockMinutes(startMinutes)
+        formatClockMinutes(startMinutes, pattern)
     } else {
-        "${formatClockMinutes(startMinutes)}–${formatClockMinutes(endMinutes)}"
+        "${formatClockMinutes(startMinutes, pattern)}–${formatClockMinutes(endMinutes, pattern)}"
     }
     Row(
         modifier = Modifier

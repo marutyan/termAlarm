@@ -1,23 +1,40 @@
 package com.marutyan.termalarm.ui.stopwatch
 
 import android.os.SystemClock
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -26,33 +43,69 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.theme.COMPACT_SCREEN_HEIGHT_THRESHOLD
+import com.marutyan.termalarm.ui.theme.heroClock
+import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.StopwatchLap
 import com.marutyan.termalarm.domain.StopwatchRunState
 import com.marutyan.termalarm.domain.elapsedMillis
 import com.marutyan.termalarm.stopwatch.formatElapsed
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.marutyan.termalarm.ui.theme.pressScaleEffect
 import com.marutyan.termalarm.ui.theme.tabularNums
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // 動作中(RUNNING)の画面表示を更新する間隔。ストップウォッチは1/100秒まで表示するのが一般的だが、
 // 実際に100Hzで再描画すると電池を消費するだけで人の目には差が分からない。10Hz(100ms)なら
 // 1/100秒表示の見た目上の滑らかさを保ちつつ再描画回数を1/10に抑えられるため、この値を採用した。
 private const val TICK_INTERVAL_RUNNING_MILLIS = 100L
 
+// 操作ボタンの高さ・間隔・左右余白。純正の実測値そのまま(docs/OFFICIAL_UI.md「ストップウォッチ」)。
+// 純正は主な操作(開始・停止)だけを大きくし、リセットとラップはひと回り小さくしている
+private val PRIMARY_BUTTON_HEIGHT = 129.dp
+private val SECONDARY_BUTTON_HEIGHT = 89.dp
+private val CONTROL_BUTTON_SPACING = 7.dp
+private val SCREEN_HORIZONTAL_PADDING = 16.dp
+
+// 経過時間の上に置く余白。画面の上端から少し下げて置く
+private val TIME_TOP_PADDING = 56.dp
+
+// ラップを左右へ送る矢印ボタンの大きさ。矢印が出ていない間も、この高さだけ場所を空けておく
+private val LAP_SCROLL_BUTTON_SIZE = 48.dp
+
+// 画面の高さが狭いときに使う操作ボタンの高さ。分割画面でも3つのボタンが収まるように小さくする。
+// 主と副の大小関係は純正と同じ比率のまま保つ
+private val COMPACT_PRIMARY_BUTTON_HEIGHT = 56.dp
+private val COMPACT_SECONDARY_BUTTON_HEIGHT = 44.dp
+
 /**
- * ストップウォッチタブの画面。経過時間の大表示、開始・一時停止・再開・ラップ・リセットの操作、
- * ラップ一覧(各ラップの時間とその時点の合計)を持つ(docs/SPEC.md「ストップウォッチタブ」)。
+ * ストップウォッチタブの画面。design/tabs/Stopwatch.dc.htmlを再現する。画面上部に余白を詰めた特大の経過時間、
+ * その下に横並びのラップカード、最下部に固定された縦3つの巨大な操作ボタンを置く
+ * (docs/OFFICIAL_UI.md「ストップウォッチ」)。ラップを刻んでもボタンが押し下げられないよう画面下部に固定する。
  * 経過時間の表示は動作中(RUNNING)のときだけ100msごとに更新し、一時停止中/未開始は再描画しない。
  */
 @Composable
-fun StopwatchScreen(viewModel: StopwatchViewModel, bottomBar: @Composable () -> Unit) {
+fun StopwatchScreen(
+    viewModel: StopwatchViewModel,
+    onOpenSettings: () -> Unit = {},
+    onOpenPrivacyPolicy: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
+    bottomBar: @Composable () -> Unit,
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val laps by viewModel.laps.collectAsStateWithLifecycle()
     val isRunning = state.runState == StopwatchRunState.RUNNING
@@ -60,26 +113,101 @@ fun StopwatchScreen(viewModel: StopwatchViewModel, bottomBar: @Composable () -> 
     val elapsed = elapsedMillis(state, nowElapsed, nowWall)
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_stopwatch), style = MaterialTheme.typography.headlineMedium) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.tab_stopwatch), style = MaterialTheme.typography.headlineMedium) },
+                actions = {
+                    TermAlarmOverflowMenu(
+                        onOpenSettings = onOpenSettings,
+                        onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                        onOpenAbout = onOpenAbout,
+                    )
+                },
+            )
+        },
         bottomBar = bottomBar,
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Text(
-                text = formatElapsed(elapsed, includeCentiseconds = true),
-                style = MaterialTheme.typography.displayLarge.tabularNums(),
-                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                textAlign = TextAlign.Center,
-            )
-            StopwatchControls(
-                runState = state.runState,
-                onStart = viewModel::start,
-                onPause = viewModel::pause,
-                onResume = viewModel::resume,
-                onReset = viewModel::reset,
-                onLap = viewModel::lap,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            LapList(laps = laps, modifier = Modifier.fillMaxSize())
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            val screenMaxHeight = maxHeight
+            val isCompact = screenMaxHeight < COMPACT_SCREEN_HEIGHT_THRESHOLD
+            val primaryButtonHeight = if (isCompact) COMPACT_PRIMARY_BUTTON_HEIGHT else PRIMARY_BUTTON_HEIGHT
+            val secondaryButtonHeight = if (isCompact) COMPACT_SECONDARY_BUTTON_HEIGHT else SECONDARY_BUTTON_HEIGHT
+            val controlsBottomPadding = if (isCompact) 16.dp else 96.dp
+            // 経過時間は画面の上端に近すぎると窮屈に見える。上へ余白を足して少し下げる
+            val timeTopPadding = if (isCompact) 8.dp else TIME_TOP_PADDING
+            val timeBottomPadding = if (isCompact) 4.dp else 8.dp
+            val buttonSpacing = if (isCompact) 8.dp else CONTROL_BUTTON_SPACING
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = screenMaxHeight),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        val formatted = formatElapsed(elapsed, includeCentiseconds = true)
+                        val dotIndex = formatted.indexOf('.')
+                        val (mainPart, centisPart) = if (dotIndex >= 0) {
+                            formatted.substring(0, dotIndex) to formatted.substring(dotIndex)
+                        } else {
+                            formatted to ""
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = timeTopPadding, bottom = timeBottomPadding),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            // 数字は動かさない。純正も経過時間の数字は動かさず、静かに入れ替える
+                            Text(
+                                text = mainPart + centisPart,
+                                style = if (isCompact) {
+                                    MaterialTheme.typography.displayMedium.tabularNums()
+                                } else {
+                                    MaterialTheme.typography.displayLarge.heroClock()
+                                },
+                                // まだ計測していないときは地に近い色にして、動いていないことを見て分かるようにする
+                                color = if (state.runState == StopwatchRunState.IDLE) {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                            )
+                        }
+                        LapRow(
+                            laps = laps,
+                            modifier = Modifier.padding(horizontal = SCREEN_HORIZONTAL_PADDING),
+                        )
+                    }
+
+                    StopwatchControls(
+                        runState = state.runState,
+                        onStart = viewModel::start,
+                        onPause = viewModel::pause,
+                        onResume = viewModel::resume,
+                        onReset = viewModel::reset,
+                        onLap = viewModel::lap,
+                        primaryButtonHeight = primaryButtonHeight,
+                        secondaryButtonHeight = secondaryButtonHeight,
+                        buttonSpacing = buttonSpacing,
+                        // 純正の開始ボタンは画面の下端に張り付かず、少し上に浮いている
+                        modifier = Modifier.padding(
+                            start = SCREEN_HORIZONTAL_PADDING,
+                            end = SCREEN_HORIZONTAL_PADDING,
+                            bottom = controlsBottomPadding,
+                        ),
+                    )
+                }
+            }
         }
     }
 }
@@ -105,6 +233,12 @@ private fun rememberTickingNow(isRunning: Boolean): Pair<Long, Long> {
     return nowElapsed to nowWall
 }
 
+/**
+ * 縦に並ぶ3つの操作ボタン。上段はIDLE/RUNNING/PAUSEDに応じて開始・一時停止・再開のいずれかへ切り替わる
+ * 「主役」のボタンで、動作中(RUNNING)の一時停止だけerror色で目立たせる(docs/OFFICIAL_UI.md「ストップウォッチ」)。
+ * 狭い画面ではbuttonHeightとbuttonSpacingを縮めて全体が収まりやすくする。
+ * リセットはPAUSEDのときだけ、ラップはRUNNINGのときだけ押せる(元の実装の状態遷移をそのまま維持)。
+ */
 @Composable
 private fun StopwatchControls(
     runState: StopwatchRunState,
@@ -113,79 +247,194 @@ private fun StopwatchControls(
     onResume: () -> Unit,
     onReset: () -> Unit,
     onLap: () -> Unit,
+    primaryButtonHeight: Dp = PRIMARY_BUTTON_HEIGHT,
+    secondaryButtonHeight: Dp = SECONDARY_BUTTON_HEIGHT,
+    buttonSpacing: Dp = CONTROL_BUTTON_SPACING,
+    modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        when (runState) {
-            StopwatchRunState.IDLE -> {
-                Button(onClick = onStart, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.stopwatch_start))
-                }
-            }
-            StopwatchRunState.RUNNING -> {
-                OutlinedButton(onClick = onLap, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.stopwatch_lap))
-                }
-                Button(onClick = onPause, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.stopwatch_pause))
-                }
-            }
-            StopwatchRunState.PAUSED -> {
-                OutlinedButton(onClick = onReset, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.stopwatch_reset))
-                }
-                Button(onClick = onResume, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.stopwatch_resume))
-                }
-            }
-        }
+    val isRunning = runState == StopwatchRunState.RUNNING
+    val (primaryLabel, primaryAction) = when (runState) {
+        // 純正の文字は「開始」と「停止」の2つだけ。止めた後の再開も「開始」と出す
+        StopwatchRunState.IDLE -> R.string.stopwatch_start to onStart
+        StopwatchRunState.RUNNING -> R.string.stopwatch_pause to onPause
+        StopwatchRunState.PAUSED -> R.string.stopwatch_start to onResume
     }
-}
 
-// ラップ一覧。新しいラップほど上に出す(docs/SPEC.md「各ラップの時間と、その時点の合計を並べる」)
-@Composable
-private fun LapList(laps: List<StopwatchLap>, modifier: Modifier = Modifier) {
-    if (laps.isEmpty()) {
-        Box(modifier = modifier, contentAlignment = Alignment.Center) {
-            Text(
-                text = stringResource(R.string.stopwatch_laps_empty),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+    // 開始・停止の切り替え時にボタンの色を滑らかに移行させるアニメーション値(0f: 通常, 1f: 停止操作)。
+    // 状態変化の瞬間だけ200msで補間し、常時動き続けず電池を消費しないようにする。
+    val transitionProgress by animateFloatAsState(
+        targetValue = if (isRunning) 1f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "StopwatchButtonTransition",
+    )
+    val primaryContainerColor = lerp(
+        MaterialTheme.colorScheme.primary,
+        MaterialTheme.colorScheme.error,
+        transitionProgress,
+    )
+    val primaryContentColor = lerp(
+        MaterialTheme.colorScheme.onPrimary,
+        MaterialTheme.colorScheme.onError,
+        transitionProgress,
+    )
+
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(buttonSpacing)) {
+        // 一時停止(=停止)のときだけerror色。開始・再開は主要な操作なのでprimaryを使う
+        // (docs/OFFICIAL_UI.md「共通」の色対応表)。切り替え時はanimateFloatAsStateで滑らかに遷移する
+        ControlButton(
+            label = stringResource(primaryLabel),
+            onClick = primaryAction,
+            containerColor = primaryContainerColor,
+            contentColor = primaryContentColor,
+            buttonHeight = primaryButtonHeight,
+        )
+        // まだ計測していないときは「開始」だけを出す。純正も同じで、押せないボタンを並べない。
+        // 一度でも動かした後は、止める・戻す・刻むの3つが要る
+        if (runState != StopwatchRunState.IDLE) {
+            // 純正はリセットとラップを同じ地の色で並べる。動作中でもリセットは押せる
+            ControlButton(
+                label = stringResource(R.string.stopwatch_reset),
+                onClick = onReset,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                buttonHeight = secondaryButtonHeight,
+            )
+            ControlButton(
+                label = stringResource(R.string.stopwatch_lap),
+                onClick = onLap,
+                enabled = isRunning,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                buttonHeight = secondaryButtonHeight,
             )
         }
-        return
     }
-    LazyColumn(
-        modifier = modifier,
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+}
+
+// 3つの操作ボタンに共通する見た目(完全な丸角)だけをまとめた小さな部品。
+// buttonHeightにより通常時と画面高不足時のサイズ切り替えに対応する。
+@Composable
+private fun ControlButton(
+    label: String,
+    onClick: () -> Unit,
+    containerColor: Color,
+    contentColor: Color,
+    enabled: Boolean = true,
+    buttonHeight: Dp = PRIMARY_BUTTON_HEIGHT,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        shape = RoundedCornerShape(percent = 50),
+        interactionSource = interactionSource,
+        colors = ButtonDefaults.buttonColors(containerColor = containerColor, contentColor = contentColor),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(buttonHeight)
+            .pressScaleEffect(interactionSource),
     ) {
-        items(laps.asReversed(), key = { it.lapNumber }) { lap ->
-            LapRow(lap)
-            HorizontalDivider()
+        Text(label, style = MaterialTheme.typography.titleLarge)
+    }
+}
+
+/**
+ * ラップ一覧。design/tabs/Stopwatch.dc.htmlと同じく横並びのカードにし、右上の矢印ボタンで送る
+ * (docs/OFFICIAL_UI.md「ストップウォッチ」)。ラップが無い間はStopwatchScreenTestが検証する
+ * 案内文だけを表示する。
+ */
+@Composable
+private fun LapRow(laps: List<StopwatchLap>, modifier: Modifier = Modifier) {
+    // 純正はラップが無いとき何も出さない。案内文を置くと、押せない操作があるように見える
+    if (laps.isEmpty()) return
+
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    // 新しいラップが増えるたびに最新(末尾)が見えるよう自動でスクロールする
+    LaunchedEffect(laps.size) {
+        if (laps.isNotEmpty()) listState.animateScrollToItem(laps.lastIndex)
+    }
+
+    // 全部が一度に収まっているときは、押しても何も起きない矢印を出さない(純正も出さない)
+    val canScroll = listState.canScrollBackward || listState.canScrollForward
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // 矢印は4件目から現れる。そのとき下のカードが押し下がって見えないよう、
+        // 矢印が無い間もこの行の高さだけは空けておく
+        Row(
+            modifier = Modifier.fillMaxWidth().height(LAP_SCROLL_BUTTON_SIZE),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+        ) {
+            if (canScroll) {
+                LapScrollButton(
+                    icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    contentDescription = stringResource(R.string.stopwatch_lap_scroll_previous),
+                    onClick = { scope.launch { listState.animateScrollToItem(maxOf(0, listState.firstVisibleItemIndex - 1)) } },
+                )
+                LapScrollButton(
+                    icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = stringResource(R.string.stopwatch_lap_scroll_next),
+                    onClick = { scope.launch { listState.animateScrollToItem(minOf(laps.lastIndex, listState.firstVisibleItemIndex + 1)) } },
+                )
+            }
+        }
+        // 端まで詰めると、スクロールした時に隣のカードが切れて見える。左右へ余白を置く
+        LazyRow(
+            state = listState,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp),
+        ) {
+            itemsIndexed(laps, key = { _, lap -> lap.lapNumber }) { index, lap ->
+                LapCard(lap, isLatest = index == laps.lastIndex)
+            }
         }
     }
 }
 
 @Composable
-private fun LapRow(lap: StopwatchLap) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+private fun LapScrollButton(icon: ImageVector, contentDescription: String, onClick: () -> Unit) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.size(LAP_SCROLL_BUTTON_SIZE),
+        colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
     ) {
-        Text(
-            text = stringResource(R.string.stopwatch_lap_number, lap.lapNumber),
-            style = MaterialTheme.typography.bodyLarge,
-        )
-        Text(
-            text = formatElapsed(lap.lapMillis, includeCentiseconds = true),
-            style = MaterialTheme.typography.bodyLarge.tabularNums(),
-        )
-        Text(
-            text = stringResource(R.string.stopwatch_lap_total, formatElapsed(lap.totalMillis, includeCentiseconds = true)),
-            style = MaterialTheme.typography.bodyLarge.tabularNums(),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Icon(icon, contentDescription = contentDescription, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+// ラップ1件のカード。周回数・そのラップの時間・その時点の合計を縦3行で並べる(docs/OFFICIAL_UI.md)
+// isLatestは直前に刻んだラップ。純正と同じく色を変えて、どれが今のものか一目で分かるようにする
+@Composable
+private fun LapCard(lap: StopwatchLap, isLatest: Boolean) {
+    val accent = MaterialTheme.colorScheme.primary
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(
+            width = if (isLatest) 2.dp else 1.dp,
+            color = if (isLatest) accent else MaterialTheme.colorScheme.outlineVariant,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.width(84.dp).padding(vertical = 16.dp, horizontal = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.stopwatch_lap_number, lap.lapNumber),
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (isLatest) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = formatElapsed(lap.lapMillis, includeCentiseconds = true),
+                style = MaterialTheme.typography.bodyMedium.tabularNums(),
+                color = if (isLatest) accent else MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = stringResource(R.string.stopwatch_lap_total, formatElapsed(lap.totalMillis, includeCentiseconds = true)),
+                style = MaterialTheme.typography.bodySmall.tabularNums(),
+                color = MaterialTheme.colorScheme.outline,
+            )
+        }
     }
 }

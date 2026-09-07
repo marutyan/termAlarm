@@ -10,8 +10,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.AlarmRepository
+import androidx.lifecycle.lifecycleScope
+import com.marutyan.termalarm.timer.TimerActions
+import kotlinx.coroutines.launch
 import com.marutyan.termalarm.ui.navigation.TermAlarmNavHost
 import com.marutyan.termalarm.ui.skipgame.hasShakeSensor
 import com.marutyan.termalarm.ui.theme.TermAlarmTheme
@@ -24,11 +27,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // ステータスバー/ナビゲーションバーの裏まで描画するエッジツーエッジ表示を有効化
         enableEdgeToEdge()
+        // 動いているタイマーがあれば、その通知を出し直す。
+        // 通知を消してしまっても、アプリを開けば戻るようにするため
+        lifecycleScope.launch { TimerActions.refreshNotification(applicationContext) }
         setContent {
             TermAlarmTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     val context = LocalContext.current
-                    val repository = remember { AlarmRepository(AlarmDatabase.getInstance(context).alarmDao()) }
+                    val repository = remember { Repositories.alarm(context) }
                     val hasShakeSensor = remember { hasShakeSensor(context) }
                     TermAlarmNavHost(repository = repository, hasShakeSensor = hasShakeSensor)
                 }

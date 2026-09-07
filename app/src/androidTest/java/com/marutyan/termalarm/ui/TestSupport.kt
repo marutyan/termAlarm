@@ -12,14 +12,17 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
+import com.marutyan.termalarm.data.ClockSettingsRepository
+import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.data.StopwatchRepository
 import com.marutyan.termalarm.data.TimerRepository
-import com.marutyan.termalarm.data.WorldClockRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
+import java.time.DayOfWeek
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditScreen
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditViewModel
 import com.marutyan.termalarm.ui.alarmlist.AlarmListScreen
@@ -68,24 +71,13 @@ internal fun createTestStopwatchRepository(): Pair<AlarmDatabase, StopwatchRepos
 }
 
 /**
- * 時計(世界時計)UIテスト専用のインメモリRoomDB+WorldClockRepositoryを作る。都市一覧と表示設定の
- * 2つのDAOを同じインメモリDBから渡す(本物のWorldClockRepositoryの構築方法と同じ)。
- */
-internal fun createTestWorldClockRepository(): Pair<AlarmDatabase, WorldClockRepository> {
-    val context = InstrumentationRegistry.getInstrumentation().targetContext
-    val db = Room.inMemoryDatabaseBuilder(context, AlarmDatabase::class.java)
-        .fallbackToDestructiveMigration(true)
-        .build()
-    return db to WorldClockRepository(db.worldClockCityDao(), db.clockSettingsDao())
-}
-
-/**
  * テストで使う既定値のアラーム。docs/SPEC.mdの既定値(7:00〜9:00・5分間隔・skipRequiresApp=true等)と
  * AlarmEditUiStateの既定値に合わせる。個々のテストは変えたいフィールドだけ引数で上書きする。
  */
 internal fun defaultTestSchedule(
     startMinutes: Int = 7 * 60,
     endMinutes: Int = 9 * 60,
+    repeatDays: Set<DayOfWeek> = emptySet(),
     intervalMinutes: Int = 5,
     label: String = "",
     skipRequiresApp: Boolean = true,
@@ -96,7 +88,7 @@ internal fun defaultTestSchedule(
     startMinutes = startMinutes,
     endMinutes = endMinutes,
     intervalMinutes = intervalMinutes,
-    repeatDays = emptySet(),
+    repeatDays = repeatDays,
     label = label,
     soundUri = null,
     vibrate = true,
@@ -126,6 +118,8 @@ internal fun ListEditHost(repository: AlarmRepository) {
             onAddAlarm = { screen = ListEditScreen.Edit(null) },
             onEditAlarm = { id -> screen = ListEditScreen.Edit(id) },
             onOpenAbout = {},
+            onOpenPrivacyPolicy = {},
+            onOpenSettings = {},
             onNavigateToSkipGame = {},
             exactAlarmBanner = {},
             notificationPermissionBanner = {},
@@ -144,9 +138,36 @@ internal fun ListEditHost(repository: AlarmRepository) {
  * 同じカード内の複数Switchを区別できない。そのため縦位置が重なるSwitchを幾何的に特定する。
  */
 internal fun ComposeTestRule.switchNear(label: String): SemanticsNodeInteraction {
+    // 画面が縦にスクロールできるようになったため、目当ての行が画面の外にあることがある。
+    // 外にある要素は座標を持たず、隣のスイッチを座標で探せない。先に見える位置まで運ぶ
+    runCatching { onNodeWithText(label).performScrollTo() }
     val labelBounds = onNodeWithText(label, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
     val match: SemanticsNode = onAllNodes(isToggleable(), useUnmergedTree = true)
         .fetchSemanticsNodes()
         .first { it.boundsInRoot.top < labelBounds.bottom && it.boundsInRoot.bottom > labelBounds.top }
     return onNode(SemanticsMatcher("id=${match.id}") { it.id == match.id }, useUnmergedTree = true)
+}
+
+/**
+ * 時計タブUIテスト専用のインメモリRoomDB+ClockSettingsRepositoryを作る。
+ * テストごとに新しいインメモリDBを作るため他機能のテストとは独立する。
+ */
+internal fun createTestClockRepository(): Pair<AlarmDatabase, ClockSettingsRepository> {
+    val context = InstrumentationRegistry.getInstrumentation().targetContext
+    val db = Room.inMemoryDatabaseBuilder(context, AlarmDatabase::class.java)
+        .fallbackToDestructiveMigration(true)
+        .build()
+    return db to ClockSettingsRepository(db.clockSettingsDao())
+}
+
+/**
+ * 設定画面UIテスト専用のインメモリRoomDBとSettingsRepository、ClockSettingsRepositoryを作る。
+ * 設定画面が参照する2つのリポジトリを同一のインメモリDBに紐づけて独立したテスト環境を提供する。
+ */
+internal fun createTestSettingsRepositories(): Triple<AlarmDatabase, SettingsRepository, ClockSettingsRepository> {
+    val context = InstrumentationRegistry.getInstrumentation().targetContext
+    val db = Room.inMemoryDatabaseBuilder(context, AlarmDatabase::class.java)
+        .fallbackToDestructiveMigration(true)
+        .build()
+    return Triple(db, SettingsRepository(db.appSettingsDao()), ClockSettingsRepository(db.clockSettingsDao()))
 }

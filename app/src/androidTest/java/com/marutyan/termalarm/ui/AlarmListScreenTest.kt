@@ -25,6 +25,10 @@ import org.junit.Test
  */
 @OptIn(ExperimentalTestApi::class)
 class AlarmListScreenTest {
+    // 端末がスリープしていてもテストが動くようにする
+    @get:Rule
+    val screenWakeRule = ScreenWakeRule()
+
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
@@ -38,9 +42,15 @@ class AlarmListScreenTest {
         repository = repo
     }
 
+    /**
+     * テスト終了後の後始末。
+     *
+     * インメモリDBは閉じない。画面が持つViewModelは、テストが終わった後も
+     * 保存の処理を続けていることがあり、閉じた先へ書きに行って落ちるため。
+     * テストごとに新しいインスタンスを作っているので、閉じなくても値は混ざらない。
+     */
     @After
     fun tearDown() {
-        db.close()
     }
 
     // アラームが1件も無いとき、案内文が表示されることを保証する
@@ -65,8 +75,8 @@ class AlarmListScreenTest {
         // 保存はRoomへのsuspend書き込みを挟むため、一覧へ戻り行の要約が出るまで待つ
         val summary = "5分ごと · 25回"
         composeTestRule.waitUntilAtLeastOneExists(hasText(summary), 5_000)
-        composeTestRule.onNodeWithText("7:00").assertExists()
-        composeTestRule.onNodeWithText("9:00").assertExists()
+        // 開始と終了は1つの文にまとめて出す(折り返し位置を揃えるため)
+        composeTestRule.onNodeWithText("7:00\u20139:00").assertExists()
 
         val saved = runBlocking { repository.observeAll().first() }
         org.junit.Assert.assertEquals(1, saved.size)
@@ -78,7 +88,9 @@ class AlarmListScreenTest {
         val id = runBlocking { repository.add(defaultTestSchedule()) }
         composeTestRule.setContent { ListEditHost(repository) }
 
-        composeTestRule.onNodeWithText("5分ごと · 25回").performClick()
+        // カードは中身をまとめて1つの節点にするため、文字で探すとカードそのものが返る。
+        // その中心は曜日の行に重なることがあるので、時刻の文字を直接押す
+        composeTestRule.onNodeWithText("5分ごと · 25回", useUnmergedTree = true).performClick()
         composeTestRule.waitUntilAtLeastOneExists(hasText(context().getString(R.string.edit_title_existing)), 5_000)
 
         // TimeCardはラベルと値をマージした1ノードになる(「開始」「7:00」がまとめて1つのText)

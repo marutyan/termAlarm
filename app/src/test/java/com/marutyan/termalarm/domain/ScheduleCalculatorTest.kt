@@ -213,10 +213,12 @@ class ScheduleCalculatorTest {
         val today = LocalDate.of(2024, 1, 3)
         val s = schedule(7 * 60, 9 * 60, 5)
 
-        // セッションの途中。残りがあるので実行できる
+        // タームの途中。残りがあるので終了できる
         assertTrue(canEndTodaySession(s, ZonedDateTime.of(today, java.time.LocalTime.of(7, 30), TOKYO)))
-        // セッション開始前。今日これから鳴るので実行できる
-        assertTrue(canEndTodaySession(s, ZonedDateTime.of(today, java.time.LocalTime.of(6, 0), TOKYO)))
+        // ちょうど開始時刻。ここから始まる
+        assertTrue(canEndTodaySession(s, ZonedDateTime.of(today, java.time.LocalTime.of(7, 0), TOKYO)))
+        // まだ始まっていない。終わらせるものが無いので出さない
+        assertFalse(canEndTodaySession(s, ZonedDateTime.of(today, java.time.LocalTime.of(6, 0), TOKYO)))
         // 最後の回まで鳴り終えた後。今日の分はもう無い
         assertFalse(canEndTodaySession(s, ZonedDateTime.of(today, java.time.LocalTime.of(9, 30), TOKYO)))
     }
@@ -294,5 +296,21 @@ class ScheduleCalculatorTest {
     fun `無効なアラームは残り時間を返さない`() {
         val disabled = weeklyMondayAlarm.copy(enabled = false)
         assertNull(remainingTimeUntilNextTrigger(disabled, mondayTrigger.minusMinutes(30)))
+    }
+
+    @Test
+    fun `日をまたぐタームは、始まってから終わるまでの間だけ終了できる`() {
+        val day = LocalDate.of(2024, 1, 3)
+        // 22:00から翌2:00まで、10分ごと
+        val s = schedule(22 * 60, 2 * 60, 10, repeatDays = DayOfWeek.entries.toSet())
+
+        // 始まる前
+        assertFalse(canEndTodaySession(s, ZonedDateTime.of(day, java.time.LocalTime.of(21, 0), TOKYO)))
+        // 始まった直後
+        assertTrue(canEndTodaySession(s, ZonedDateTime.of(day, java.time.LocalTime.of(22, 0), TOKYO)))
+        // 日付が変わった後、まだターム中
+        assertTrue(canEndTodaySession(s, ZonedDateTime.of(day.plusDays(1), java.time.LocalTime.of(1, 0), TOKYO)))
+        // 終わった後
+        assertFalse(canEndTodaySession(s, ZonedDateTime.of(day.plusDays(1), java.time.LocalTime.of(3, 0), TOKYO)))
     }
 }

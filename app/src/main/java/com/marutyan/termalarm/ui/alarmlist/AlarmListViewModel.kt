@@ -5,11 +5,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.marutyan.termalarm.alarm.AlarmScheduler
+import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.AlarmRepository
+import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
+import java.time.DayOfWeek
+import com.marutyan.termalarm.domain.WeekStart
 import java.time.ZonedDateTime
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -27,10 +32,31 @@ class AlarmListViewModel(private val repository: AlarmRepository, context: Conte
     val alarms: StateFlow<List<AlarmSchedule>> = repository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    // 曜日チップの並び順(設定「週の始まり」)。NavHostを変更せずに済むよう、ここでcontextから組み立てる
+    val weekStart: StateFlow<WeekStart> =
+        Repositories.settings(appContext).observe().map { it.weekStart }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeekStart.SUNDAY)
+
     fun setEnabled(id: Long, enabled: Boolean) {
         viewModelScope.launch {
             repository.setEnabled(id, enabled)
             AlarmScheduler.reschedule(appContext, id)
+        }
+    }
+
+    /**
+     * 一覧のカードから曜日を切り替える。
+     * 編集画面を開かずに「今週は水曜だけ外す」といった調整ができるようにするため。
+     */
+    fun toggleDay(schedule: AlarmSchedule, day: DayOfWeek) {
+        viewModelScope.launch {
+            val days = if (day in schedule.repeatDays) {
+                schedule.repeatDays - day
+            } else {
+                schedule.repeatDays + day
+            }
+            repository.update(schedule.copy(repeatDays = days))
+            AlarmScheduler.reschedule(appContext, schedule.id)
         }
     }
 

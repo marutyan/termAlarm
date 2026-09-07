@@ -1,6 +1,5 @@
 package com.marutyan.termalarm.stopwatch
 
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
@@ -14,7 +13,8 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.marutyan.termalarm.MainActivity
 import com.marutyan.termalarm.R
-import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.Repositories
+import com.marutyan.termalarm.notification.NotificationChannels
 import com.marutyan.termalarm.data.StopwatchRepository
 import com.marutyan.termalarm.domain.StopwatchRunState
 import com.marutyan.termalarm.domain.elapsedMillis
@@ -100,20 +100,14 @@ class StopwatchForegroundService : Service() {
     }
 
     // 通知チャンネルは一度だけ作成すればよい。1秒ごとの更新で毎回鳴らさないようIMPORTANCE_LOWにする
-    private fun ensureChannel(): String {
-        val manager = getSystemService(NotificationManager::class.java)
-        if (manager.getNotificationChannel(STOPWATCH_NOTIFICATION_CHANNEL_ID) == null) {
-            val channel = NotificationChannel(
-                STOPWATCH_NOTIFICATION_CHANNEL_ID,
-                getString(R.string.stopwatch_notification_channel_name),
-                NotificationManager.IMPORTANCE_LOW,
-            )
-            manager.createNotificationChannel(channel)
-        }
-        return STOPWATCH_NOTIFICATION_CHANNEL_ID
-    }
+    private fun ensureChannel(): String = NotificationChannels.ensure(
+        this,
+        STOPWATCH_NOTIFICATION_CHANNEL_ID,
+        R.string.stopwatch_notification_channel_name,
+        NotificationManager.IMPORTANCE_LOW,
+    )
 
-    private fun repository(): StopwatchRepository = StopwatchRepository(AlarmDatabase.getInstance(this).stopwatchDao())
+    private fun repository(): StopwatchRepository = Repositories.stopwatch(this)
 
     override fun onDestroy() {
         super.onDestroy()
@@ -125,7 +119,7 @@ class StopwatchForegroundService : Service() {
         /**
          * RUNNINGになったかもしれないタイミングで呼ぶ。サービス自身が不要になったら自分で止まる設計なので、
          * 呼び出し側(ui/stopwatch, StopwatchRescheduleReceiver)は「開始・再開・再起動直後」など
-         * 複数箇所から重複して呼んでも安全(timer機能のTimerForegroundService.ensureRunningと同じ考え方)。
+         * 複数箇所から重複して呼んでも安全。
          */
         fun ensureRunning(context: Context) {
             ContextCompat.startForegroundService(context, Intent(context, StopwatchForegroundService::class.java))

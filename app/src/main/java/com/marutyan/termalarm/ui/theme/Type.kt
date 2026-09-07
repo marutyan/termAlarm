@@ -2,6 +2,8 @@ package com.marutyan.termalarm.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
@@ -62,3 +64,51 @@ val AppTypography = Typography(
  * 桁数が変わるたびに文字幅が動いてアラーム一覧・編集画面の時刻表示がちらつくのを防ぐ(docs/SPEC.md「フォント」)。
  */
 fun TextStyle.tabularNums(): TextStyle = copy(fontFeatureSettings = "tnum")
+
+/**
+ * 画面の主役になる時刻の文字。
+ *
+ * 純正の時計アプリを実機で撮り、数字の帯の高さを測って合わせている。
+ * ストップウォッチの経過時間と世界時計の時刻はどちらも44dpだった。
+ *
+ * 61spで試したところ31dpにしかならず、純正の70%の大きさだった。
+ * 実測から逆算して87spにしている。Material 3で最も大きいdisplayLarge(57sp)
+ * でも足りないため、専用の大きさを持つ。
+ */
+fun TextStyle.heroClock(): TextStyle = copy(
+    fontSize = 87.sp,
+    lineHeight = 96.sp,
+    fontFeatureSettings = "tnum",
+)
+
+/**
+ * リングの中に収める時刻。純正のタイマーは高さ40dpだったので、それに合わせる。
+ */
+fun TextStyle.subHeroClock(): TextStyle = copy(
+    fontSize = 79.sp,
+    lineHeight = 88.sp,
+    fontFeatureSettings = "tnum",
+)
+
+/**
+ * アラーム一覧のカードに出す時刻。
+ * このアプリは「7:00 – 9:00」のように時刻を2つ並べるため、画面いっぱいの大きさは使えない。
+ * 純正のアラームは約33spだが、利用者の希望でひと回り大きくしている。
+ */
+fun TextStyle.alarmCardClock(): TextStyle = copy(
+    fontSize = 44.sp,
+    lineHeight = 52.sp,
+    fontFeatureSettings = "tnum",
+)
+
+/**
+ * タイマーの追加画面で、入力中の時間を出す文字。
+ * 「00h 00m 00s」を1行に収める必要があるため、画面の主役の時刻ほどは大きくできない。
+ * 数字6つと単位3つで、幅360dpの端末でもぎりぎり収まる値にしている。
+ */
+fun TextStyle.keypadInput(): TextStyle = copy(
+    fontSize = 72.sp,
+    lineHeight = 80.sp,
+    fontFeatureSettings = "tnum",
+)
+

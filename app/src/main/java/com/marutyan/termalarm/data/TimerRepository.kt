@@ -26,11 +26,4 @@ class TimerRepository(private val dao: TimerDao) {
 
     suspend fun delete(id: Long) = dao.deleteById(id)
 
-    /**
-     * 動作中または鳴動中のタイマーが1件でもあるか。
-     * フォアグラウンドサービスを止めてよいかの判定に使う。一覧はFlowで流すが、
-     * この判定に必要なのは現在の件数だけなので都度問い合わせる。
-     */
-    suspend fun hasActiveTimer(): Boolean =
-        dao.countByRunStates(listOf(TimerRunState.RUNNING.name, TimerRunState.FINISHED.name)) > 0
 }

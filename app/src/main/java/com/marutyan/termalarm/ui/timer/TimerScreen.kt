@@ -1,100 +1,176 @@
 package com.marutyan.termalarm.ui.timer
 
 import android.os.SystemClock
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.marutyan.termalarm.ui.theme.pressScaleEffect
+import com.marutyan.termalarm.ui.theme.subHeroClock
+import com.marutyan.termalarm.ui.theme.timerAddFadeSpec
+import com.marutyan.termalarm.ui.theme.timerAddSlideSpec
+import com.marutyan.termalarm.ui.theme.timerProgressAnimationSpec
+import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
+import com.marutyan.termalarm.domain.millisUntilNextSecondBoundary
+import com.marutyan.termalarm.domain.overdueMillis
 import com.marutyan.termalarm.domain.remainingMillis
-import com.marutyan.termalarm.timer.formatDuration
 import com.marutyan.termalarm.ui.theme.tabularNums
 import kotlinx.coroutines.delay
 
 /**
- * タイマータブの画面。時分秒を指定して開始する入力と、動作中のタイマー一覧(複数同時表示)を持つ
- * (docs/SPEC.md「タイマータブ」)。残り時間の表示は1秒ごとに更新する。
+ * タイマータブの画面。動作中のタイマー一覧(複数同時表示)を円形リングのカードとして並べる
+ * (docs/OFFICIAL_UI.md「タイマー」)。時分秒の入力は画面上から無くし、右下のFABから
+ * 開くTimerAddScreenへ追い出した。Add画面はNavHostのルートではなくこの画面内のローカルな
+ * 状態切り替えとして表示する(NavHostは変更禁止のため、経路を増やさずに完結させる)。
+ * 残り時間の表示は1秒ごとに更新する。
  */
+// 右下の追加ボタンの大きさ。純正の実測値に合わせている
+private val FAB_SIZE = 80.dp
+
 @Composable
-fun TimerScreen(viewModel: TimerViewModel, bottomBar: @Composable () -> Unit) {
+fun TimerScreen(
+    viewModel: TimerViewModel,
+    onOpenSettings: () -> Unit = {},
+    onOpenPrivacyPolicy: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
+    bottomBar: @Composable () -> Unit,
+) {
+    var showAddScreen by rememberSaveable { mutableStateOf(false) }
     val timers by viewModel.timers.collectAsStateWithLifecycle()
-    val (nowElapsed, nowWall) = rememberTickingNow()
+    // 通知に出る秒と画面の秒を合わせる。詳しくはrememberTickingNowを参照
+    val tickingNow = rememberTickingNow(timers)
+    val (nowElapsed, nowWall) = tickingNow
+    val sortedTimers = remember(timers, nowElapsed, nowWall) {
+        sortTimers(timers, nowElapsed, nowWall)
+    }
+    // 純正はタイマーが1件も無いとき、案内文ではなくテンキーをそのまま出す。
+    // 追加ボタンを押したときも同じテンキーなので、どちらの理由でも同じ画面を使う
+    val showKeypad = showAddScreen || sortedTimers.isEmpty()
 
-    var hours by rememberSaveable { mutableIntStateOf(0) }
-    var minutes by rememberSaveable { mutableIntStateOf(5) }
-    var seconds by rememberSaveable { mutableIntStateOf(0) }
-
+    // 枠は1つだけ持ち、中身を入れ替える。追加画面のときも下部ナビを見せたままにするため
+    // (純正も同じで、テンキーを出している間ナビは消えない)
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_timer), style = MaterialTheme.typography.headlineMedium) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.tab_timer), style = MaterialTheme.typography.headlineMedium) },
+                actions = {
+                    TermAlarmOverflowMenu(
+                        onOpenSettings = onOpenSettings,
+                        onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                        onOpenAbout = onOpenAbout,
+                    )
+                },
+            )
+        },
+        floatingActionButton = {
+            // テンキーを出している間は、追加ボタンを隠す
+            if (!showKeypad) {
+                FloatingActionButton(
+                    onClick = { showAddScreen = true },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    // 純正を実測すると80dp。既定のままでは45dpしかなく、押す場所として小さい
+                    modifier = Modifier.size(FAB_SIZE),
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.timer_add))
+                }
+            }
+        },
         bottomBar = bottomBar,
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            TimerInputRow(
-                hours = hours,
-                minutes = minutes,
-                seconds = seconds,
-                onHoursChange = { hours = it },
-                onMinutesChange = { minutes = it },
-                onSecondsChange = { seconds = it },
-                onStart = { viewModel.start(hours, minutes, seconds) },
-            )
-            if (timers.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = stringResource(R.string.timer_list_empty),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+        AnimatedContent(
+            targetState = showKeypad,
+            transitionSpec = {
+                if (targetState) {
+                    (slideInVertically(animationSpec = timerAddSlideSpec()) { it } + fadeIn(animationSpec = timerAddFadeSpec()))
+                        .togetherWith(fadeOut(animationSpec = timerAddFadeSpec()))
+                } else {
+                    fadeIn(animationSpec = timerAddFadeSpec())
+                        .togetherWith(slideOutVertically(animationSpec = timerAddSlideSpec()) { -it } + fadeOut(animationSpec = timerAddFadeSpec()))
                 }
+            },
+            label = "TimerAddScreenTransition",
+            modifier = Modifier.padding(padding),
+        ) { isKeypad ->
+            if (isKeypad) {
+                TimerAddScreen(
+                    onStart = { h, m, s -> viewModel.start(h, m, s); showAddScreen = false },
+                    // 1件も無いときはテンキーがタブそのものの中身なので、戻る先が無い
+                    onClose = if (sortedTimers.isEmpty()) null else ({ showAddScreen = false }),
+                )
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    // 下を厚くしておかないと、最後のカードが右下の追加ボタンに隠れる
+                    contentPadding = PaddingValues(start = 13.dp, end = 13.dp, top = 16.dp, bottom = 96.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    items(timers, key = { it.id }) { timer ->
+                    items(sortedTimers, key = { it.id }) { timer ->
                         TimerCard(
                             timer = timer,
                             nowElapsed = nowElapsed,
@@ -104,6 +180,8 @@ fun TimerScreen(viewModel: TimerViewModel, bottomBar: @Composable () -> Unit) {
                             onReset = { viewModel.reset(timer.id) },
                             onExtend = { viewModel.extendOneMinute(timer.id) },
                             onDelete = { viewModel.delete(timer.id) },
+                            // 残り時間が縮んで並び順が変わったとき、その場で飛ばず動いて入れ替わるようにする
+                            modifier = Modifier.animateItem(),
                         )
                     }
                 }
@@ -113,17 +191,20 @@ fun TimerScreen(viewModel: TimerViewModel, bottomBar: @Composable () -> Unit) {
 }
 
 /**
- * 1秒ごとに更新される(elapsedRealtime, wallClock)のペア。domain.remainingMillis()の再計算だけに使い、
- * DBへは書き込まない(ui/alarmlist/AlarmListScreen.ktのrememberCurrentMinute()を分単位→秒単位に
- * 合わせて作り直したもの。実装は共有せずタイマー画面専用として持つ)。
+ * 残り時間の表示に使う「今」。画面が見えている間だけ進める。
+ * 再計算に使うだけで、データベースへは書き込まない。
+ *
+ * ただ1秒ごとに数えると、通知に出る秒と画面の秒が最大1秒ずれる。
+ * 通知は「残り時間が尽きる時刻」から逆算して数えるため、こちらの起動時刻とは関係がない。
+ * 残り時間が次の秒へ変わる瞬間に合わせて描き直すことで、通知と同じ数字を出す。
  */
 @Composable
-private fun rememberTickingNow(): Pair<Long, Long> {
+private fun rememberTickingNow(timers: List<TimerState>): Pair<Long, Long> {
     var nowElapsed by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     var nowWall by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(timers) {
         while (true) {
-            delay(1000)
+            delay(millisUntilNextSecondBoundary(timers, SystemClock.elapsedRealtime(), System.currentTimeMillis()))
             nowElapsed = SystemClock.elapsedRealtime()
             nowWall = System.currentTimeMillis()
         }
@@ -131,126 +212,26 @@ private fun rememberTickingNow(): Pair<Long, Long> {
     return nowElapsed to nowWall
 }
 
-@Composable
-private fun TimerInputRow(
-    hours: Int,
-    minutes: Int,
-    seconds: Int,
-    onHoursChange: (Int) -> Unit,
-    onMinutesChange: (Int) -> Unit,
-    onSecondsChange: (Int) -> Unit,
-    onStart: () -> Unit,
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            NumberStepper(stringResource(R.string.timer_input_hours), hours, 0..23, onHoursChange)
-            NumberStepper(stringResource(R.string.timer_input_minutes), minutes, 0..59, onMinutesChange)
-            NumberStepper(stringResource(R.string.timer_input_seconds), seconds, 0..59, onSecondsChange)
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        Button(
-            onClick = onStart,
-            enabled = hours > 0 || minutes > 0 || seconds > 0,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.timer_start))
-        }
-    }
-}
-
-// 時/分/秒それぞれの入力用ステッパー。IMEを出さずタップだけで完結させる
-@Composable
-private fun NumberStepper(label: String, value: Int, range: IntRange, onChange: (Int) -> Unit) {
-    val decreaseDescription = stringResource(R.string.timer_decrease)
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { if (value > range.first) onChange(value - 1) }, modifier = Modifier.size(48.dp)) {
-                // Icons.Filled.Removeはmaterial-icons-coreに含まれないため、Textでマイナス記号を出す
-                Text(
-                    text = "－",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.semantics { contentDescription = decreaseDescription },
-                )
-            }
-            Text(
-                text = value.toString().padStart(2, '0'),
-                style = MaterialTheme.typography.headlineSmall.tabularNums(),
-                modifier = Modifier.width(40.dp),
-                textAlign = TextAlign.Center,
-            )
-            IconButton(onClick = { if (value < range.last) onChange(value + 1) }, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.timer_increase))
-            }
-        }
-    }
-}
-
-@Composable
-private fun TimerCard(
-    timer: TimerState,
+/**
+ * タイマー一覧を「次に鳴る順（残り時間が短い順）」に並べ替える。
+ * 鳴動中(FINISHED)を最優先、次に動作中(RUNNING)を残り時間の昇順、一時停止中(PAUSED)は
+ * 計測が止まっており動作中タイマーの視認性を邪魔しないよう末尾にまとめて残り時間の昇順で並べる。
+ */
+private fun sortTimers(
+    timers: List<TimerState>,
     nowElapsed: Long,
     nowWall: Long,
-    onPause: () -> Unit,
-    onResume: () -> Unit,
-    onReset: () -> Unit,
-    onExtend: () -> Unit,
-    onDelete: () -> Unit,
-) {
-    val remaining = remainingMillis(timer, nowElapsed, nowWall)
-    val isFinished = timer.runState == TimerRunState.FINISHED
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isFinished) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = timer.label,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = formatDuration(remaining),
-                style = MaterialTheme.typography.displaySmall.tabularNums(),
-            )
-            if (!isFinished) {
-                LinearProgressIndicator(
-                    progress = { if (timer.totalMillis > 0) remaining / timer.totalMillis.toFloat() else 0f },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (isFinished) {
-                    // 完了(鳴動中)は「停止」だけを出す。停止=タイマー自体の削除(domain/TimerState.ktの契約)
-                    Button(onClick = onDelete, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text(stringResource(R.string.timer_stop))
-                    }
-                } else {
-                    if (timer.runState == TimerRunState.RUNNING) {
-                        OutlinedButton(onClick = onPause, modifier = Modifier.heightIn(min = 48.dp)) {
-                            Text(stringResource(R.string.timer_pause))
-                        }
-                    } else {
-                        OutlinedButton(onClick = onResume, modifier = Modifier.heightIn(min = 48.dp)) {
-                            Text(stringResource(R.string.timer_resume))
-                        }
-                    }
-                    OutlinedButton(onClick = onExtend, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text(stringResource(R.string.timer_extend_one_minute))
-                    }
-                    OutlinedButton(onClick = onReset, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text(stringResource(R.string.timer_reset))
-                    }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.timer_delete))
-                    }
-                }
-            }
+): List<TimerState> = timers.sortedWith(
+    compareBy<TimerState> { timer ->
+        when (timer.runState) {
+            TimerRunState.FINISHED -> 0
+            TimerRunState.RUNNING -> 1
+            TimerRunState.PAUSED -> 2
         }
-    }
-}
+    }.thenBy { timer ->
+        remainingMillis(timer, nowElapsed, nowWall)
+    }.thenBy { timer ->
+        timer.id
+    },
+)
+

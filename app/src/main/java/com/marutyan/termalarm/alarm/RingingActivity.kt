@@ -1,11 +1,14 @@
 package com.marutyan.termalarm.alarm
 
 import android.app.KeyguardManager
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -44,14 +47,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.marutyan.termalarm.R
-import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.AlarmRepository
+import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
+import com.marutyan.termalarm.domain.AppSettings
+import com.marutyan.termalarm.domain.VolumeButtonAction
 import com.marutyan.termalarm.domain.nextTrigger
 import com.marutyan.termalarm.domain.remainingOccurrenceCount
+import com.marutyan.termalarm.ui.common.clockTimePattern
 import com.marutyan.termalarm.ui.theme.TermAlarmTheme
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -65,12 +76,36 @@ import java.util.Locale
  */
 class RingingActivity : ComponentActivity() {
 
+    // 鳴動セッション開始時に一度だけ読み込む設定値。鳴動中に設定画面から値が変わることは想定しないため、
+    // 起動時の1回読みで十分とする(RingingServiceと同じ方針)。読み込み前はAppSettings()の既定値で表示する
+    private var settings by mutableStateOf(AppSettings())
+
+    /**
+     * 通知の操作ボタンからアラームを止めたときに、この画面を閉じるための受け口。
+     * 画面上のボタンで止めた場合は自分でfinish()するため、この経路は通知側からの操作だけに使う。
+     */
+    private val ringingFinishedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) = finish()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setupLockScreenDisplay()
 
+        ContextCompat.registerReceiver(
+            this,
+            ringingFinishedReceiver,
+            IntentFilter(RingingService.ACTION_RINGING_FINISHED),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+
         val alarmId = intent.getLongExtra(EXTRA_ALARM_ID, -1L)
         val triggerAtMillis = intent.getLongExtra(EXTRA_TRIGGER_AT_MILLIS, System.currentTimeMillis())
+
+        lifecycleScope.launch {
+            settings = Repositories.settings(this@RingingActivity)
+                .observe().first()
+        }
 
         setContent {
             TermAlarmTheme {
@@ -78,11 +113,43 @@ class RingingActivity : ComponentActivity() {
                     RingingScreen(
                         alarmId = alarmId,
                         triggerAtMillis = triggerAtMillis,
+                        autoStopMinutes = settings.autoStopMinutes,
                         onFinish = { finish() },
                     )
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(ringingFinishedReceiver)
+    }
+
+    /**
+     * 鳴動中に音量ボタンを押したときの動作。設定「アラーム時の音量ボタン」に従う。
+     * ADJUST_VOLUME(既定)はここでは何もせず、システム標準の音量調整に任せる
+     * (STREAM_ALARMで再生中のため、素通しするだけでアラーム音量が変わる)。
+     */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            when (settings.volumeButtonAction) {
+                VolumeButtonAction.SNOOZE -> {
+                    // 分数を指定せず送ることで、RingingService側にそのアラームのsnoozeMinutesを解決させる
+                    // (スヌーズ無効なアラームなら停止と同じ扱いになる。RingingService.snoozeOrStop参照)
+                    startService(RingingService.snoozeIntent(this, -1))
+                    finish()
+                    return true
+                }
+                VolumeButtonAction.DISMISS -> {
+                    startService(RingingService.stopIntent(this))
+                    finish()
+                    return true
+                }
+                VolumeButtonAction.ADJUST_VOLUME -> Unit
+            }
+        }
+        return super.onKeyDown(keyCode, event)
     }
 
     // ロック画面の上に鳴動画面を表示するためのウィンドウ設定。
@@ -127,7 +194,7 @@ class RingingActivity : ComponentActivity() {
 }
 
 @Composable
-private fun RingingScreen(alarmId: Long, triggerAtMillis: Long, onFinish: () -> Unit) {
+private fun RingingScreen(alarmId: Long, triggerAtMillis: Long, autoStopMinutes: Int, onFinish: () -> Unit) {
     val context = LocalContext.current
 
     // 鳴動中のoccurrenceの実時刻。予約時に意図していた時刻を使うことで、サービス起動の遅延に影響されない
@@ -137,7 +204,7 @@ private fun RingingScreen(alarmId: Long, triggerAtMillis: Long, onFinish: () -> 
 
     var schedule by remember { mutableStateOf<AlarmSchedule?>(null) }
     LaunchedEffect(alarmId) {
-        schedule = AlarmRepository(AlarmDatabase.getInstance(context).alarmDao()).getById(alarmId)
+        schedule = Repositories.alarm(context).getById(alarmId)
     }
 
     // 画面上部に表示する現在時刻。1秒ごとに更新する
@@ -149,9 +216,10 @@ private fun RingingScreen(alarmId: Long, triggerAtMillis: Long, onFinish: () -> 
         }
     }
 
-    // サービス側の無操作タイムアウトと同じ時間で画面も閉じる（サービス自体の停止・次回予約はサービス側が行う）
-    LaunchedEffect(Unit) {
-        delay(RINGING_AUTO_STOP_TIMEOUT_MILLIS)
+    // サービス側の無操作タイムアウト(設定「消音までの時間」)と同じ時間で画面も閉じる
+    // （サービス自体の停止・次回予約はサービス側が行う）。設定の読み込み完了で値が変わったら数え直す
+    LaunchedEffect(autoStopMinutes) {
+        delay(autoStopMinutes * 60_000L)
         onFinish()
     }
 
@@ -191,7 +259,9 @@ private fun RingingContent(
     onSnooze: (Int) -> Unit,
     onSkipToday: () -> Unit,
 ) {
-    val timeFormatter = remember { DateTimeFormatter.ofPattern("H:mm") }
+    // 端末の「24時間表示」設定に合わせる。純正も同じくシステムに任せている
+    val timePattern = clockTimePattern()
+    val timeFormatter = remember(timePattern) { DateTimeFormatter.ofPattern(timePattern, Locale.getDefault()) }
     val dateFormatter = remember { DateTimeFormatter.ofPattern("M月d日（E）", Locale.JAPANESE) }
 
     Column(
@@ -279,106 +349,3 @@ private fun RingingContent(
     }
 }
 
-@Composable
-private fun StopButton(onClick: () -> Unit) {
-    Surface(
-        color = MaterialTheme.colorScheme.primary,
-        shape = RoundedCornerShape(48.dp),
-        modifier = Modifier.fillMaxWidth().height(96.dp).clickable(onClick = onClick),
-    ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = stringResource(R.string.ringing_stop),
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SnoozeButton(minutes: Int, onClick: () -> Unit) {
-    Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = RoundedCornerShape(28.dp),
-        modifier = Modifier.fillMaxWidth().height(56.dp).clickable(onClick = onClick),
-    ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-            Text(
-                text = "${stringResource(R.string.ringing_snooze)}（${minutes}分）",
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SkipTodayRow(onClick: () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxWidth().height(56.dp).clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                CancelGlyph(tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                Text(
-                    text = stringResource(R.string.ringing_skip_today),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        }
-    }
-}
-
-// 上部の丸いアイコン内に描く簡易な時計の図柄(文字盤の輪+2本の針)。design/Ringing.dc.htmlのSVGを模す
-@Composable
-private fun AlarmGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val strokeWidth = size.minDimension * 0.1f
-        drawCircle(color = tint, radius = size.minDimension / 2 - strokeWidth, style = Stroke(width = strokeWidth, cap = StrokeCap.Round))
-        val center = this.center
-        drawLine(
-            color = tint,
-            start = center,
-            end = Offset(center.x, center.y - size.minDimension * 0.28f),
-            strokeWidth = strokeWidth,
-            cap = StrokeCap.Round,
-        )
-        drawLine(
-            color = tint,
-            start = center,
-            end = Offset(center.x + size.minDimension * 0.22f, center.y + size.minDimension * 0.06f),
-            strokeWidth = strokeWidth,
-            cap = StrokeCap.Round,
-        )
-    }
-}
-
-// 「今日はもう止める」の丸に斜線の図柄。design/Ringing.dc.htmlのSVGを模す
-@Composable
-private fun CancelGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val strokeWidth = size.minDimension * 0.12f
-        drawCircle(color = tint, radius = size.minDimension / 2 - strokeWidth, style = Stroke(width = strokeWidth, cap = StrokeCap.Round))
-        drawLine(
-            color = tint,
-            start = Offset(size.width * 0.22f, size.height * 0.78f),
-            end = Offset(size.width * 0.78f, size.height * 0.22f),
-            strokeWidth = strokeWidth,
-            cap = StrokeCap.Round,
-        )
-    }
-}

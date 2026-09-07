@@ -78,7 +78,29 @@ fun extendTimer(state: TimerState, extraMillis: Long, nowElapsedRealtime: Long, 
 }
 
 // 残り時間が尽きたときの遷移。鳴動中(FINISHED)として残り0秒に固定する
-fun finishTimer(state: TimerState): TimerState = state.copy(remainingMillisAtAnchor = 0L, runState = TimerRunState.FINISHED)
+fun finishTimer(state: TimerState, nowElapsedRealtime: Long, nowWallClockMillis: Long): TimerState = state.copy(
+    remainingMillisAtAnchor = 0L,
+    // 鳴り始めた時刻をここへ残す。純正はタイムアップの後も経過をマイナスで数え続けるため、
+    // その起点が要る。サービス側に覚えさせると、再起動やサービスの停止で失われる
+    anchorElapsedRealtime = nowElapsedRealtime,
+    anchorWallClockMillis = nowWallClockMillis,
+    runState = TimerRunState.FINISHED,
+)
+
+/**
+ * 鳴り始めてから経過したミリ秒。鳴動中(FINISHED)でなければ0。
+ * 純正のタイマーはタイムアップの後、残り時間の代わりに経過時間をマイナスで出し続ける。
+ */
+fun overdueMillis(state: TimerState, nowElapsedRealtime: Long, nowWallClockMillis: Long): Long {
+    if (state.runState != TimerRunState.FINISHED) return 0L
+    val elapsed = if (nowElapsedRealtime >= state.anchorElapsedRealtime) {
+        nowElapsedRealtime - state.anchorElapsedRealtime
+    } else {
+        // elapsedRealtimeの逆行は再起動の合図。壁時計へ切り替える(remainingMillisと同じ考え方)
+        nowWallClockMillis - state.anchorWallClockMillis
+    }
+    return elapsed.coerceAtLeast(0L)
+}
 
 /**
  * 端末再起動の直後、保存されていたRUNNINGのタイマーを新しいelapsedRealtimeへ再アンカーする。
@@ -94,4 +116,26 @@ fun rebaseTimerAfterReboot(state: TimerState, nowElapsedRealtime: Long, nowWallC
         anchorElapsedRealtime = nowElapsedRealtime,
         anchorWallClockMillis = nowWallClockMillis,
     )
+}
+
+/**
+ * 残り時間の表示が次の秒へ変わるまでのミリ秒。
+ *
+ * 画面をただ1秒ごとに描き直すと、通知に出る秒と最大1秒ずれる。
+ * 通知は「残り時間が尽きる時刻」から逆算して数えるため、画面を開いた時刻とは関係がないため。
+ * 動いているタイマーのうち、いちばん早く秒が変わるものに合わせて描き直せば、通知と同じ数字が出る。
+ *
+ * 動いているタイマーが1つも無ければ1秒を返す。
+ */
+fun millisUntilNextSecondBoundary(
+    timers: List<TimerState>,
+    nowElapsedRealtime: Long,
+    nowWallClockMillis: Long,
+): Long {
+    val remainder = timers
+        .filter { it.runState == TimerRunState.RUNNING }
+        .minOfOrNull { remainingMillis(it, nowElapsedRealtime, nowWallClockMillis) % 1000L }
+        ?: 0L
+    // ちょうど区切りのときは、まるまる1秒待つ
+    return if (remainder <= 0L) 1000L else remainder
 }

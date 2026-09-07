@@ -11,8 +11,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.AlarmRepository
+import com.marutyan.termalarm.data.SettingsRepository
+import com.marutyan.termalarm.ui.settings.SettingsScreen
+import com.marutyan.termalarm.ui.settings.SettingsViewModel
+import com.marutyan.termalarm.ui.settings.SettingsViewModelFactory
 import com.marutyan.termalarm.ui.about.AboutScreen
+import com.marutyan.termalarm.ui.privacy.PrivacyScreen
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditScreen
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditViewModel
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditViewModelFactory
@@ -24,8 +30,7 @@ import com.marutyan.termalarm.ui.alarmlist.TermAlarmTab
 import com.marutyan.termalarm.ui.clock.ClockScreen
 import com.marutyan.termalarm.ui.clock.ClockViewModel
 import com.marutyan.termalarm.ui.clock.ClockViewModelFactory
-import com.marutyan.termalarm.data.WorldClockRepository
-import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.ClockSettingsRepository
 import com.marutyan.termalarm.ui.common.PlaceholderTabScreen
 import com.marutyan.termalarm.ui.permission.ExactAlarmPermissionBanner
 import com.marutyan.termalarm.ui.permission.NotificationPermissionBanner
@@ -40,13 +45,29 @@ import com.marutyan.termalarm.ui.stopwatch.StopwatchViewModelFactory
 import com.marutyan.termalarm.ui.timer.TimerScreen
 import com.marutyan.termalarm.ui.timer.TimerViewModel
 import com.marutyan.termalarm.ui.timer.TimerViewModelFactory
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.ui.res.stringResource
 import com.marutyan.termalarm.R
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
+import com.marutyan.termalarm.ui.theme.SCREEN_SLIDE_DISTANCE_DP
+import com.marutyan.termalarm.ui.theme.screenCloseEnter
+import com.marutyan.termalarm.ui.theme.screenCloseExit
+import com.marutyan.termalarm.ui.theme.screenOpenEnter
+import com.marutyan.termalarm.ui.theme.screenPredictivePopExit
+import com.marutyan.termalarm.ui.theme.screenOpenExit
+import com.marutyan.termalarm.ui.theme.tabFadeSpec
 
 private const val ROUTE_LIST = "list"
 private const val ROUTE_EDIT = "edit"
 private const val ROUTE_SKIP_GAME = "skipGame"
 private const val ROUTE_ABOUT = "about"
+// プライバシーポリシー画面への遷移ルート。各タブ右上の「⋮」メニューから開く画面を識別するために定義する。
+private const val ROUTE_PRIVACY = "privacy"
+private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_CLOCK = "clock"
 private const val ROUTE_TIMER = "timer"
 private const val ROUTE_STOPWATCH = "stopwatch"
@@ -55,6 +76,10 @@ private const val ARG_ALARM_ID = "alarmId"
 // SET_ALARM等の外部インテントを受けたAlarmIntentActivity(ui.intent)がMainActivity起動時に付ける拡張。
 // 値が-1なら新規作成画面、0以上ならそのidの編集画面へ直接遷移する。他パッケージから参照するためpublic。
 const val EXTRA_DEEPLINK_ALARM_ID = "com.marutyan.termalarm.ui.EXTRA_DEEPLINK_ALARM_ID"
+
+// どのタブを開いた状態で始めるかを指定する拡張。TermAlarmTabの名前(ALARM/CLOCK/TIMER/STOPWATCH)を入れる。
+// タイマーの通知から開いたときにタイマータブが出るようにするために使う。他パッケージから参照するためpublic。
+const val EXTRA_DEEPLINK_TAB = "com.marutyan.termalarm.ui.EXTRA_DEEPLINK_TAB"
 
 /**
  * アプリ全体の画面遷移。アラーム一覧を起点に、追加・編集、当日終了ゲーム、ライセンス表示、
@@ -75,23 +100,40 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             val id = launchIntent.getLongExtra(EXTRA_DEEPLINK_ALARM_ID, -1L)
             navController.navigate(if (id >= 0) "$ROUTE_EDIT?$ARG_ALARM_ID=$id" else ROUTE_EDIT)
         }
+        // 通知から開いたときは、そのタブを出す。知らない名前が入っていた場合は一覧のままにする
+        launchIntent?.getStringExtra(EXTRA_DEEPLINK_TAB)?.let { name ->
+            runCatching { TermAlarmTab.valueOf(name) }.getOrNull()?.let { tab ->
+                navController.navigate(routeOf(tab))
+            }
+        }
     }
 
     fun goToTab(tab: TermAlarmTab) {
-        val route = when (tab) {
-            TermAlarmTab.ALARM -> ROUTE_LIST
-            TermAlarmTab.CLOCK -> ROUTE_CLOCK
-            TermAlarmTab.TIMER -> ROUTE_TIMER
-            TermAlarmTab.STOPWATCH -> ROUTE_STOPWATCH
-        }
-        navController.navigate(route) {
+        navController.navigate(routeOf(tab)) {
             popUpTo(ROUTE_LIST) { saveState = true }
             launchSingleTop = true
             restoreState = true
         }
     }
 
-    NavHost(navController = navController, startDestination = ROUTE_LIST) {
+    // 端末の既定と同じ96dpだけ横へ滑らせる。dpのままでは渡せないので画素へ直しておく
+    val slidePx = with(LocalDensity.current) { SCREEN_SLIDE_DISTANCE_DP.dp.roundToPx() }
+
+    NavHost(
+        navController = navController,
+        startDestination = ROUTE_LIST,
+        // タブを移るとき、画面を横へ滑らせない。純正も滑らせず、その場で入れ替わる。
+        // 横に動くと、押した場所と違うところが動いて見えて落ち着かない
+        enterTransition = { fadeIn(animationSpec = tabFadeSpec()) },
+        exitTransition = { fadeOut(animationSpec = tabFadeSpec()) },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None },
+        // 端の引っ張りで戻すときは、横へ滑らせず、閉じる画面を縮めるだけにする。
+        // 純正はここで端末が画面ごと縮める動きになるため、それに合わせている。
+        // 戻り先は動かさない。動かすと二重になって落ち着かない
+        predictivePopEnterTransition = { _ -> EnterTransition.None },
+        predictivePopExitTransition = { _ -> screenPredictivePopExit() },
+    ) {
         composable(ROUTE_LIST) {
             val viewModel: AlarmListViewModel = viewModel(factory = AlarmListViewModelFactory(repository, context))
             AlarmListScreen(
@@ -99,6 +141,8 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
                 onAddAlarm = { navController.navigate(ROUTE_EDIT) },
                 onEditAlarm = { id -> navController.navigate("$ROUTE_EDIT?$ARG_ALARM_ID=$id") },
                 onOpenAbout = { navController.navigate(ROUTE_ABOUT) },
+                onOpenPrivacyPolicy = { navController.navigate(ROUTE_PRIVACY) },
+                onOpenSettings = { navController.navigate(ROUTE_SETTINGS) },
                 onNavigateToSkipGame = { id -> navController.navigate("$ROUTE_SKIP_GAME/$id") },
                 exactAlarmBanner = { ExactAlarmPermissionBanner() },
                 notificationPermissionBanner = { NotificationPermissionBanner() },
@@ -106,36 +150,53 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             )
         }
         composable(ROUTE_CLOCK) {
-            // AlarmDatabaseは共有シングルトンのため、ここでdaoを取り出してWorldClockRepositoryを組み立てる
+            // AlarmDatabaseは共有シングルトンのため、ここでdaoを取り出して組み立てる
             // (MainActivityの配線は変えず、時計タブの行だけで完結させる)
             val clockRepository = remember {
-                WorldClockRepository(
-                    AlarmDatabase.getInstance(context).worldClockCityDao(),
-                    AlarmDatabase.getInstance(context).clockSettingsDao(),
-                )
+                Repositories.clockSettings(context)
             }
-            val viewModel: ClockViewModel = viewModel(factory = ClockViewModelFactory(clockRepository))
-            ClockScreen(viewModel = viewModel) { TermAlarmBottomBar(TermAlarmTab.CLOCK, ::goToTab) }
+            val clockSettingsRepository = remember {
+                Repositories.settings(context)
+            }
+            val viewModel: ClockViewModel =
+                viewModel(factory = ClockViewModelFactory(clockRepository, clockSettingsRepository))
+            ClockScreen(
+                viewModel = viewModel,
+                onOpenSettings = { navController.navigate(ROUTE_SETTINGS) },
+                onOpenPrivacyPolicy = { navController.navigate(ROUTE_PRIVACY) },
+                onOpenAbout = { navController.navigate(ROUTE_ABOUT) },
+                bottomBar = { TermAlarmBottomBar(TermAlarmTab.CLOCK, ::goToTab) },
+            )
         }
         composable(ROUTE_TIMER) {
-            val timerRepository = remember { TimerRepository(AlarmDatabase.getInstance(context).timerDao()) }
+            val timerRepository = remember { Repositories.timer(context) }
             val viewModel: TimerViewModel = viewModel(factory = TimerViewModelFactory(timerRepository, context))
             TimerScreen(
                 viewModel = viewModel,
+                onOpenSettings = { navController.navigate(ROUTE_SETTINGS) },
+                onOpenPrivacyPolicy = { navController.navigate(ROUTE_PRIVACY) },
+                onOpenAbout = { navController.navigate(ROUTE_ABOUT) },
                 bottomBar = { TermAlarmBottomBar(TermAlarmTab.TIMER, ::goToTab) },
             )
         }
         composable(ROUTE_STOPWATCH) {
-            val stopwatchRepository = remember { StopwatchRepository(AlarmDatabase.getInstance(context).stopwatchDao()) }
+            val stopwatchRepository = remember { Repositories.stopwatch(context) }
             val viewModel: StopwatchViewModel = viewModel(factory = StopwatchViewModelFactory(stopwatchRepository, context))
             StopwatchScreen(
                 viewModel = viewModel,
+                onOpenSettings = { navController.navigate(ROUTE_SETTINGS) },
+                onOpenPrivacyPolicy = { navController.navigate(ROUTE_PRIVACY) },
+                onOpenAbout = { navController.navigate(ROUTE_ABOUT) },
                 bottomBar = { TermAlarmBottomBar(TermAlarmTab.STOPWATCH, ::goToTab) },
             )
         }
         composable(
             route = "$ROUTE_EDIT?$ARG_ALARM_ID={$ARG_ALARM_ID}",
             arguments = listOf(navArgument(ARG_ALARM_ID) { type = NavType.LongType; defaultValue = -1L }),
+            enterTransition = { screenOpenEnter(slidePx) },
+            exitTransition = { screenOpenExit(slidePx) },
+            popEnterTransition = { screenCloseEnter(slidePx) },
+            popExitTransition = { screenCloseExit(slidePx) },
         ) { backStackEntry ->
             val rawId = backStackEntry.arguments?.getLong(ARG_ALARM_ID) ?: -1L
             val alarmId = rawId.takeIf { it >= 0 }
@@ -145,13 +206,57 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
         composable(
             route = "$ROUTE_SKIP_GAME/{$ARG_ALARM_ID}",
             arguments = listOf(navArgument(ARG_ALARM_ID) { type = NavType.LongType }),
+            enterTransition = { screenOpenEnter(slidePx) },
+            exitTransition = { screenOpenExit(slidePx) },
+            popEnterTransition = { screenCloseEnter(slidePx) },
+            popExitTransition = { screenCloseExit(slidePx) },
         ) { backStackEntry ->
             val alarmId = backStackEntry.arguments?.getLong(ARG_ALARM_ID) ?: return@composable
             val viewModel: SkipGameViewModel = viewModel(factory = SkipGameViewModelFactory(repository, context, alarmId, hasShakeSensor))
             SkipGameScreen(viewModel = viewModel, onClose = { navController.popBackStack() })
         }
-        composable(ROUTE_ABOUT) {
+        composable(ROUTE_SETTINGS,
+            enterTransition = { screenOpenEnter(slidePx) },
+            exitTransition = { screenOpenExit(slidePx) },
+            popEnterTransition = { screenCloseEnter(slidePx) },
+            popExitTransition = { screenCloseExit(slidePx) },
+        ) {
+            // 設定は全体で1つなので、ここでRepositoryを組み立てて渡す
+            val settingsRepository = remember {
+                Repositories.settings(context)
+            }
+            val clockRepository = remember {
+                Repositories.clockSettings(context)
+            }
+            val viewModel: SettingsViewModel = viewModel(
+                factory = SettingsViewModelFactory(settingsRepository, clockRepository),
+            )
+            SettingsScreen(viewModel = viewModel, onBack = { navController.popBackStack() })
+        }
+        composable(ROUTE_ABOUT,
+            enterTransition = { screenOpenEnter(slidePx) },
+            exitTransition = { screenOpenExit(slidePx) },
+            popEnterTransition = { screenCloseEnter(slidePx) },
+            popExitTransition = { screenCloseExit(slidePx) },
+        ) {
             AboutScreen(onBack = { navController.popBackStack() })
+        }
+        composable(ROUTE_PRIVACY,
+            enterTransition = { screenOpenEnter(slidePx) },
+            exitTransition = { screenOpenExit(slidePx) },
+            popEnterTransition = { screenCloseEnter(slidePx) },
+            popExitTransition = { screenCloseExit(slidePx) },
+        ) {
+            PrivacyScreen(onBack = { navController.popBackStack() })
         }
     }
 }
+
+// タブと画面の対応。下部ナビからの移動と、通知から開いたときの移動の両方で使う
+private fun routeOf(tab: TermAlarmTab): String = when (tab) {
+    TermAlarmTab.ALARM -> ROUTE_LIST
+    TermAlarmTab.CLOCK -> ROUTE_CLOCK
+    TermAlarmTab.TIMER -> ROUTE_TIMER
+    TermAlarmTab.STOPWATCH -> ROUTE_STOPWATCH
+}
+

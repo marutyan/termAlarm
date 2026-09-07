@@ -4,24 +4,18 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.remember
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodesWithContentDescription
-import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextInput
 import com.marutyan.termalarm.R
+import com.marutyan.termalarm.ui.theme.CLOCK_MODE_TRANSITION_DURATION_MS
 import com.marutyan.termalarm.data.AlarmDatabase
-import com.marutyan.termalarm.data.WorldClockRepository
+import com.marutyan.termalarm.data.ClockSettingsRepository
+import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.ClockDisplayMode
 import com.marutyan.termalarm.ui.clock.ClockScreen
 import com.marutyan.termalarm.ui.clock.ClockViewModel
-import com.marutyan.termalarm.ui.clock.cityDisplayName
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -30,145 +24,143 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
- * 時計タブ(ClockScreen)を「画面から操作する経路」で保証する(TimerScreenTest/StopwatchScreenTestと同じ方針)。
- *
- * 時差の数値計算そのものはWorldClockTest(JVM単体テスト)がZoneId/Instantを固定して検証済みのため、
- * ここでは「操作した結果、都市一覧やRepositoryの状態が正しく変わるか」「時差が(同じ時刻ではなく)
- * 何かしら表示されるか」までを見る。実機の現在時刻(デジタル表示のHH:mm)はテスト実行中も進み続けるため、
- * チェックのたびに期待値を計算し直すことで実機時刻に依存しないようにする。
- *
- * 日本語環境での都市名表示(cityDisplayName、android.icu.text.TimeZoneNames)はJVM単体テストでは動かせないため、
- * ここで実機を使って検証する。テスト実行機のロケールはja-JPであることを確認済み("Asia/Tokyo"→"東京")。
+ * 時計タブ(ClockScreen)のUI表示と操作を保証する。
+ * アナログとデジタルの表示モード切り替え、および端末の日付表示が正しく機能することを検証する。
  */
 @OptIn(ExperimentalTestApi::class)
 class ClockScreenTest {
+    // 端末がスリープしていてもテストが動くようにする
+    @get:Rule
+    val screenWakeRule = ScreenWakeRule()
+
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     private lateinit var db: AlarmDatabase
-    private lateinit var repository: WorldClockRepository
+    private lateinit var repository: ClockSettingsRepository
+    private lateinit var settingsRepository: SettingsRepository
 
+    /**
+     * テストごとに独立したインメモリDBとClockSettingsRepositoryを初期化する。
+     * 前のテストの保存データが次のテストに影響しないようにする。
+     */
     @Before
     fun setUp() {
-        val (database, repo) = createTestWorldClockRepository()
+        val (database, repo) = createTestClockRepository()
         db = database
         repository = repo
+        settingsRepository = SettingsRepository(db.appSettingsDao())
     }
 
+    /**
+     * テスト終了後の後始末。
+     *
+     * インメモリDBは閉じない。画面が持つViewModelは、テストが終わった後も
+     * 保存の処理を続けていることがあり、閉じた先へ書きに行って落ちるため。
+     * テストごとに新しいインスタンスを作っているので、閉じなくても値は混ざらない。
+     */
     @After
     fun tearDown() {
-        db.close()
     }
 
+    /**
+     * リソースIDから文字列を取得するヘルパー。
+     * テストコード内での文字列リソース参照を簡潔にする。
+     */
     private fun string(resId: Int) = composeTestRule.activity.getString(resId)
 
+    /**
+     * 時計タブの画面をテストルール上にセットアップする。
+     * テスト対象のClockViewModelをインメモリDBに接続した状態で画面を組み立てる。
+     */
     private fun setScreen() {
         composeTestRule.setContent {
-            ClockScreen(viewModel = remember { ClockViewModel(repository) }, bottomBar = {})
+            ClockScreen(
+                viewModel = remember { ClockViewModel(repository, settingsRepository) },
+                bottomBar = {},
+            )
         }
     }
 
-    // 都市が1件も無いとき、案内文が表示されることを保証する
+    // 初期状態のデジタル表示で、現在時刻が表示されデジタルのセグメントボタンが選択されていることを保証する
     @Test
-    fun 都市が無いときの表示() {
+    fun デジタル表示のとき現在時刻が表示される() {
+        // 時計の毎秒更新アニメーションによりComposeがアイドル状態にならずタイムアウトするため、クロックの自動進行を止めて手動で進める
+        composeTestRule.mainClock.autoAdvance = false
         setScreen()
-        composeTestRule.onNodeWithText(string(R.string.clock_city_list_empty)).assertExists()
+        composeTestRule.mainClock.advanceTimeBy(500)
+
+        composeTestRule.onNodeWithText(string(R.string.clock_display_mode_digital)).assertIsSelected()
+
+        val now = ZonedDateTime.now()
+        val currentTime = now.format(DateTimeFormatter.ofPattern("HH:mm"))
+        val prevMinuteTime = now.minusMinutes(1).format(DateTimeFormatter.ofPattern("HH:mm"))
+        // SlideAnimatedDigitsによりRow全体に「HH:mm:ss」が設定されるため、部分一致で現在時刻の時分が含まれることを確認する
+        val hasCurrentOrPrev = composeTestRule.onAllNodes(hasText(currentTime, substring = true)).fetchSemanticsNodes().isNotEmpty() ||
+            composeTestRule.onAllNodes(hasText(prevMinuteTime, substring = true)).fetchSemanticsNodes().isNotEmpty()
+        assertTrue("現在時刻の表示が存在すること", hasCurrentOrPrev)
     }
 
-    // アナログ⇔デジタルの切り替えで、Repositoryの表示設定とデジタル時刻表示の有無が入れ替わることを保証する。
-    // デジタル表示(HH:mm)は実機時刻が進み続けるため、チェックのたびに期待値を計算し直す
+    // 表示モードをアナログへ切り替えると、RepositoryにANALOGが保存され、デジタルの時分表示が非表示になることを保証する
     @Test
-    fun アナログとデジタルを切り替えられる() {
+    fun アナログに切り替えるとモードが保存されデジタル時刻が非表示になる() {
         setScreen()
-        val formatter = DateTimeFormatter.ofPattern("HH:mm")
-        composeTestRule.waitUntil(5_000) {
-            composeTestRule.onAllNodesWithText(ZonedDateTime.now().format(formatter)).fetchSemanticsNodes().isNotEmpty()
-        }
+
+        val now = ZonedDateTime.now()
+        val currentTime = now.format(DateTimeFormatter.ofPattern("HH:mm"))
 
         composeTestRule.onNodeWithText(string(R.string.clock_display_mode_analog)).performClick()
-        composeTestRule.waitUntil(5_000) { runBlocking { repository.observeDisplayMode().first() == ClockDisplayMode.ANALOG } }
+
+        composeTestRule.waitUntil(5_000) {
+            runBlocking { repository.observeDisplayMode().first() == ClockDisplayMode.ANALOG }
+        }
+
         composeTestRule.onNodeWithText(string(R.string.clock_display_mode_analog)).assertIsSelected()
-        // アナログ表示はCanvas描画のみでTextノードを持たないため、デジタル書式の表示が消えていることを確認する
-        composeTestRule.onNodeWithText(ZonedDateTime.now().format(formatter)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(currentTime).assertDoesNotExist()
+    }
+
+    // アナログからデジタルへ切り替え直すと、RepositoryにDIGITALが保存され、時分表示が再表示されることを保証する
+    @Test
+    fun アナログからデジタルに切り替えるとデジタル表示に戻りRepositoryに保存される() {
+        // 時計の毎秒更新アニメーションによりComposeがアイドル状態にならずタイムアウトするため、クロックの自動進行を止めて手動で進める
+        composeTestRule.mainClock.autoAdvance = false
+        runBlocking { repository.setDisplayMode(ClockDisplayMode.ANALOG) }
+        setScreen()
+        composeTestRule.mainClock.advanceTimeBy(500)
+
+        composeTestRule.onNodeWithText(string(R.string.clock_display_mode_analog)).assertIsSelected()
 
         composeTestRule.onNodeWithText(string(R.string.clock_display_mode_digital)).performClick()
-        composeTestRule.waitUntil(5_000) { runBlocking { repository.observeDisplayMode().first() == ClockDisplayMode.DIGITAL } }
-        composeTestRule.waitUntil(5_000) {
-            composeTestRule.onAllNodesWithText(ZonedDateTime.now().format(formatter)).fetchSemanticsNodes().isNotEmpty()
-        }
+        composeTestRule.mainClock.advanceTimeBy(500)
+
+        val saved = runBlocking { repository.observeDisplayMode().first() }
+        assertEquals(ClockDisplayMode.DIGITAL, saved)
+
+        // 保存が終わっても、画面はまだ切り替わりの途中でありうる。
+        // 切り替えに動きを付けてあるため、その分だけクロックを進めてから確かめる
+        composeTestRule.mainClock.advanceTimeBy(CLOCK_MODE_TRANSITION_DURATION_MS.toLong() * 2)
+        composeTestRule.onNodeWithText(string(R.string.clock_display_mode_digital)).assertIsSelected()
+
+        val now = ZonedDateTime.now()
+        val currentTime = now.format(DateTimeFormatter.ofPattern("HH:mm"))
+        val prevMinuteTime = now.minusMinutes(1).format(DateTimeFormatter.ofPattern("HH:mm"))
+        // SlideAnimatedDigitsによりRow全体に「HH:mm:ss」が設定されるため、部分一致でデジタル時刻の時分が含まれることを確認する
+        val hasCurrentOrPrev = composeTestRule.onAllNodes(hasText(currentTime, substring = true)).fetchSemanticsNodes().isNotEmpty() ||
+            composeTestRule.onAllNodes(hasText(prevMinuteTime, substring = true)).fetchSemanticsNodes().isNotEmpty()
+        assertTrue("デジタル時刻の表示が再表示されること", hasCurrentOrPrev)
     }
 
-    // FABから都市を追加すると一覧に現れ、Repositoryにも保存されることを保証する。
-    // 検索欄にはzoneIdの一部("Tokyo")を入力する(表示名はロケール依存だがzoneIdは常に"Asia/Tokyo"のため)
+    // 時計タブに現在の日付が「M月d日（E）」の形式で表示されていることを保証する
     @Test
-    fun 都市を追加すると一覧に現れる() {
-        setScreen()
-        composeTestRule.onNodeWithText(string(R.string.clock_city_list_empty)).assertExists()
-
-        composeTestRule.onNodeWithContentDescription(string(R.string.clock_add_city)).performClick()
-        composeTestRule.waitUntilAtLeastOneExists(hasText(string(R.string.clock_add_city_title)), 5_000)
-
-        composeTestRule.onNode(hasSetTextAction()).performTextInput("Tokyo")
-        composeTestRule.waitUntilAtLeastOneExists(hasText("Asia/Tokyo"), 5_000)
-        composeTestRule.onNodeWithText("Asia/Tokyo").performClick()
-
-        composeTestRule.waitUntil(5_000) { runBlocking { repository.observeCities().first().size == 1 } }
-        composeTestRule.onNodeWithText(string(R.string.clock_city_list_empty)).assertDoesNotExist()
-        // 日本語ロケールでは識別子("Asia/Tokyo")ではなく読める都市名("東京")で表示されることを確認する
-        composeTestRule.onNodeWithText("東京").assertExists()
-
-        val saved = runBlocking { repository.observeCities().first().single() }
-        assertEquals("Asia/Tokyo", saved.zoneId)
-    }
-
-    // 都市を削除すると一覧から消え、Repositoryからも消えることを保証する
-    @Test
-    fun 都市を削除すると消える() {
-        runBlocking { repository.addCity("Asia/Tokyo") }
-        setScreen()
-        composeTestRule.onNodeWithText("東京").assertExists()
-
-        composeTestRule.onNodeWithContentDescription(string(R.string.clock_delete_city)).performClick()
-
-        composeTestRule.waitUntil(5_000) { runBlocking { repository.observeCities().first().isEmpty() } }
-        composeTestRule.onNodeWithText("東京").assertDoesNotExist()
-        composeTestRule.onNodeWithText(string(R.string.clock_city_list_empty)).assertExists()
-    }
-
-    // 先頭の都市の「下へ移動」を押すと、Repository上の並び順と画面上の表示順(縦位置)の両方が入れ替わることを保証する
-    @Test
-    fun 都市を並べ替えられる() {
-        runBlocking {
-            repository.addCity("Asia/Tokyo")
-            repository.addCity("America/New_York")
-        }
-        setScreen()
-        val tokyoName = cityDisplayName("Asia/Tokyo")
-        val nyName = cityDisplayName("America/New_York")
-        composeTestRule.onNodeWithText(tokyoName).assertExists()
-        composeTestRule.onNodeWithText(nyName).assertExists()
-
-        fun topOf(name: String) = composeTestRule.onNodeWithText(name).fetchSemanticsNode().boundsInRoot.top
-        assertTrue(topOf(tokyoName) < topOf(nyName)) // 追加順どおり東京が先頭にあることを確認してから並べ替える
-
-        composeTestRule.onAllNodesWithContentDescription(string(R.string.clock_move_down))[0].performClick()
-
-        composeTestRule.waitUntil(5_000) {
-            runBlocking { repository.observeCities().first().map { it.zoneId } == listOf("America/New_York", "Asia/Tokyo") }
-        }
-        assertTrue(topOf(nyName) < topOf(tokyoName)) // 画面上の表示順も入れ替わっていることを確認する
-    }
-
-    // 端末のタイムゾーン(Asia/Tokyo, UTC+9)と大きく異なる都市を追加すると、「同じ時刻」ではなく
-    // 具体的な時差が表示されることを保証する。時差の数値の正しさそのものはWorldClockTestの担当とする
-    @Test
-    fun 追加した都市に時差が表示される() {
-        runBlocking { repository.addCity("Etc/GMT+12") } // UTC-12固定、Asia/Tokyo(UTC+9)とは常に21時間差
+    fun 日付が表示される() {
         setScreen()
 
-        composeTestRule.onNodeWithText(string(R.string.clock_diff_same_time)).assertDoesNotExist()
-        assertTrue(composeTestRule.onAllNodesWithText("時間", substring = true).fetchSemanticsNodes().isNotEmpty())
+        val todayDate = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("M月d日", Locale.JAPANESE))
+        composeTestRule.onNodeWithText(todayDate, substring = true).assertExists()
     }
 }

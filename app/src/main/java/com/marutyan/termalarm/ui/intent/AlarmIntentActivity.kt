@@ -8,7 +8,7 @@ import androidx.lifecycle.lifecycleScope
 import com.marutyan.termalarm.MainActivity
 import com.marutyan.termalarm.alarm.AlarmScheduler
 import com.marutyan.termalarm.alarm.RingingService
-import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
 import com.marutyan.termalarm.ui.navigation.EXTRA_DEEPLINK_ALARM_ID
@@ -73,7 +73,7 @@ class AlarmIntentActivity : ComponentActivity() {
         )
         val skipUi = intent.getBooleanExtra(AlarmClock.EXTRA_SKIP_UI, false)
         lifecycleScope.launch {
-            val repository = AlarmRepository(AlarmDatabase.getInstance(applicationContext).alarmDao())
+            val repository = Repositories.alarm(applicationContext)
             val savedId = repository.add(schedule)
             // 作成しただけでは鳴らない。必ず次回の予約を反映する(呼び忘れると永久に鳴らない不具合になる)
             AlarmScheduler.reschedule(applicationContext, savedId)

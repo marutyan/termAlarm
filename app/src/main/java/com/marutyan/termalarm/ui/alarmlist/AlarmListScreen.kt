@@ -17,15 +17,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.material3.MaterialTheme
+import com.marutyan.termalarm.ui.theme.alarmCardClock
+import com.marutyan.termalarm.ui.theme.alarmColorAnimationSpec
+import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarItem
@@ -58,14 +59,30 @@ import com.marutyan.termalarm.domain.canEndTodaySession
 import java.time.ZonedDateTime
 import com.marutyan.termalarm.domain.remainingTimeUntilNextTrigger
 import com.marutyan.termalarm.domain.scheduleSummary
+import com.marutyan.termalarm.domain.WeekStart
 import com.marutyan.termalarm.ui.common.formatClockMinutes
+import com.marutyan.termalarm.ui.common.clockTimePattern
 import java.time.DayOfWeek
+
+// 曜日の丸の大きさ。7つ並べても、カードの内側(413dp = 画面485dp − 左右の余白16dp×2 − カード内側20dp×2)に
+// 隙間を残して収まる大きさにしている。56dpなら 56×7 = 392dp で、丸どうしに少しずつ間が空く
+private val DAY_CHIP_SIZE = 56.dp
+
+// 週の始まり(設定「週の始まり」)に合わせて曜日チップの並び順を決める。DayOfWeek.entriesは月曜始まりの
+// 固定順のため、日曜始まりのときだけ日曜を先頭に回転させる。ui/alarmedit/AlarmEditScreen.ktからも使う
+internal fun orderedDaysOfWeek(weekStart: WeekStart): List<DayOfWeek> = when (weekStart) {
+    WeekStart.MONDAY -> DayOfWeek.entries
+    WeekStart.SUNDAY -> listOf(DayOfWeek.SUNDAY) + DayOfWeek.entries.filter { it != DayOfWeek.SUNDAY }
+}
 
 /**
  * 1分ごとに更新される現在時刻を返す。
  * 残り時間や当日終了の可否は時刻とともに変わるため、画面を触らなくても表示が追従するようにする。
  * 秒までは表示しないので、次の分の頭に合わせて起こすことで無駄な再計算を避ける。
  */
+// 右下の追加ボタンの大きさ。純正の実測値に合わせている
+private val FAB_SIZE = 80.dp
+
 @Composable
 private fun rememberCurrentMinute(): ZonedDateTime {
     var now by remember { mutableStateOf(ZonedDateTime.now()) }
@@ -94,15 +111,17 @@ fun AlarmListScreen(
     onAddAlarm: () -> Unit,
     onEditAlarm: (Long) -> Unit,
     onOpenAbout: () -> Unit,
+    onOpenSettings: () -> Unit,
     onNavigateToSkipGame: (Long) -> Unit,
     exactAlarmBanner: @Composable () -> Unit,
     notificationPermissionBanner: @Composable () -> Unit,
     bottomBar: @Composable () -> Unit = {},
+    onOpenPrivacyPolicy: () -> Unit = {},
 ) {
     val alarms by viewModel.alarms.collectAsStateWithLifecycle()
+    val weekStart by viewModel.weekStart.collectAsStateWithLifecycle()
     // 残り時間と当日終了の可否は時刻で変わるため、1分ごとに更新される現在時刻を使う
     val now = rememberCurrentMinute()
-    var menuExpanded by rememberSaveable { mutableStateOf(false) }
     // 「今日はもう止める」の確認ダイアログ対象。skipGame=trueのアラームはダイアログを出さずSkipGame画面へ遷移させる
     var pendingSkipTarget by remember { mutableStateOf<AlarmSchedule?>(null) }
 
@@ -111,22 +130,23 @@ fun AlarmListScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.alarm_list_title), style = MaterialTheme.typography.headlineMedium) },
                 actions = {
-                    Box {
-                        IconButton(onClick = { menuExpanded = true }) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.menu_more))
-                        }
-                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_about_license)) },
-                                onClick = { menuExpanded = false; onOpenAbout() },
-                            )
-                        }
-                    }
+                    TermAlarmOverflowMenu(
+                        onOpenSettings = onOpenSettings,
+                        onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                        onOpenAbout = onOpenAbout,
+                    )
                 },
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddAlarm) {
+            // 純正と同じ明るい色にする。暗い画面ではprimaryが明るい側の色になる
+            FloatingActionButton(
+                onClick = onAddAlarm,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                // 純正を実測すると80dp。既定のままでは45dpしかなく、押す場所として小さい
+                modifier = Modifier.size(FAB_SIZE),
+            ) {
                 Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_alarm))
             }
         },
@@ -147,12 +167,16 @@ fun AlarmListScreen(
                         AlarmCard(
                             schedule = schedule,
                             now = now,
+                            weekStart = weekStart,
                             onToggleEnabled = { enabled -> viewModel.setEnabled(schedule.id, enabled) },
+                            onToggleDay = { day -> viewModel.toggleDay(schedule, day) },
                             onClick = { onEditAlarm(schedule.id) },
                             onRequestEndTodaySession = {
                                 // skipGameがtrueならその場でゲーム画面へ遷移し、falseなら確認ダイアログを出す
                                 if (schedule.skipGame) onNavigateToSkipGame(schedule.id) else pendingSkipTarget = schedule
                             },
+                            // 追加・削除・並び替えのときに、その場で入れ替わらず動いて見えるようにする
+                            modifier = Modifier.animateItem(),
                         )
                     }
                 }
@@ -193,14 +217,17 @@ private fun EmptyAlarmList(modifier: Modifier = Modifier) {
 private fun AlarmCard(
     schedule: AlarmSchedule,
     now: ZonedDateTime,
+    weekStart: WeekStart,
     onToggleEnabled: (Boolean) -> Unit,
+    onToggleDay: (DayOfWeek) -> Unit,
     onClick: () -> Unit,
     onRequestEndTodaySession: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val isSingle = schedule.startMinutes == schedule.endMinutes
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(28.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -208,19 +235,41 @@ private fun AlarmCard(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
+        // 端末の「24時間表示」設定に合わせた時刻の書式。設定が変わればその場で切り替わる
+        val timePattern = clockTimePattern()
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (isSingle) {
-                    Text(
-                        text = formatClockMinutes(schedule.startMinutes),
-                        style = MaterialTheme.typography.displaySmall,
-                    )
+            // weightを付けないと、長い時刻が右のスイッチへ重なって読めなくなる
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                // 開始と終了をつないだ1つの文にする。別々のTextへ分けると折り返し位置が揃わない
+                val timeText = if (isSingle) {
+                    formatClockMinutes(schedule.startMinutes, timePattern)
                 } else {
-                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(text = formatClockMinutes(schedule.startMinutes), style = MaterialTheme.typography.displaySmall)
-                        Text(text = "–", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(text = formatClockMinutes(schedule.endMinutes), style = MaterialTheme.typography.displaySmall)
-                    }
+                    formatClockMinutes(schedule.startMinutes, timePattern) + "–" + formatClockMinutes(schedule.endMinutes, timePattern)
+                }
+                // アラームの有効・無効切り替え時に文字色を滑らかに補間する
+                val textColor by animateColorAsState(
+                    targetValue = if (schedule.enabled) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    animationSpec = alarmColorAnimationSpec(),
+                    label = "AlarmTextColor",
+                )
+                Text(
+                    text = timeText,
+                    style = MaterialTheme.typography.displayLarge.alarmCardClock(),
+                    color = textColor,
+                    maxLines = 1,
+                    softWrap = false,
+                )
+                // 名前を付けたアラームは、何のためのものか一覧で分かるように出す
+                if (schedule.label.isNotBlank()) {
+                    Text(
+                        text = schedule.label,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = textColor,
+                    )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(
@@ -249,27 +298,28 @@ private fun AlarmCard(
             Switch(checked = schedule.enabled, onCheckedChange = onToggleEnabled)
         }
 
-        if (schedule.repeatDays.isNotEmpty()) {
-            // 固定間隔で並べると7つが左へ寄って右に余白ができるため、幅いっぱいに均等配置する
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                DayOfWeek.entries.forEach { day ->
-                    val on = day in schedule.repeatDays
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(if (on) MaterialTheme.colorScheme.primary else Color.Transparent),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = dayLabel(day),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+        // 曜日はここで直に切り替えられる。編集画面を開かずに
+        // 「今週は水曜だけ外す」といった調整ができるようにするため。
+        // 繰り返しを設定していないアラームでも並べて、そのまま選べるようにする
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            orderedDaysOfWeek(weekStart).forEach { day ->
+                val on = day in schedule.repeatDays
+                Box(
+                    modifier = Modifier
+                        .size(DAY_CHIP_SIZE)
+                        .clip(CircleShape)
+                        .background(if (on) MaterialTheme.colorScheme.primary else Color.Transparent)
+                        .clickable { onToggleDay(day) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = dayLabel(day),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }

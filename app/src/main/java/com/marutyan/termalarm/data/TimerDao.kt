@@ -22,10 +22,6 @@ interface TimerDao {
     @Query("SELECT * FROM timer_state WHERE runState = 'RUNNING'")
     suspend fun getAllRunningOnce(): List<TimerEntity>
 
-    // 指定した実行状態のタイマーの件数。サービスを続けるかの判断に使う
-    @Query("SELECT COUNT(*) FROM timer_state WHERE runState IN (:states)")
-    suspend fun countByRunStates(states: List<String>): Int
-
     @Insert
     suspend fun insert(entity: TimerEntity): Long
 

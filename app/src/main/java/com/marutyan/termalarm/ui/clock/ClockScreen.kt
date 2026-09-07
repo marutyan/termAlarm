@@ -1,303 +1,225 @@
 package com.marutyan.termalarm.ui.clock
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Card
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.theme.COMPACT_SCREEN_HEIGHT_THRESHOLD
+import com.marutyan.termalarm.ui.theme.heroClock
+import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
 import com.marutyan.termalarm.R
+import com.marutyan.termalarm.data.AlarmDatabase
+import com.marutyan.termalarm.data.SettingsRepository
+import com.marutyan.termalarm.domain.AppSettings
 import com.marutyan.termalarm.domain.ClockDisplayMode
-import com.marutyan.termalarm.domain.TimeDifference
-import com.marutyan.termalarm.domain.WorldClockCity
-import com.marutyan.termalarm.domain.timeDifference
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+import com.marutyan.termalarm.ui.theme.clockModeAnimationSpec
 import com.marutyan.termalarm.ui.theme.tabularNums
-import java.time.Instant
-import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import com.marutyan.termalarm.ui.common.clockTimePattern
 
-// 世界時計の各都市の時刻表示に使うフォーマット。分までにとどめ、秒は出さない(docs/SPEC.md「更新頻度」)
-private val CITY_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+// 日付表示のフォーマット。「9月3日（木）」の形にする(RingingActivity.ktの終了時刻表示と同じ書式)
+private val DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("M月d日（E）", Locale.JAPANESE)
 
-// 端末の時刻をデジタル表示するときのフォーマット。CITY_TIME_FORMATTERと同じ粒度に揃える
-private val DIGITAL_CLOCK_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 /**
- * 時計タブの画面。端末の現在時刻を設定どおりアナログ/デジタルで表示し、その下に世界時計の
- * 都市一覧(追加・削除・並べ替え可能)を出す(docs/SPEC.md「時計タブ」)。
+ * 時計タブの画面。世界時計をやめ、端末の現在時刻をアナログ/デジタルで大きく表示する
+ * 1つの時計に作り直した。表示モードの切り替えは画面下部のトグルで行い、設定として永続化する。
  */
 @Composable
-fun ClockScreen(viewModel: ClockViewModel, bottomBar: @Composable () -> Unit) {
-    val cities by viewModel.cities.collectAsStateWithLifecycle()
+fun ClockScreen(
+    viewModel: ClockViewModel,
+    onOpenSettings: () -> Unit = {},
+    onOpenPrivacyPolicy: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
+    bottomBar: @Composable () -> Unit,
+) {
     val displayMode by viewModel.displayMode.collectAsStateWithLifecycle()
-    var showAddCity by rememberSaveable { mutableStateOf(false) }
+    // アナログの秒針・デジタルの秒表示のどちらも1秒ごとに動かす(要件「1秒ごとの更新」)
+    val now = rememberCurrentSecond()
 
-    // アナログは秒針が動くため1秒ごと、デジタルは分までの表示なので1分ごとに更新する
-    val now = if (displayMode == ClockDisplayMode.ANALOG) rememberCurrentSecond() else rememberCurrentMinute()
+    // 設定「時刻に秒を表示」。画面が自分でDBを開くと、テストが差し替えた先と食い違って
+    // 実行のたびに結果が変わるため、ViewModelから受け取る
+    val appSettings by viewModel.appSettings.collectAsStateWithLifecycle()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_clock), style = MaterialTheme.typography.headlineMedium) }) },
-        bottomBar = bottomBar,
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAddCity = true }) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.clock_add_city))
-            }
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.tab_clock), style = MaterialTheme.typography.headlineMedium) },
+                actions = {
+                    TermAlarmOverflowMenu(
+                        onOpenSettings = onOpenSettings,
+                        onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                        onOpenAbout = onOpenAbout,
+                    )
+                },
+            )
         },
+        bottomBar = bottomBar,
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
         ) {
-            item { DisplayModeToggle(mode = displayMode, onModeChange = viewModel::setDisplayMode) }
-            item {
+            val isCompact = maxHeight < COMPACT_SCREEN_HEIGHT_THRESHOLD
+            val topSpacerHeight = if (isCompact) 8.dp else 24.dp
+            val datePaddingTop = if (isCompact) 8.dp else 24.dp
+            val datePaddingBottom = if (isCompact) 12.dp else 32.dp
+            val analogClockSize = if (isCompact) 200.dp else 320.dp
+
+            // 純正は時刻を画面の上の方へ置く(実測で上端が画面の16%の位置)。
+            // 縦が足りないときはスクロールできるようにし、狭い画面では余白と時計サイズを詰める
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = if (isCompact) 16.dp else 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(modifier = Modifier.height(topSpacerHeight))
                 MainClock(
                     mode = displayMode,
                     time = now,
-                    modifier = Modifier.fillMaxWidth(),
+                    showSeconds = appSettings.showClockSeconds,
+                    analogClockSize = analogClockSize,
                 )
-            }
-            item {
                 Text(
-                    text = stringResource(R.string.clock_world_clock_title),
-                    style = MaterialTheme.typography.titleMedium,
+                    text = now.format(DATE_FORMATTER),
+                    style = if (isCompact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = datePaddingTop, bottom = datePaddingBottom),
                 )
-            }
-            if (cities.isEmpty()) {
-                item {
-                    Text(
-                        text = stringResource(R.string.clock_city_list_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            itemsIndexed(cities, key = { _, city -> city.id }) { index, city ->
-                CityRow(
-                    city = city,
-                    nowInstant = now.toInstant(),
-                    deviceZone = now.zone,
-                    canMoveUp = index > 0,
-                    canMoveDown = index < cities.lastIndex,
-                    onMoveUp = { viewModel.moveCity(index, index - 1) },
-                    onMoveDown = { viewModel.moveCity(index, index + 1) },
-                    onDelete = { viewModel.removeCity(city.id) },
-                )
+                DisplayModeToggle(mode = displayMode, onModeChange = viewModel::setDisplayMode)
             }
         }
     }
+}
 
-    if (showAddCity) {
-        AddCityDialog(
-            existingZoneIds = remember(cities) { cities.map { it.zoneId }.toSet() },
-            onDismiss = { showAddCity = false },
-            onSelect = { zoneId ->
-                viewModel.addCity(zoneId)
-                showAddCity = false
-            },
+// 端末の現在時刻を、設定どおりアナログ(Canvas描画)またはデジタル(等幅数字)で大きく表示する。
+// showSecondsは設定「時刻に秒を表示」(デジタルは秒の文字、アナログは秒針の表示可否に反映する)。
+// analogClockSizeは狭い画面でアナログ時計がはみ出さないよう縮小するために渡す。
+@Composable
+private fun MainClock(
+    mode: ClockDisplayMode,
+    time: ZonedDateTime,
+    showSeconds: Boolean,
+    analogClockSize: Dp = 320.dp,
+) {
+    AnimatedContent(
+        targetState = mode,
+        transitionSpec = {
+            (scaleIn(initialScale = 0.8f, animationSpec = clockModeAnimationSpec()) + fadeIn(animationSpec = clockModeAnimationSpec()))
+                .togetherWith(scaleOut(targetScale = 0.8f, animationSpec = clockModeAnimationSpec()) + fadeOut(animationSpec = clockModeAnimationSpec()))
+        },
+        label = "ClockModeTransition",
+    ) { currentMode ->
+        when (currentMode) {
+            ClockDisplayMode.ANALOG -> AnalogClockFace(time = time, showSeconds = showSeconds, modifier = Modifier.size(analogClockSize))
+            ClockDisplayMode.DIGITAL -> DigitalClockFace(time = time, showSeconds = showSeconds)
+        }
+    }
+}
+
+/**
+ * デジタル時計。
+ * 純正は「6:31:20」のように秒まで同じ大きさで1行に並べる。秒だけ小さくすると別物に見える。
+ * 文字の大きさは画面の幅から決める。桁数は時刻帯や12/24時制で変わるため、固定値だと
+ * ある時間帯だけはみ出したり、逆に小さすぎたりする。
+ */
+@Composable
+private fun DigitalClockFace(time: ZonedDateTime, showSeconds: Boolean) {
+    // 端末の「24時間表示」設定と地域に合わせる。純正も同じくシステムに任せている
+    val pattern = clockTimePattern(withSeconds = showSeconds)
+    val formatter = remember(pattern) { DateTimeFormatter.ofPattern(pattern, Locale.getDefault()) }
+    val text = time.format(formatter)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        // 秒が変わるたびに文字を動かさない。純正も時刻の数字は動かさず、静かに入れ替える。
+        // 1秒ごとに動くと目が休まらず、読み取りにくい。
+        //
+        // 大きさは、実際に描いてみて1行に収まる最大を選ばせる。12時間表示の「午後3:52:30」のように
+        // 全角と数字が混ざると、文字数からの見積もりでは合わない
+        BasicText(
+            text = text,
+            style = MaterialTheme.typography.displayLarge.copy(
+                color = MaterialTheme.colorScheme.onSurface,
+                fontFeatureSettings = "tnum",
+            ),
+            maxLines = 1,
+            softWrap = false,
+            autoSize = TextAutoSize.StepBased(minFontSize = 48.sp, maxFontSize = 120.sp),
         )
     }
 }
+
+// 「アナログ」「デジタル」が折り返さずに収まる幅
+private val SEGMENT_WIDTH = 132.dp
 
 // 表示モード(アナログ/デジタル)を選ぶ2択のセグメントボタン
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DisplayModeToggle(mode: ClockDisplayMode, onModeChange: (ClockDisplayMode) -> Unit) {
-    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+    SingleChoiceSegmentedButtonRow {
         SegmentedButton(
             selected = mode == ClockDisplayMode.ANALOG,
             onClick = { onModeChange(ClockDisplayMode.ANALOG) },
             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+            modifier = Modifier.width(SEGMENT_WIDTH),
         ) {
-            Text(stringResource(R.string.clock_display_mode_analog))
+            // 幅が足りないと「アナ/ログ」のように途中で折り返してしまう
+            Text(stringResource(R.string.clock_display_mode_analog), maxLines = 1, softWrap = false)
         }
         SegmentedButton(
             selected = mode == ClockDisplayMode.DIGITAL,
             onClick = { onModeChange(ClockDisplayMode.DIGITAL) },
             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+            modifier = Modifier.width(SEGMENT_WIDTH),
         ) {
-            Text(stringResource(R.string.clock_display_mode_digital))
-        }
-    }
-}
-
-// 端末の現在時刻を、設定どおりアナログ(Canvas描画)またはデジタル(等幅数字)で表示する
-@Composable
-private fun MainClock(mode: ClockDisplayMode, time: ZonedDateTime, modifier: Modifier = Modifier) {
-    when (mode) {
-        ClockDisplayMode.ANALOG -> AnalogClockFace(time = time, modifier = modifier.size(240.dp))
-        ClockDisplayMode.DIGITAL -> Text(
-            text = time.format(DIGITAL_CLOCK_FORMATTER),
-            style = MaterialTheme.typography.displayLarge.tabularNums(),
-            modifier = modifier,
-        )
-    }
-}
-
-// 世界時計の1都市分の行。都市名・生のzoneId・時差を左に、時刻を右に、並べ替えと削除のボタンを続ける
-@Composable
-private fun CityRow(
-    city: WorldClockCity,
-    nowInstant: Instant,
-    deviceZone: ZoneId,
-    canMoveUp: Boolean,
-    canMoveDown: Boolean,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
-    onDelete: () -> Unit,
-) {
-    val targetZone = remember(city.zoneId) { ZoneId.of(city.zoneId) }
-    val name = remember(city.zoneId) { cityDisplayName(city.zoneId) }
-    val timeText = remember(nowInstant, targetZone) {
-        ZonedDateTime.ofInstant(nowInstant, targetZone).format(CITY_TIME_FORMATTER)
-    }
-    val diff = remember(nowInstant, targetZone, deviceZone) { timeDifference(targetZone, deviceZone, nowInstant) }
-
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = name, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = formatTimeDifference(diff),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Text(
-                text = timeText,
-                style = MaterialTheme.typography.headlineSmall.tabularNums(),
-                modifier = Modifier.padding(horizontal = 8.dp),
-            )
-            IconButton(onClick = onMoveUp, enabled = canMoveUp) {
-                Icon(Icons.Filled.KeyboardArrowUp, contentDescription = stringResource(R.string.clock_move_up))
-            }
-            IconButton(onClick = onMoveDown, enabled = canMoveDown) {
-                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = stringResource(R.string.clock_move_down))
-            }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.clock_delete_city))
-            }
-        }
-    }
-}
-
-// domainのTimeDifference(数値のみ)をstrings.xmlの文言へ変換する(remainingTimeTextと同じ考え方)。
-// 符号("+"/"-")は言語ではなく記号なので文字列リソース化せず、プレースホルダへそのまま渡す
-@Composable
-private fun formatTimeDifference(diff: TimeDifference): String {
-    val sign = if (diff.isAhead) "+" else "-"
-    val timeText = when {
-        diff.hourPart == 0 && diff.minutePart == 0 -> stringResource(R.string.clock_diff_same_time)
-        diff.minutePart == 0 -> stringResource(R.string.clock_diff_hours, sign, diff.hourPart)
-        diff.hourPart == 0 -> stringResource(R.string.clock_diff_minutes, sign, diff.minutePart)
-        else -> stringResource(R.string.clock_diff_hours_minutes, sign, diff.hourPart, diff.minutePart)
-    }
-    val dayText = when {
-        diff.dayOffset == -1 -> stringResource(R.string.clock_diff_day_before)
-        diff.dayOffset == 1 -> stringResource(R.string.clock_diff_day_after)
-        diff.dayOffset <= -2 -> stringResource(R.string.clock_diff_days_before, -diff.dayOffset)
-        diff.dayOffset >= 2 -> stringResource(R.string.clock_diff_days_after, diff.dayOffset)
-        else -> null
-    }
-    return if (dayText != null) "$timeText $dayText" else timeText
-}
-
-// 都市追加ダイアログ。ZoneId.getAvailableZoneIds()全件を検索して選ぶ(都市データを自前で持たない方針)
-@Composable
-private fun AddCityDialog(existingZoneIds: Set<String>, onDismiss: () -> Unit, onSelect: (String) -> Unit) {
-    val locale = remember { Locale.getDefault() }
-    // 全ゾーンIDの一覧と表示名の組を1回だけ作り、検索のたびに作り直さない(約600件)
-    val allCities = remember(locale) {
-        ZoneId.getAvailableZoneIds()
-            .map { zoneId -> zoneId to cityDisplayName(zoneId, locale) }
-            .sortedBy { it.second }
-    }
-    var query by rememberSaveable { mutableStateOf("") }
-    val filtered = remember(query, allCities, existingZoneIds) {
-        allCities.filter { (zoneId, name) ->
-            zoneId !in existingZoneIds &&
-                (query.isBlank() || name.contains(query, ignoreCase = true) || zoneId.contains(query, ignoreCase = true))
-        }
-    }
-
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-            Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close))
-                    }
-                    Text(
-                        text = stringResource(R.string.clock_add_city_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.padding(start = 8.dp),
-                    )
-                }
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    label = { Text(stringResource(R.string.clock_search_city)) },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                )
-                LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(filtered, key = { it.first }) { (zoneId, name) ->
-                        ListItem(
-                            headlineContent = { Text(name) },
-                            supportingContent = { Text(zoneId) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 48.dp)
-                                .clickable { onSelect(zoneId) },
-                        )
-                    }
-                }
-            }
+            Text(stringResource(R.string.clock_display_mode_digital), maxLines = 1, softWrap = false)
         }
     }
 }

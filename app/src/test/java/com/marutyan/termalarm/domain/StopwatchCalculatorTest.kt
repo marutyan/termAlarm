@@ -1,6 +1,7 @@
 package com.marutyan.termalarm.domain
 
 import org.junit.Assert.assertEquals
+import com.marutyan.termalarm.stopwatch.formatElapsed
 import org.junit.Test
 
 class StopwatchCalculatorTest {
@@ -96,5 +97,22 @@ class StopwatchCalculatorTest {
         val rebased = rebaseStopwatchAfterReboot(paused, nowElapsedRealtime = 100L, nowWallClockMillis = 999_999L)
         // RUNNING以外は対象外でそのまま返る
         assertEquals(paused, rebased)
+    }
+
+    // --- 表示する書式 ---
+    // 純正に合わせて1時間未満でも分を2桁にした。桁が減ると数字の位置が動いて読みにくいため
+
+    @Test
+    fun `1時間未満は分を2桁で出す`() {
+        assertEquals("00:00.00", formatElapsed(0L, includeCentiseconds = true))
+        assertEquals("00:07.35", formatElapsed(7_350L, includeCentiseconds = true))
+        assertEquals("09:59.99", formatElapsed(599_990L, includeCentiseconds = true))
+        assertEquals("59:59", formatElapsed(3_599_000L, includeCentiseconds = false))
+    }
+
+    @Test
+    fun `1時間以上は時を足して出す`() {
+        assertEquals("1:00:00.00", formatElapsed(3_600_000L, includeCentiseconds = true))
+        assertEquals("12:34:56", formatElapsed(45_296_000L, includeCentiseconds = false))
     }
 }

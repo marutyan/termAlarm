@@ -8,6 +8,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.marutyan.termalarm.R
@@ -39,6 +41,10 @@ import org.junit.Test
  */
 @OptIn(ExperimentalTestApi::class)
 class TimerScreenTest {
+    // 端末がスリープしていてもテストが動くようにする
+    @get:Rule
+    val screenWakeRule = ScreenWakeRule()
+
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
@@ -52,9 +58,15 @@ class TimerScreenTest {
         repository = repo
     }
 
+    /**
+     * テスト終了後の後始末。
+     *
+     * インメモリDBは閉じない。画面が持つViewModelは、テストが終わった後も
+     * 保存の処理を続けていることがあり、閉じた先へ書きに行って落ちるため。
+     * テストごとに新しいインスタンスを作っているので、閉じなくても値は混ざらない。
+     */
     @After
     fun tearDown() {
-        db.close()
     }
 
     private fun string(resId: Int) = composeTestRule.activity.getString(resId)
@@ -65,24 +77,33 @@ class TimerScreenTest {
         }
     }
 
-    // 動作中のタイマーが1件も無いとき、案内文が表示されることを保証する
+    // 動作中のタイマーが1件も無いとき、純正と同じくテンキーがそのまま出ることを保証する。
+    // 戻る先が無いので取り消し(×)は出さない
     @Test
-    fun タイマーが無いとき案内文が表示される() {
+    fun タイマーが無いときテンキーが出る() {
         setScreen()
-        composeTestRule.onNodeWithText(string(R.string.timer_list_empty)).assertExists()
+        composeTestRule.waitUntilAtLeastOneExists(hasText("5"), 5_000)
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_start)).assertExists()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_cancel)).assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).assertDoesNotExist()
     }
 
-    // 既定値(5分)のまま「開始」を押すと、一覧に1件現れ空表示が消えることを保証する
+    // テンキーで5分00秒(5 → 0 → 0)を入力して開始すると、一覧に1件現れることを保証する。
+    // 1件も無い間はテンキーがそのまま出ているため、追加ボタンを押す手順は要らない。
     @Test
     fun 開始すると一覧に1件現れる() {
         setScreen()
-        composeTestRule.onNodeWithText(string(R.string.timer_start)).performClick()
+        composeTestRule.waitUntilAtLeastOneExists(hasText("5"), 5_000)
+        composeTestRule.onNodeWithText("5").performClick()
+        composeTestRule.onNodeWithText("0").performClick()
+        composeTestRule.onNodeWithText("0").performClick()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_start)).performClick()
 
         composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().size == 1 } }
-        composeTestRule.onNodeWithText(string(R.string.timer_list_empty)).assertDoesNotExist()
+        composeTestRule.waitUntilAtLeastOneExists(hasContentDescription(string(R.string.timer_add)), 5_000)
 
         val saved = runBlocking { repository.observeAll().first().single() }
-        assertEquals(300_000L, saved.totalMillis) // 既定値は0時間5分0秒
+        assertEquals(300_000L, saved.totalMillis) // 5分0秒 = 300,000ms
         assertEquals(TimerRunState.RUNNING, saved.runState)
     }
 
@@ -90,23 +111,34 @@ class TimerScreenTest {
     @Test
     fun 複数開始すると両方一覧に出てそれぞれ独立している() {
         setScreen()
-        val decrease = string(R.string.timer_decrease)
+        val addDescription = string(R.string.timer_add)
+        val startDescription = string(R.string.timer_start)
 
-        composeTestRule.onNodeWithText(string(R.string.timer_start)).performClick()
+        // 1件目は、1件も無いときにそのまま出ているテンキーで 5分00秒 (5 → 0 → 0) を入力して開始する
+        composeTestRule.waitUntilAtLeastOneExists(hasText("5"), 5_000)
+        composeTestRule.onNodeWithText("5").performClick()
+        composeTestRule.onNodeWithText("0").performClick()
+        composeTestRule.onNodeWithText("0").performClick()
+        composeTestRule.onNodeWithContentDescription(startDescription).performClick()
         composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().size == 1 } }
 
-        // 2件目は分数を3分に変えてから開始し、1件目と別の合計時間にする
-        // (時/分/秒の3つのステッパーはcontentDescriptionが共通のため、並び順のindex=1で分のステッパーを指す)
-        repeat(2) { composeTestRule.onAllNodesWithContentDescription(decrease)[1].performClick() }
-        composeTestRule.onNodeWithText(string(R.string.timer_start)).performClick()
+        // 2件目は一覧へ戻っているので、追加ボタンからテンキーを開いて 3分00秒 を入力する
+        composeTestRule.waitUntilAtLeastOneExists(hasContentDescription(addDescription), 5_000)
+        composeTestRule.onNodeWithContentDescription(addDescription).performClick()
+        composeTestRule.waitUntilAtLeastOneExists(hasText("3"), 5_000)
+        composeTestRule.onNodeWithText("3").performClick()
+        composeTestRule.onNodeWithText("0").performClick()
+        composeTestRule.onNodeWithText("0").performClick()
+        composeTestRule.onNodeWithContentDescription(startDescription).performClick()
         composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().size == 2 } }
 
         val all = runBlocking { repository.observeAll().first() }
         assertEquals(setOf(300_000L, 180_000L), all.map { it.totalMillis }.toSet())
         assertTrue(all.all { it.runState == TimerRunState.RUNNING })
 
-        // 一方だけ一時停止しても、他方はRUNNINGのままであることを確認する(独立した状態を持つ証拠)
-        composeTestRule.onAllNodesWithText(string(R.string.timer_pause))[0].performClick()
+        // 一方だけ一時停止しても、他方はRUNNINGのままであることを確認する(独立した状態を持つ証拠)。
+        // 一時停止/再開ボタンは新デザインではアイコンのみのため、文言ではなくcontentDescriptionで探す
+        composeTestRule.onAllNodesWithContentDescription(string(R.string.timer_pause))[0].performClick()
         composeTestRule.waitUntil(5_000) {
             runBlocking { repository.observeAll().first().count { it.runState == TimerRunState.PAUSED } == 1 }
         }
@@ -115,21 +147,34 @@ class TimerScreenTest {
         assertEquals(1, afterPause.count { it.runState == TimerRunState.PAUSED })
     }
 
-    // 一時停止するとPAUSEDになりボタンが「再開」に変わること、再開するとRUNNINGへ戻ることを保証する
+    // 一時停止するとPAUSEDになりボタンが「再開」に変わること、再開するとRUNNINGへ戻ることを保証する。
+    // 一時停止/再開ボタンは新デザインではアイコンのみのため、文言ではなくcontentDescriptionで探す
     @Test
     fun 一時停止と再開() {
+        // タイマーの連続アニメーションによりComposeがアイドル状態にならずタイムアウトするため、クロックの自動進行を止めて手動で進める
+        composeTestRule.mainClock.autoAdvance = false
         val id = runBlocking {
             repository.add(startTimer(0L, "5:00", 300_000L, SystemClock.elapsedRealtime(), System.currentTimeMillis()))
         }
         setScreen()
+        // 一覧は薄く現れる。その分を跨いでから操作する
+        composeTestRule.mainClock.advanceTimeBy(1_000)
 
-        composeTestRule.onNodeWithText(string(R.string.timer_pause)).performClick()
-        composeTestRule.waitUntil(5_000) { runBlocking { repository.getById(id)?.runState == TimerRunState.PAUSED } }
-        composeTestRule.onNodeWithText(string(R.string.timer_resume)).assertExists()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_pause)).performClick()
+        // 保存はコルーチンで進むため、Composeのクロックを進めるだけでは終わらない。
+        // 保存の完了を確かめてから、画面の描き直しを進める
+        awaitRunState(id, TimerRunState.PAUSED)
+        // 画面は「残り時間が次の秒へ変わる瞬間」に合わせて描き直すため、
+        // 1秒分を確実に跨げるだけクロックを進める
+        composeTestRule.mainClock.advanceTimeBy(2_000)
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_resume)).assertExists()
 
-        composeTestRule.onNodeWithText(string(R.string.timer_resume)).performClick()
-        composeTestRule.waitUntil(5_000) { runBlocking { repository.getById(id)?.runState == TimerRunState.RUNNING } }
-        composeTestRule.onNodeWithText(string(R.string.timer_pause)).assertExists()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_resume)).performClick()
+        awaitRunState(id, TimerRunState.RUNNING)
+        composeTestRule.mainClock.advanceTimeBy(2_000)
+        // 再開後のUI再描画(recomposition)を完了させるためクロックを進める
+        composeTestRule.mainClock.advanceTimeBy(500)
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_pause)).assertExists()
     }
 
     // 「+1分」を押すと合計時間・残り時間の両方が60秒(60000ms)増えることを保証する
@@ -140,7 +185,8 @@ class TimerScreenTest {
         }
         setScreen()
 
-        composeTestRule.onNodeWithText(string(R.string.timer_extend_one_minute)).performClick()
+        // 延長ボタンは新デザインでは「+1:00」表記のため、timer_extend_one_minute_button で探す
+        composeTestRule.onNodeWithText(string(R.string.timer_extend_one_minute_button)).performClick()
         composeTestRule.waitUntil(5_000) { runBlocking { repository.getById(id)?.totalMillis == 120_000L } }
 
         val extended = runBlocking { repository.getById(id)!! }
@@ -167,7 +213,8 @@ class TimerScreenTest {
             )
         }
         setScreen()
-        composeTestRule.onNodeWithText(string(R.string.timer_reset)).performClick()
+        // リセットボタンは新デザインでは円を描く矢印アイコンのため、contentDescriptionで探す
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_reset)).performClick()
 
         composeTestRule.waitUntil(5_000) { runBlocking { repository.getById(id)?.remainingMillisAtAnchor == 300_000L } }
         val reset = runBlocking { repository.getById(id)!! }
@@ -189,6 +236,21 @@ class TimerScreenTest {
         composeTestRule.onNodeWithContentDescription(string(R.string.timer_delete)).performClick()
 
         composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().isEmpty() } }
-        composeTestRule.onNodeWithText(string(R.string.timer_list_empty)).assertExists()
+        // 最後の1件を消すと、純正と同じくテンキーへ戻る
+        composeTestRule.waitUntilAtLeastOneExists(hasText("5"), 5_000)
+    }
+
+    /**
+     * 保存が終わって指定の状態になるまで待つ。
+     * この画面は数字が動き続けるためComposeが「暇な状態」にならず、
+     * waitUntilやwaitForIdleでは待てない。Repositoryを直接見て待つ。
+     */
+    private fun awaitRunState(id: Long, expected: TimerRunState) {
+        val deadline = System.currentTimeMillis() + 5_000
+        while (System.currentTimeMillis() < deadline) {
+            if (runBlocking { repository.getById(id)?.runState } == expected) return
+            Thread.sleep(50)
+        }
+        assertEquals(expected, runBlocking { repository.getById(id)?.runState })
     }
 }

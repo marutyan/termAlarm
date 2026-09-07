@@ -1,28 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 下部ナビ「タイマー」タブ用アイコン(design/Main.dc.htmlと同じ、上部につまみのある時計の形) -->
+<!-- 下部ナビ「タイマー」タブ用アイコン。純正と同じ砂時計の形にして、隣のストップウォッチと見分けられるようにする -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
-    android:viewportHeight="24">
+    android:viewportHeight="24"
+    android:tint="#FF000000">
     <path
-        android:strokeColor="#FF000000"
-        android:strokeWidth="1.8"
-        android:strokeLineCap="round"
-        android:pathData="M 4.5,13.5 a 7.5,7.5 0 1,0 15,0 a 7.5,7.5 0 1,0 -15,0" />
-    <path
-        android:strokeColor="#FF000000"
-        android:strokeWidth="1.8"
-        android:strokeLineCap="round"
-        android:pathData="M9.5,3 L14.5,3" />
-    <path
-        android:strokeColor="#FF000000"
-        android:strokeWidth="1.8"
-        android:strokeLineCap="round"
-        android:pathData="M12,3 L12,6" />
-    <path
-        android:strokeColor="#FF000000"
-        android:strokeWidth="1.8"
-        android:strokeLineCap="round"
-        android:pathData="M12,9.5 L12,13.5" />
+        android:fillColor="#FF000000"
+        android:pathData="M6,2v6h0.01L6,8.01 10,12l-4,4 0.01,0.01H6V22h12v-5.99h-0.01L18,16l-4,-4 4,-3.99 -0.01,-0.01H18V2H6zM16,16.5V20H8v-3.5l4,-4 4,4zM12,11.5l-4,-4V4h8v3.5l-4,4z" />
 </vector>
