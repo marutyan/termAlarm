@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Space Grotesk', 'Helvetica Neue', system-ui, sans-serif; }
+    a { color: #F2A65A; } a:hover { color: #FFC489; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #0B0E14; color: #E8E4DC; box-sizing: border-box; padding: 56px 24px 0; display: flex; flex-direction: column; gap: 20px;">
+
+  <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <div style="font-size: 52px; font-weight: 300; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums;">7:12</div>
+      <div style="font-size: 13px; font-weight: 400; color: #8A8F9C;">9月13日 土曜日</div>
+    </div>
+    <div style="display: flex; gap: 14px; padding-top: 8px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8A8F9C" stroke-width="1.6" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 16px; align-items: center;">
+    <div style="flex-grow: 1; height: 1px; background: #222833;"></div>
+    <div style="font-size: 11px; letter-spacing: 0.16em; color: #5E6472;">進行中</div>
+  </div>
+
+  <div style="display: flex; gap: 18px; flex-grow: 1;">
+
+    <div style="display: flex; flex-direction: column; justify-content: space-between; padding: 2px 0 40px; font-size: 12px; font-variant-numeric: tabular-nums; color: #5E6472;">
+      <div style="color: #F2A65A;">7:00</div>
+      <div>8:00</div>
+      <div>9:00</div>
+    </div>
+
+    <div style="position: relative; width: 26px;">
+      <div style="position: absolute; left: 12px; top: 6px; bottom: 46px; width: 2px; background: #1C222D;"></div>
+      <div style="position: absolute; left: 12px; top: 6px; height: 42px; width: 2px; background: #F2A65A;"></div>
+      <div style="display: flex; flex-direction: column; gap: 9px; padding-top: 2px;">
+        <sc-for list="{{dots}}" as="dot" hint-placeholder-count="25">
+          <div style="width: 26px; height: 8px; display: flex; align-items: center;">
+            <div style="width: {{dot.size}}; height: {{dot.size}}; border-radius: 50%; background: {{dot.fill}}; border: 1.5px solid {{dot.ring}}; box-sizing: border-box; margin-left: {{dot.offset}};"></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 4px; padding-top: 0;">
+      <div style="font-size: 19px; font-weight: 500; letter-spacing: -0.01em;">起きる</div>
+      <div style="font-size: 12.5px; color: #8A8F9C; line-height: 1.5;">5分ごと・25回<br>平日と土曜</div>
+
+      <div style="height: 26px;"></div>
+
+      <div style="border-left: 2px solid #F2A65A; padding-left: 12px; display: flex; flex-direction: column; gap: 3px;">
+        <div style="font-size: 10.5px; letter-spacing: 0.14em; color: #5E6472;">つぎ</div>
+        <div style="font-size: 30px; font-weight: 400; line-height: 1; font-variant-numeric: tabular-nums;">7:15</div>
+        <div style="font-size: 12.5px; color: #8A8F9C;">あと22回</div>
+      </div>
+
+      <div style="height: 20px;"></div>
+
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <div style="font-size: 10.5px; letter-spacing: 0.14em; color: #5E6472;">きょう</div>
+        <div style="font-size: 12.5px; color: #8A8F9C; line-height: 1.5;">3回鳴って<br>まだ起きていない</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 10px; padding-bottom: 22px;">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 13px 16px; background: #12161F; border-radius: 4px;">
+      <div style="width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid #3A4150; box-sizing: border-box;"></div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 1px;">
+        <div style="font-size: 14.5px; font-variant-numeric: tabular-nums; color: #8A8F9C;">9:30 – 10:00</div>
+        <div style="font-size: 11.5px; color: #5E6472;">昼寝から戻る・10分ごと</div>
+      </div>
+      <div style="font-size: 11px; color: #5E6472;">日</div>
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+      <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border: 1px solid #222833; border-radius: 4px; font-size: 13px; color: #8A8F9C;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8A8F9C" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        追加
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center; padding: 14px 18px; border: 1px solid #222833; border-radius: 4px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A8F9C" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2"/></svg>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center; padding: 14px 18px; border: 1px solid #222833; border-radius: 4px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A8F9C" stroke-width="1.6" stroke-linecap="round"><path d="M4 19V9M10 19V5M16 19v-7M22 19h-20"/></svg>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const dots = [];
+    for (let i = 0; i < 25; i++) {
+      const done = i < 3;
+      const next = i === 3;
+      dots.push({
+        size: next ? '10px' : '6px',
+        offset: next ? '8px' : '10px',
+        fill: done ? '#F2A65A' : (next ? '#0B0E14' : 'transparent'),
+        ring: done ? '#F2A65A' : (next ? '#F2A65A' : '#2A3140'),
+      });
+    }
+    return { dots };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+    a { color: #A3E635; } a:hover { color: #BEF264; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #0A0A0A; color: #E5E5E5; box-sizing: border-box; padding: 60px 20px 0; display: flex; flex-direction: column; gap: 18px;">
+
+  <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+      <div style="font-size: 10px; letter-spacing: 0.14em; color: #A3E635; font-family: 'IBM Plex Mono', monospace;">RINGING · 04 / 25</div>
+      <div style="font-size: 56px; font-weight: 300; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.035em;">7:15</div>
+      <div style="font-size: 13px; color: #A3A3A3;">起きる</div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; padding-top: 4px;">
+      <div style="font-size: 9px; letter-spacing: 0.1em; color: #737373; font-family: 'IBM Plex Mono', monospace;">音量</div>
+      <div style="display: flex; align-items: flex-end; gap: 2px; height: 26px;">
+        <div style="width: 4px; height: 8px; background: #A3E635;"></div>
+        <div style="width: 4px; height: 13px; background: #A3E635;"></div>
+        <div style="width: 4px; height: 18px; background: #A3E635;"></div>
+        <div style="width: 4px; height: 22px; background: #262626;"></div>
+        <div style="width: 4px; height: 26px; background: #262626;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 2px;">
+    <sc-for list="{{slots}}" as="slot" hint-placeholder-count="25">
+      <div style="flex-grow: 1; height: 10px; background: {{slot.color}};"></div>
+    </sc-for>
+  </div>
+
+  <div style="background: #111111; border: 1px solid #1F1F1F; border-radius: 3px; padding: 18px 16px; display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div style="font-size: 10px; letter-spacing: 0.14em; color: #737373; font-family: 'IBM Plex Mono', monospace;">1から12まで順に押す</div>
+      <div style="font-size: 10px; color: #A3E635; font-family: 'IBM Plex Mono', monospace;">3 / 12</div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+      <sc-for list="{{tiles}}" as="tile" hint-placeholder-count="12">
+        <div style="aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; background: {{tile.bg}}; border: 1px solid {{tile.border}}; border-radius: 2px; font-family: 'IBM Plex Mono', monospace; font-size: 21px; font-variant-numeric: tabular-nums; color: {{tile.fg}};">{{tile.n}}</div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+    <div style="background: #111111; border: 1px solid #1F1F1F; border-radius: 3px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-size: 9px; letter-spacing: 0.1em; color: #737373; font-family: 'IBM Plex Mono', monospace;">きょう</div>
+      <div style="font-size: 13px; color: #A3A3A3; line-height: 1.4;">4回目<br><span style="color: #525252; font-size: 11px;">いつもは6.2回目</span></div>
+    </div>
+    <div style="background: #111111; border: 1px solid #1F1F1F; border-radius: 3px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-size: 9px; letter-spacing: 0.1em; color: #737373; font-family: 'IBM Plex Mono', monospace;">のこり</div>
+      <div style="font-size: 13px; color: #A3A3A3; line-height: 1.4;">21回 / 1時間45分<br><span style="color: #525252; font-size: 11px;">9:00まで</span></div>
+    </div>
+  </div>
+
+  <div style="flex-grow: 1;"></div>
+
+  <div style="display: flex; flex-direction: column; gap: 10px; padding-bottom: 28px;">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 16px; border: 1px solid #262626; border-radius: 3px;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#737373" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5"/></svg>
+      <div style="font-size: 12px; color: #737373;">3秒長押しで今回だけ止める</div>
+      <div style="flex-grow: 1;"></div>
+      <div style="font-size: 10px; color: #525252; font-family: 'IBM Plex Mono', monospace;">記録に残る</div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const slots = [];
+    for (let i = 0; i < 25; i++) {
+      const done = i < 3;
+      const now = i === 3;
+      slots.push({ color: done ? '#3F4A1C' : (now ? '#A3E635' : '#1C1C1C') });
+    }
+    const order = [7, 2, 11, 5, 1, 9, 4, 12, 3, 6, 10, 8];
+    const tiles = order.map((n) => {
+      const pressed = n <= 3;
+      return {
+        n: n,
+        bg: pressed ? '#1C2410' : '#0A0A0A',
+        border: pressed ? '#3F4A1C' : '#262626',
+        fg: pressed ? '#3F4A1C' : '#E5E5E5',
+      };
+    });
+    return { slots, tiles };
+  }
+}
+</script>
+</body>
+</html>
