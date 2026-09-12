@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@200;300;400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+    a { color: #8CDDC2; } a:hover { color: #A9D1F5; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #0B1530; color: #E8EEF9; box-sizing: border-box; padding: 76px 28px 0; display: flex; flex-direction: column;">
+
+  <div style="font-size: 124px; font-weight: 200; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 0.84; letter-spacing: -0.06em;">7:12</div>
+  <div style="height: 16px;"></div>
+  <div style="font-size: 13px; color: #55709E; font-family: 'IBM Plex Mono', monospace;">土 09.13</div>
+
+  <div style="flex-grow: 1;"></div>
+
+  <div style="display: flex; flex-direction: column; gap: 11px;">
+    <div style="width: 30px; height: 2px; background: #8CDDC2;"></div>
+    <div style="height: 6px;"></div>
+    <div style="font-size: 18px; font-weight: 400;">起きる</div>
+    <div style="display: flex; gap: 5px;">
+      <sc-for list="{{days}}" as="day" hint-placeholder-count="7">
+        <div style="width: 21px; height: 21px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10.5px; background: {{day.bg}}; color: {{day.fg}};">{{day.name}}</div>
+      </sc-for>
+    </div>
+    <div style="height: 10px;"></div>
+    <div style="font-size: 9.5px; letter-spacing: 0.14em; color: #7B93BF; font-family: 'IBM Plex Mono', monospace;">つぎに鳴るのは</div>
+    <div style="font-size: 68px; font-weight: 200; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 0.92; letter-spacing: -0.045em;">7:15</div>
+    <div style="font-size: 14px; color: #7B93BF; line-height: 1.5;">9:00まで 5分ごとに あと22回</div>
+  </div>
+
+  <div style="height: 54px;"></div>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 32px;">
+    <div style="display: flex; gap: 24px; align-items: center;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8EEF9" stroke-width="1.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#55709E" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#55709E" stroke-width="1.5" stroke-linecap="round"><path d="M4 19V9M10 19V5M16 19v-7M22 19h-20"/></svg>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <div style="font-size: 9.5px; color: #55709E; font-family: 'IBM Plex Mono', monospace;">ミニマル</div>
+      <div style="width: 30px; height: 17px; border-radius: 9px; background: #8CDDC2; display: flex; align-items: center; justify-content: flex-end; padding: 2px; box-sizing: border-box;">
+        <div style="width: 13px; height: 13px; border-radius: 50%; background: #0B1530;"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const names = ['月', '火', '水', '木', '金', '土', '日'];
+    const on = [true, true, true, true, true, true, false];
+    const days = names.map((n, i) => ({
+      name: n,
+      bg: on[i] ? '#8CDDC2' : 'transparent',
+      fg: on[i] ? '#0B1530' : '#3C5484',
+    }));
+    return { days };
+  }
+}
+</script>
+</body>
+</html>

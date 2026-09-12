@@ -17,21 +17,31 @@ private val TOKYO = ZoneId.of("Asia/Tokyo")
 private fun schedule(
     startMinutes: Int,
     endMinutes: Int,
-    intervalMinutes: Int,
+    startIntervalMinutes: Int,
+    endIntervalMinutes: Int = startIntervalMinutes,
     repeatDays: Set<DayOfWeek> = emptySet(),
     enabled: Boolean = true,
     skippedSessionStart: LocalDate? = null,
+    challenge: ChallengeLevel = ChallengeLevel.NONE,
+    startVolumePercent: Int = 100,
+    endVolumePercent: Int = 100,
+    wakeCheckMinutes: Int? = null,
 ) = AlarmSchedule(
     id = 1L,
     startMinutes = startMinutes,
     endMinutes = endMinutes,
-    intervalMinutes = intervalMinutes,
+    startIntervalMinutes = startIntervalMinutes,
+    endIntervalMinutes = endIntervalMinutes,
     repeatDays = repeatDays,
     label = "test",
     soundUri = null,
     vibrate = true,
     enabled = enabled,
     skippedSessionStart = skippedSessionStart,
+    challenge = challenge,
+    startVolumePercent = startVolumePercent,
+    endVolumePercent = endVolumePercent,
+    wakeCheckMinutes = wakeCheckMinutes,
 )
 
 class ScheduleCalculatorTest {
@@ -40,12 +50,12 @@ class ScheduleCalculatorTest {
 
     @Test
     fun `7時から9時を5分間隔で25回になる`() {
-        assertEquals(25, occurrenceCount(schedule(startMinutes = 7 * 60, endMinutes = 9 * 60, intervalMinutes = 5)))
+        assertEquals(25, occurrenceCount(schedule(startMinutes = 7 * 60, endMinutes = 9 * 60, startIntervalMinutes = 5)))
     }
 
     @Test
     fun `startとendが同じなら1回だけになる`() {
-        assertEquals(1, occurrenceCount(schedule(startMinutes = 7 * 60, endMinutes = 7 * 60, intervalMinutes = 5)))
+        assertEquals(1, occurrenceCount(schedule(startMinutes = 7 * 60, endMinutes = 7 * 60, startIntervalMinutes = 5)))
     }
 
     @Test
@@ -56,7 +66,7 @@ class ScheduleCalculatorTest {
         //   (span/intervalMinutes+1、occurrenceはstart+k*interval)通りに計算すると8:59になり、
         //   本文中の具体例の数値そのものがこの式と矛盾している（8:57は7分刻みの倍数ではない）。
         //   計算式を共通契約として優先し、本文の例の数値は誤りとみなして実装・テストした。
-        val s = schedule(startMinutes = 7 * 60, endMinutes = 9 * 60, intervalMinutes = 7)
+        val s = schedule(startMinutes = 7 * 60, endMinutes = 9 * 60, startIntervalMinutes = 7)
         assertEquals(18, occurrenceCount(s))
 
         val today = LocalDate.of(2024, 1, 3) // 水曜日。repeatDays空なので曜日は無関係
@@ -73,7 +83,7 @@ class ScheduleCalculatorTest {
     fun `23時から1時の日またぎで開始日の曜日が使われる`() {
         // 2024-01-01は月曜日
         val monday = LocalDate.of(2024, 1, 1)
-        val s = schedule(startMinutes = 23 * 60, endMinutes = 60, intervalMinutes = 30, repeatDays = setOf(DayOfWeek.MONDAY))
+        val s = schedule(startMinutes = 23 * 60, endMinutes = 60, startIntervalMinutes = 30, repeatDays = setOf(DayOfWeek.MONDAY))
 
         // 月曜22:00 → 月曜23:00に鳴る
         val beforeStart = ZonedDateTime.of(monday, java.time.LocalTime.of(22, 0), TOKYO)
@@ -91,7 +101,7 @@ class ScheduleCalculatorTest {
         // 火曜23時から始まる次のセッションまで待つ。
         val monday = LocalDate.of(2024, 1, 1)
         val tuesday = monday.plusDays(1)
-        val s = schedule(startMinutes = 23 * 60, endMinutes = 60, intervalMinutes = 30, repeatDays = setOf(DayOfWeek.TUESDAY))
+        val s = schedule(startMinutes = 23 * 60, endMinutes = 60, startIntervalMinutes = 30, repeatDays = setOf(DayOfWeek.TUESDAY))
 
         val tuesdayEarlyMorning = ZonedDateTime.of(tuesday, java.time.LocalTime.of(0, 15), TOKYO)
         assertEquals(ZonedDateTime.of(tuesday, java.time.LocalTime.of(23, 0), TOKYO), nextTrigger(s, tuesdayEarlyMorning))
@@ -102,7 +112,7 @@ class ScheduleCalculatorTest {
     @Test
     fun `repeatDaysが空なら次の1回だけを返しその後はnullになる`() {
         val today = LocalDate.of(2024, 1, 3)
-        val s = schedule(startMinutes = 7 * 60, endMinutes = 9 * 60, intervalMinutes = 5)
+        val s = schedule(startMinutes = 7 * 60, endMinutes = 9 * 60, startIntervalMinutes = 5)
 
         val beforeStart = ZonedDateTime.of(today, java.time.LocalTime.of(6, 0), TOKYO)
         assertEquals(ZonedDateTime.of(today, java.time.LocalTime.of(7, 0), TOKYO), nextTrigger(s, beforeStart))
@@ -114,7 +124,7 @@ class ScheduleCalculatorTest {
 
     @Test
     fun `enabledがfalseならnull`() {
-        val s = schedule(startMinutes = 7 * 60, endMinutes = 9 * 60, intervalMinutes = 5, enabled = false)
+        val s = schedule(startMinutes = 7 * 60, endMinutes = 9 * 60, startIntervalMinutes = 5, enabled = false)
         val now = ZonedDateTime.of(LocalDate.of(2024, 1, 3), java.time.LocalTime.of(6, 0), TOKYO)
         assertNull(nextTrigger(s, now))
     }
@@ -128,7 +138,7 @@ class ScheduleCalculatorTest {
         val s = schedule(
             startMinutes = 7 * 60,
             endMinutes = 9 * 60,
-            intervalMinutes = 5,
+            startIntervalMinutes = 5,
             repeatDays = setOf(DayOfWeek.MONDAY),
             skippedSessionStart = monday,
         )
@@ -143,7 +153,7 @@ class ScheduleCalculatorTest {
     fun `7時05分が鳴っているとき残りは23回で次は7時10分`() {
         // docs/SPEC.md「追記: 残り鳴動回数の数え方」の例そのもの
         val today = LocalDate.of(2024, 1, 3)
-        val s = schedule(startMinutes = 7 * 60, endMinutes = 9 * 60, intervalMinutes = 5)
+        val s = schedule(startMinutes = 7 * 60, endMinutes = 9 * 60, startIntervalMinutes = 5)
         val ringingAt = ZonedDateTime.of(today, java.time.LocalTime.of(7, 5), TOKYO)
 
         assertEquals(23, remainingOccurrenceCount(s, ringingAt))
@@ -155,7 +165,7 @@ class ScheduleCalculatorTest {
         // 23:00-01:00・30分間隔（全5回: 23:00,23:30,00:00,00:30,01:00）
         val monday = LocalDate.of(2024, 1, 1)
         val tuesday = monday.plusDays(1)
-        val s = schedule(startMinutes = 23 * 60, endMinutes = 60, intervalMinutes = 30)
+        val s = schedule(startMinutes = 23 * 60, endMinutes = 60, startIntervalMinutes = 30)
 
         val at2330 = ZonedDateTime.of(monday, java.time.LocalTime.of(23, 30), TOKYO)
         assertEquals(3, remainingOccurrenceCount(s, at2330)) // 00:00,00:30,01:00
@@ -168,8 +178,20 @@ class ScheduleCalculatorTest {
 
     @Test
     fun `要約文字列を組み立てる`() {
-        assertEquals("5分ごと · 25回", scheduleSummary(schedule(startMinutes = 7 * 60, endMinutes = 9 * 60, intervalMinutes = 5)))
-        assertEquals("1回のみ", scheduleSummary(schedule(startMinutes = 7 * 60, endMinutes = 7 * 60, intervalMinutes = 5)))
+        assertEquals("5分ごと · 25回", scheduleSummary(schedule(startMinutes = 7 * 60, endMinutes = 9 * 60, startIntervalMinutes = 5)))
+        assertEquals("1回のみ", scheduleSummary(schedule(startMinutes = 7 * 60, endMinutes = 7 * 60, startIntervalMinutes = 5)))
+    }
+
+    // 可変間隔のときに「10〜3分ごと · 11回」の形式で要約文字列が生成されることを検証する
+    @Test
+    fun `可変間隔の要約文字列を組み立てる`() {
+        val s = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 8 * 60,
+            startIntervalMinutes = 10,
+            endIntervalMinutes = 3,
+        )
+        assertEquals("10〜3分ごと · 11回", scheduleSummary(s))
     }
 
     // --- タイムゾーン・DST ---
@@ -181,7 +203,7 @@ class ScheduleCalculatorTest {
         // ZonedDateTime.atZoneの既定解決によりギャップ分(1時間)繰り上がって03:00になる。
         val newYork = ZoneId.of("America/New_York")
         val dstDay = LocalDate.of(2024, 3, 10)
-        val s = schedule(startMinutes = 90, endMinutes = 150, intervalMinutes = 30)
+        val s = schedule(startMinutes = 90, endMinutes = 150, startIntervalMinutes = 30)
 
         val justAfterFirst = ZonedDateTime.of(dstDay, java.time.LocalTime.of(1, 31), newYork)
         val next = nextTrigger(s, justAfterFirst)
@@ -196,7 +218,7 @@ class ScheduleCalculatorTest {
         // 01:30ちょうどに鳴る設定なら、繰り下げ前(EDT, UTC-4)の早い方が採用されるはず。
         val newYork = ZoneId.of("America/New_York")
         val dstDay = LocalDate.of(2024, 11, 3)
-        val s = schedule(startMinutes = 90, endMinutes = 90, intervalMinutes = 1) // 01:30ちょうど1回だけ
+        val s = schedule(startMinutes = 90, endMinutes = 90, startIntervalMinutes = 1) // 01:30ちょうど1回だけ
 
         val justBefore = ZonedDateTime.of(dstDay, java.time.LocalTime.of(1, 0), newYork) // まだEDT(-04:00)側
         val next = nextTrigger(s, justBefore)
@@ -312,5 +334,372 @@ class ScheduleCalculatorTest {
         assertTrue(canEndTodaySession(s, ZonedDateTime.of(day.plusDays(1), java.time.LocalTime.of(1, 0), TOKYO)))
         // 終わった後
         assertFalse(canEndTodaySession(s, ZonedDateTime.of(day.plusDays(1), java.time.LocalTime.of(3, 0), TOKYO)))
+    }
+
+    // --- 可変間隔アラーム ---
+
+    // 7:00〜8:00、開始10分・終了3分の可変間隔で、各鳴動時刻が仕様どおりの11回に収束するか検証する。
+    // 仕様書の計算例に沿って手計算した確定期待値と一致するかを確かめ、進捗率に応じた間隔計算と端数処理の正確性を保証する。
+    @Test
+    fun `7時から8時で開始10分終了3分の可変間隔で鳴動時刻列が11回と一致する`() {
+        val s = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 8 * 60,
+            startIntervalMinutes = 10,
+            endIntervalMinutes = 3,
+        )
+
+        assertEquals(11, occurrenceCount(s))
+
+        val expectedOffsets = listOf(0, 10, 19, 27, 34, 40, 45, 50, 54, 58, 60)
+        assertEquals(expectedOffsets, calculateOccurrenceOffsets(s))
+
+        val today = LocalDate.of(2024, 1, 3)
+        val expectedDateTimes = listOf(
+            ZonedDateTime.of(today, java.time.LocalTime.of(7, 0), TOKYO),
+            ZonedDateTime.of(today, java.time.LocalTime.of(7, 10), TOKYO),
+            ZonedDateTime.of(today, java.time.LocalTime.of(7, 19), TOKYO),
+            ZonedDateTime.of(today, java.time.LocalTime.of(7, 27), TOKYO),
+            ZonedDateTime.of(today, java.time.LocalTime.of(7, 34), TOKYO),
+            ZonedDateTime.of(today, java.time.LocalTime.of(7, 40), TOKYO),
+            ZonedDateTime.of(today, java.time.LocalTime.of(7, 45), TOKYO),
+            ZonedDateTime.of(today, java.time.LocalTime.of(7, 50), TOKYO),
+            ZonedDateTime.of(today, java.time.LocalTime.of(7, 54), TOKYO),
+            ZonedDateTime.of(today, java.time.LocalTime.of(7, 58), TOKYO),
+            ZonedDateTime.of(today, java.time.LocalTime.of(8, 0), TOKYO),
+        )
+
+        var current = ZonedDateTime.of(today, java.time.LocalTime.of(6, 59), TOKYO)
+        val actualDateTimes = mutableListOf<ZonedDateTime>()
+        while (true) {
+            val next = nextTrigger(s, current) ?: break
+            actualDateTimes.add(next)
+            current = next
+        }
+        assertEquals(expectedDateTimes, actualDateTimes)
+    }
+
+    // 開始間隔と終了間隔が同値のときに等間隔アラームの鳴動時刻列と完全に一致することを検証する。
+    // 複数の間隔（5分・15分・30分）で検証し、可変間隔アルゴリズムの共通化によって既存の等間隔の挙動が壊れていないことを確認する。
+    @Test
+    fun `startIntervalMinutesとendIntervalMinutesが同値なら可変間隔でも等間隔と同じ列になる`() {
+        // 7:00〜8:00 (span=60分) で5分、15分、30分の3通りの間隔で確認する
+        val s5 = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 8 * 60,
+            startIntervalMinutes = 5,
+            endIntervalMinutes = 5,
+        )
+        val expectedOffsets5 = listOf(0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60)
+        assertEquals(13, occurrenceCount(s5))
+        assertEquals(expectedOffsets5, calculateOccurrenceOffsets(s5))
+
+        val s15 = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 8 * 60,
+            startIntervalMinutes = 15,
+            endIntervalMinutes = 15,
+        )
+        val expectedOffsets15 = listOf(0, 15, 30, 45, 60)
+        assertEquals(5, occurrenceCount(s15))
+        assertEquals(expectedOffsets15, calculateOccurrenceOffsets(s15))
+
+        val s30 = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 8 * 60,
+            startIntervalMinutes = 30,
+            endIntervalMinutes = 30,
+        )
+        val expectedOffsets30 = listOf(0, 30, 60)
+        assertEquals(3, occurrenceCount(s30))
+        assertEquals(expectedOffsets30, calculateOccurrenceOffsets(s30))
+    }
+
+    // 間隔の計算結果が最低保証である1分を下回らないことを検証する。
+    // 範囲終了付近で間隔が極小になった場合でも0分や負の間隔にならず、各鳴動が1分以上空くことを保証する。
+    @Test
+    fun `間隔の計算結果が1分を下回らず途中の間隔が0や負にならない`() {
+        // 7:00〜7:20 (span=20分)、開始5分・終了1分のケース
+        val s = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 7 * 60 + 20,
+            startIntervalMinutes = 5,
+            endIntervalMinutes = 1,
+        )
+        val expectedOffsets = listOf(0, 5, 9, 12, 15, 17, 19, 20)
+        val offsets = calculateOccurrenceOffsets(s)
+        assertEquals(expectedOffsets, offsets)
+
+        for (i in 0 until offsets.size - 1) {
+            val interval = offsets[i + 1] - offsets[i]
+            assertTrue("各鳴動間の間隔は1分以上であること (index=$i, interval=$interval)", interval >= 1)
+        }
+    }
+
+    // 可変間隔において、最後の鳴動が必ずセッション終了時刻に一致することを検証する。
+    // 等間隔とは異なり、割り切れない場合でも最後の鳴動が終了時刻へ寄せて生成されることを保証する。
+    @Test
+    fun `可変間隔のとき最後の鳴動が必ず終了時刻に一致する`() {
+        // 7:00〜7:30 (span=30分)、開始10分・終了4分（割り切れない設定）
+        val s = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 7 * 60 + 30,
+            startIntervalMinutes = 10,
+            endIntervalMinutes = 4,
+        )
+        val expectedOffsets = listOf(0, 10, 18, 24, 29, 30)
+        val offsets = calculateOccurrenceOffsets(s)
+        assertEquals(expectedOffsets, offsets)
+        assertEquals(30, offsets.last())
+
+        val today = LocalDate.of(2024, 1, 3)
+        val justBeforeLast = ZonedDateTime.of(today, java.time.LocalTime.of(7, 29), TOKYO)
+        assertEquals(ZonedDateTime.of(today, java.time.LocalTime.of(7, 30), TOKYO), nextTrigger(s, justBeforeLast))
+
+        val atLast = ZonedDateTime.of(today, java.time.LocalTime.of(7, 30), TOKYO)
+        assertNull("最後の鳴動(7:30)以降はnextTriggerがnullになること", nextTrigger(s, atLast))
+    }
+
+    // 深夜から翌朝にかけて日をまたぐセッションにおいて可変間隔が正確に計算されることを検証する。
+    // 日付跨ぎの分数計算と日付の繰り上がり、およびセッション開始日基準の次回鳴動・残り回数が保たれることを確認する。
+    @Test
+    fun `日をまたぐ範囲で可変間隔が正しく計算される`() {
+        // 23:00〜翌01:00 (span=120分)、開始60分・終了20分
+        val monday = LocalDate.of(2024, 1, 1)
+        val tuesday = monday.plusDays(1)
+        val s = schedule(
+            startMinutes = 23 * 60,
+            endMinutes = 60,
+            startIntervalMinutes = 60,
+            endIntervalMinutes = 20,
+            repeatDays = setOf(DayOfWeek.MONDAY),
+        )
+
+        val expectedOffsets = listOf(0, 60, 100, 120)
+        assertEquals(4, occurrenceCount(s))
+        assertEquals(expectedOffsets, calculateOccurrenceOffsets(s))
+
+        // 月曜22:30 -> 月曜23:00に鳴る
+        val beforeStart = ZonedDateTime.of(monday, java.time.LocalTime.of(22, 30), TOKYO)
+        assertEquals(ZonedDateTime.of(monday, java.time.LocalTime.of(23, 0), TOKYO), nextTrigger(s, beforeStart))
+
+        // 月曜23:00 -> 火曜00:00に鳴る
+        val atStart = ZonedDateTime.of(monday, java.time.LocalTime.of(23, 0), TOKYO)
+        assertEquals(ZonedDateTime.of(tuesday, java.time.LocalTime.of(0, 0), TOKYO), nextTrigger(s, atStart))
+
+        // 火曜00:00 -> 火曜00:40に鳴る
+        val atMidnight = ZonedDateTime.of(tuesday, java.time.LocalTime.of(0, 0), TOKYO)
+        assertEquals(ZonedDateTime.of(tuesday, java.time.LocalTime.of(0, 40), TOKYO), nextTrigger(s, atMidnight))
+
+        // 火曜00:40 -> 火曜01:00に鳴る
+        val at0040 = ZonedDateTime.of(tuesday, java.time.LocalTime.of(0, 40), TOKYO)
+        assertEquals(ZonedDateTime.of(tuesday, java.time.LocalTime.of(1, 0), TOKYO), nextTrigger(s, at0040))
+
+        // 火曜01:00 -> 次週月曜23:00まで鳴らない
+        val nextMonday = monday.plusWeeks(1)
+        val atEnd = ZonedDateTime.of(tuesday, java.time.LocalTime.of(1, 0), TOKYO)
+        assertEquals(ZonedDateTime.of(nextMonday, java.time.LocalTime.of(23, 0), TOKYO), nextTrigger(s, atEnd))
+
+        // 残り回数（そのセッション内で、現在鳴っている回を含めない残りの鳴動回数）
+        assertEquals(3, remainingOccurrenceCount(s, atStart)) // 00:00, 00:40, 01:00
+        assertEquals(2, remainingOccurrenceCount(s, atMidnight)) // 00:40, 01:00
+        assertEquals(1, remainingOccurrenceCount(s, at0040)) // 01:00
+        assertEquals(0, remainingOccurrenceCount(s, atEnd))
+    }
+
+    // 間隔が範囲の長さより長い場合、1回目の次の鳴動が範囲外に出る。
+    // 等間隔（開始60分・終了60分）では開始時刻の1回だけ鳴るが、
+    // 可変間隔（開始60分・終了59分）では最後を終了時刻へ寄せる仕様により開始時刻と終了時刻の2回鳴る。
+    @Test
+    fun `最初の1回目で既に終了時刻を超える場合`() {
+        // 範囲が10分（7:00〜7:10）、等間隔（60分）なら開始時刻の1回だけ
+        val equalSchedule = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 7 * 60 + 10,
+            startIntervalMinutes = 60,
+            endIntervalMinutes = 60,
+        )
+        assertEquals(1, occurrenceCount(equalSchedule))
+        assertEquals(listOf(0), calculateOccurrenceOffsets(equalSchedule))
+
+        // 範囲が10分（7:00〜7:10）、可変間隔（開始60分・終了59分）なら開始時刻と終了時刻の2回
+        val variableSchedule = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 7 * 60 + 10,
+            startIntervalMinutes = 60,
+            endIntervalMinutes = 59,
+        )
+        assertEquals(2, occurrenceCount(variableSchedule))
+        assertEquals(listOf(0, 10), calculateOccurrenceOffsets(variableSchedule))
+    }
+
+    // 範囲の長さが0（開始時刻と終了時刻が同じ）のとき、開始間隔と終了間隔が異なっていても鳴動は1回だけになる。
+    // 可変かどうかの判定より前に範囲長0の判定を行う実装順序を固定する。
+    @Test
+    fun `開始時刻と終了時刻が同じで開始間隔と終了間隔が異なる場合`() {
+        val s = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 7 * 60,
+            startIntervalMinutes = 10,
+            endIntervalMinutes = 3,
+        )
+        assertEquals(1, occurrenceCount(s))
+        assertEquals(listOf(0), calculateOccurrenceOffsets(s))
+    }
+
+    // --- 鳴動ごとの音量上限 ---
+
+    @Test
+    fun `音量上限 開始40・終了100でpに応じて40、70、100になる`() {
+        val s = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 9 * 60,
+            startIntervalMinutes = 10,
+            startVolumePercent = 40,
+            endVolumePercent = 100,
+        )
+        // 手計算:
+        // p = 0.0 -> 40 + (100 - 40) * 0.0 = 40
+        // p = 0.5 -> 40 + (100 - 40) * 0.5 = 70
+        // p = 1.0 -> 40 + (100 - 40) * 1.0 = 100
+        assertEquals(40, maxVolumePercent(s, 0.0))
+        assertEquals(70, maxVolumePercent(s, 0.5))
+        assertEquals(100, maxVolumePercent(s, 1.0))
+    }
+
+    @Test
+    fun `音量上限 開始と終了が同値ならpによらずその値になる`() {
+        val s = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 9 * 60,
+            startIntervalMinutes = 10,
+            startVolumePercent = 60,
+            endVolumePercent = 60,
+        )
+        assertEquals(60, maxVolumePercent(s, 0.0))
+        assertEquals(60, maxVolumePercent(s, 0.3))
+        assertEquals(60, maxVolumePercent(s, 0.5))
+        assertEquals(60, maxVolumePercent(s, 0.8))
+        assertEquals(60, maxVolumePercent(s, 1.0))
+    }
+
+    @Test
+    fun `音量上限 計算結果が1から100の外へ出ない`() {
+        val lowerSchedule = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 9 * 60,
+            startIntervalMinutes = 10,
+            startVolumePercent = 0,
+            endVolumePercent = 0,
+        )
+        assertEquals(1, maxVolumePercent(lowerSchedule, 0.0))
+        assertEquals(1, maxVolumePercent(lowerSchedule, 1.0))
+
+        val upperSchedule = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 9 * 60,
+            startIntervalMinutes = 10,
+            startVolumePercent = 120,
+            endVolumePercent = 150,
+        )
+        assertEquals(100, maxVolumePercent(upperSchedule, 0.0))
+        assertEquals(100, maxVolumePercent(upperSchedule, 0.5))
+        assertEquals(100, maxVolumePercent(upperSchedule, 1.0))
+    }
+
+    // --- 解除チャレンジの問題数 ---
+
+    @Test
+    fun `問題数 NONEで0、LIGHTで常に1になる`() {
+        assertEquals(0, challengeQuestionCount(ChallengeLevel.NONE, 0.0))
+        assertEquals(0, challengeQuestionCount(ChallengeLevel.NONE, 0.5))
+        assertEquals(0, challengeQuestionCount(ChallengeLevel.NONE, 1.0))
+
+        assertEquals(1, challengeQuestionCount(ChallengeLevel.LIGHT, 0.0))
+        assertEquals(1, challengeQuestionCount(ChallengeLevel.LIGHT, 0.5))
+        assertEquals(1, challengeQuestionCount(ChallengeLevel.LIGHT, 1.0))
+    }
+
+    @Test
+    fun `問題数 HARDでpが0なら1、0_5なら2、0_9なら3になる`() {
+        assertEquals(1, challengeQuestionCount(ChallengeLevel.HARD, 0.0))
+        assertEquals(2, challengeQuestionCount(ChallengeLevel.HARD, 0.5))
+        assertEquals(3, challengeQuestionCount(ChallengeLevel.HARD, 0.9))
+    }
+
+    @Test
+    fun `問題数 HARDの境界pが1割る3で2、2割る3で3になる`() {
+        // 境界値はその値を含む側が大きい方（1/3 <= p < 2/3 なら2、2/3 <= p なら3）
+        assertEquals(2, challengeQuestionCount(ChallengeLevel.HARD, 1.0 / 3.0))
+        assertEquals(3, challengeQuestionCount(ChallengeLevel.HARD, 2.0 / 3.0))
+    }
+
+    // --- 範囲終了後の起床確認 ---
+
+    @Test
+    fun `起床確認 wakeCheckMinutesがnullなら時刻がnullになる`() {
+        val s = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 8 * 60,
+            startIntervalMinutes = 10,
+            wakeCheckMinutes = null,
+        )
+        val dismissedAt = ZonedDateTime.of(2026, 9, 13, 8, 0, 0, 0, TOKYO)
+        assertNull(wakeCheckTime(s, dismissedAt))
+    }
+
+    @Test
+    fun `起床確認 停止時刻の15分後になり予定時刻ではなく停止時刻から数えている`() {
+        val s = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 8 * 60,
+            startIntervalMinutes = 10,
+            wakeCheckMinutes = 15,
+        )
+        // 予定時刻は 8:00 だが、実際に止めた時刻は遅れて 8:07
+        // 予定時刻から数えたら 8:15 だが、実際の停止時刻から数えるため 8:22 になる
+        val lastDismissedAt = ZonedDateTime.of(2026, 9, 13, 8, 7, 0, 0, TOKYO)
+        val expectedWakeCheckTime = ZonedDateTime.of(2026, 9, 13, 8, 22, 0, 0, TOKYO)
+        assertEquals(expectedWakeCheckTime, wakeCheckTime(s, lastDismissedAt))
+    }
+
+    @Test
+    fun `起床確認 今日はもう止めるを実行したセッションでは確認を行わないと判定される`() {
+        val sessionDate = LocalDate.of(2026, 9, 13)
+        val sWithSkip = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 8 * 60,
+            startIntervalMinutes = 10,
+            wakeCheckMinutes = 15,
+            skippedSessionStart = sessionDate,
+        )
+        assertFalse(shouldPerformWakeCheck(sWithSkip, sessionDate))
+
+        val sWithoutSkip = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 8 * 60,
+            startIntervalMinutes = 10,
+            wakeCheckMinutes = 15,
+            skippedSessionStart = null,
+        )
+        assertTrue(shouldPerformWakeCheck(sWithoutSkip, sessionDate))
+
+        val sWithDifferentDaySkip = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 8 * 60,
+            startIntervalMinutes = 10,
+            wakeCheckMinutes = 15,
+            skippedSessionStart = sessionDate.minusDays(1),
+        )
+        assertTrue(shouldPerformWakeCheck(sWithDifferentDaySkip, sessionDate))
+
+        val sWithNullMinutes = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 8 * 60,
+            startIntervalMinutes = 10,
+            wakeCheckMinutes = null,
+            skippedSessionStart = null,
+        )
+        assertFalse(shouldPerformWakeCheck(sWithNullMinutes, sessionDate))
     }
 }

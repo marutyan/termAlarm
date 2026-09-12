@@ -22,3 +22,7 @@ design/termalarm-screens.html
 keystore.properties
 *.jks
 *.keystore
+
+# デザインキャンバスの生成物。元になる .dc.html と canvas.json だけを追跡する
+design/*.html
+!design/*.dc.html

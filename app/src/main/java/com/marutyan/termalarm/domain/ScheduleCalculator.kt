@@ -5,6 +5,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZonedDateTime
+import kotlin.math.roundToInt
 
 // 1日の分数。日またぎ判定・時刻計算で繰り返し使う定数
 private const val MINUTES_PER_DAY = 1440
@@ -24,21 +25,53 @@ private fun sessionSpanMinutes(schedule: AlarmSchedule): Int =
     }
 
 /**
+ * セッション全体の長さ span に対する経過分 t の進捗率 p (0.0..1.0) を求める。
+ * span が 0 以下のときは 0.0 とする。
+ */
+internal fun calculateProgress(t: Int, span: Int): Double =
+    if (span <= 0) 0.0 else t.toDouble() / span.toDouble()
+
+/**
+ * 開始時刻を0分としたセッション内の全鳴動時刻の経過分オフセット列を逐次生成する内部関数。
+ * 可変間隔および等間隔のスケジュールから鳴動の列を算出し、回数算出や次回鳴動・残り回数の判定に共通で用いる。
+ */
+internal fun calculateOccurrenceOffsets(schedule: AlarmSchedule): List<Int> {
+    val span = sessionSpanMinutes(schedule)
+    if (span <= 0) return listOf(0)
+
+    val isVariable = schedule.startIntervalMinutes != schedule.endIntervalMinutes
+    val offsets = mutableListOf<Int>()
+    var t = 0
+    offsets.add(t)
+
+    while (t < span) {
+        val p = calculateProgress(t, span)
+        val rawInterval = schedule.startIntervalMinutes + (schedule.endIntervalMinutes - schedule.startIntervalMinutes) * p
+        val nextInterval = rawInterval.roundToInt().coerceAtLeast(1)
+        val nextT = t + nextInterval
+
+        if (nextT > span) {
+            if (isVariable) {
+                offsets.add(span)
+            }
+            break
+        } else if (nextT == span) {
+            offsets.add(span)
+            break
+        } else {
+            offsets.add(nextT)
+            t = nextT
+        }
+    }
+    return offsets
+}
+
+/**
  * 1セッションで実際に鳴る回数（occurrence数）を返す。
- * startMinutes・endMinutesの両端を含むため span/interval + 1 になる（docs/SPEC.md「鳴動回数」）。
+ * 開始時刻から終了時刻までのオフセット列の件数をそのまま返す。
  */
 fun occurrenceCount(schedule: AlarmSchedule): Int =
-    sessionSpanMinutes(schedule) / schedule.intervalMinutes + 1
-
-// セッション開始日の深夜0時から数えて、index番目(0始まり)の鳴動までの経過分
-private fun occurrenceOffsetMinutes(schedule: AlarmSchedule, index: Int): Int =
-    schedule.startMinutes + index * schedule.intervalMinutes
-
-// sessionStartDateに始まるセッションのうち、index番目(0始まり)の鳴動時刻。
-// plusMinutesの繰り上がりにより、日をまたぐ場合は自動的に翌日の日時になる
-private fun occurrenceDateTime(schedule: AlarmSchedule, sessionStartDate: LocalDate, index: Int): LocalDateTime =
-    LocalDateTime.of(sessionStartDate, LocalTime.MIDNIGHT)
-        .plusMinutes(occurrenceOffsetMinutes(schedule, index).toLong())
+    calculateOccurrenceOffsets(schedule).size
 
 /**
  * 瞬間atが属するセッションの開始日を求める。
@@ -69,6 +102,7 @@ fun nextTrigger(schedule: AlarmSchedule, now: ZonedDateTime): ZonedDateTime? {
     // 日またぎスケジュールは前日に始まったセッションがまだ終わっていない可能性があるため -1 日から調べる。
     // 日をまたがない場合、前日のセッションの鳴動は必ずnow以前になるため実害はない
     val dayOffsets = if (schedule.repeatDays.isEmpty()) -1..0 else -1..MAX_SEARCH_DAYS_AHEAD
+    val offsets = calculateOccurrenceOffsets(schedule)
 
     for (dayOffset in dayOffsets) {
         val sessionStart = now.toLocalDate().plusDays(dayOffset.toLong())
@@ -76,9 +110,10 @@ fun nextTrigger(schedule: AlarmSchedule, now: ZonedDateTime): ZonedDateTime? {
         if (schedule.repeatDays.isNotEmpty() && sessionStart.dayOfWeek !in schedule.repeatDays) continue
         if (sessionStart == schedule.skippedSessionStart) continue
 
-        val count = occurrenceCount(schedule)
-        for (index in 0 until count) {
-            val candidate = occurrenceDateTime(schedule, sessionStart, index).atZone(now.zone)
+        val baseDateTime = LocalDateTime.of(sessionStart, LocalTime.MIDNIGHT)
+            .plusMinutes(schedule.startMinutes.toLong())
+        for (offset in offsets) {
+            val candidate = baseDateTime.plusMinutes(offset.toLong()).atZone(now.zone)
             if (candidate.isAfter(now)) return candidate
         }
     }
@@ -93,11 +128,11 @@ fun nextTrigger(schedule: AlarmSchedule, now: ZonedDateTime): ZonedDateTime? {
  */
 fun remainingOccurrenceCount(schedule: AlarmSchedule, at: ZonedDateTime): Int {
     val sessionStart = sessionStartDate(schedule, at)
-    // セッション開始日の深夜0時からatまでの経過分。sessionStartDateの選び方によりstartMinutes以上になる
-    val elapsedMinutes = Duration.between(LocalDateTime.of(sessionStart, LocalTime.MIDNIGHT), at.toLocalDateTime()).toMinutes()
-    val index = ((elapsedMinutes - schedule.startMinutes) / schedule.intervalMinutes).toInt()
-    val count = occurrenceCount(schedule)
-    return (count - 1 - index).coerceAtLeast(0)
+    val sessionStartDateTime = LocalDateTime.of(sessionStart, LocalTime.MIDNIGHT)
+        .plusMinutes(schedule.startMinutes.toLong())
+    val elapsedMinutes = Duration.between(sessionStartDateTime, at.toLocalDateTime()).toMinutes().toInt()
+    val offsets = calculateOccurrenceOffsets(schedule)
+    return offsets.count { it > elapsedMinutes }
 }
 
 /**
@@ -140,7 +175,13 @@ fun remainingTimeUntilNextTrigger(schedule: AlarmSchedule, now: ZonedDateTime): 
  */
 fun scheduleSummary(schedule: AlarmSchedule): String {
     val count = occurrenceCount(schedule)
-    return if (count <= 1) "1回のみ" else "${schedule.intervalMinutes}分ごと · ${count}回"
+    return if (count <= 1) {
+        "1回のみ"
+    } else if (schedule.startIntervalMinutes == schedule.endIntervalMinutes) {
+        "${schedule.startIntervalMinutes}分ごと · ${count}回"
+    } else {
+        "${schedule.startIntervalMinutes}〜${schedule.endIntervalMinutes}分ごと · ${count}回"
+    }
 }
 
 /**
@@ -175,3 +216,99 @@ private fun hasSessionStarted(schedule: AlarmSchedule, now: ZonedDateTime): Bool
         minuteOfDay >= schedule.startMinutes
     }
 }
+
+/**
+ * そのセッションの指定回（occurrenceIndex: 0始まり）の鳴動における進捗率 p (0.0..1.0) を求める。
+ * calculateOccurrenceOffsets で算出したオフセット列から経過分 t を取得し、セッション長に対する進捗率を算出する。
+ */
+fun occurrenceProgress(schedule: AlarmSchedule, occurrenceIndex: Int): Double {
+    val span = sessionSpanMinutes(schedule)
+    if (span <= 0) return 0.0
+    val offsets = calculateOccurrenceOffsets(schedule)
+    val t = offsets.getOrElse(occurrenceIndex) {
+        if (occurrenceIndex < 0) 0 else offsets.last()
+    }
+    return calculateProgress(t, span)
+}
+
+/**
+ * 進捗率 progress (0.0..1.0) における音量上限を返す。
+ * 端末のアラーム音量に対する割合（1..100%）という意味を持ち、フェードインの到達点となる。音を鳴らす処理自体は対象外。
+ * startVolumePercent と endVolumePercent が同値のときは進捗率によらずその値をそのまま返す。
+ */
+fun maxVolumePercent(schedule: AlarmSchedule, progress: Double): Int {
+    if (schedule.startVolumePercent == schedule.endVolumePercent) {
+        return schedule.startVolumePercent.coerceIn(1, 100)
+    }
+    val raw = schedule.startVolumePercent + (schedule.endVolumePercent - schedule.startVolumePercent) * progress
+    return raw.roundToInt().coerceIn(1, 100)
+}
+
+/**
+ * 指定した鳴動回（occurrenceIndex: 0始まり）の音量上限を返す。
+ * 端末のアラーム音量に対する割合（1..100%）という意味を持ち、フェードインの到達点となる。音を鳴らす処理自体は対象外。
+ */
+fun maxVolumePercent(schedule: AlarmSchedule, occurrenceIndex: Int): Int {
+    val p = occurrenceProgress(schedule, occurrenceIndex)
+    return maxVolumePercent(schedule, p)
+}
+
+/**
+ * 解除チャレンジの強さと進捗率 progress (0.0..1.0) から、その回に出題する問題数を返す。
+ * 朝の二度寝を防ぐため、HARD では進捗に応じて 1〜3 問を出題し、境界値（1/3, 2/3）はその値を含む側が大きい方の問題数となる。
+ */
+fun challengeQuestionCount(challenge: ChallengeLevel, progress: Double): Int =
+    when (challenge) {
+        ChallengeLevel.NONE -> 0
+        ChallengeLevel.LIGHT -> 1
+        ChallengeLevel.HARD -> when {
+            progress < 1.0 / 3.0 -> 1
+            progress < 2.0 / 3.0 -> 2
+            else -> 3
+        }
+    }
+
+/**
+ * スケジュールと進捗率 progress (0.0..1.0) から、その回に出題する解除チャレンジの問題数を返す。
+ * アラームごとの難易度設定に応じて問題数を導出する。
+ */
+fun challengeQuestionCount(schedule: AlarmSchedule, progress: Double): Int =
+    challengeQuestionCount(schedule.challenge, progress)
+
+/**
+ * スケジュールと指定した鳴動回（occurrenceIndex: 0始まり）から、その回に出題する解除チャレンジの問題数を返す。
+ * 何回目の鳴動かに応じた進捗率から出題数を決定する。
+ */
+fun challengeQuestionCount(schedule: AlarmSchedule, occurrenceIndex: Int): Int {
+    val p = occurrenceProgress(schedule, occurrenceIndex)
+    return challengeQuestionCount(schedule.challenge, p)
+}
+
+/**
+ * 範囲の最後の鳴動を停止した後に、本当に起きたかを確認する起床確認の時刻を求める。
+ * wakeCheckMinutes が null の場合は確認を行わないため null を返す。
+ * 有効な場合は、実際に停止した時刻 lastDismissedAt に wakeCheckMinutes 分を足した時刻を返す。
+ */
+fun wakeCheckTime(schedule: AlarmSchedule, lastDismissedAt: ZonedDateTime): ZonedDateTime? {
+    val minutes = schedule.wakeCheckMinutes ?: return null
+    return lastDismissedAt.plusMinutes(minutes.toLong())
+}
+
+/**
+ * そのセッションにおいて起床確認を行うべきかを判定する。
+ * wakeCheckMinutes が null の場合、または「今日はもう止める」が実行され
+ * skippedSessionStart がセッション開始日と一致する場合は確認を行わないため false を返す。
+ */
+fun shouldPerformWakeCheck(schedule: AlarmSchedule, sessionStart: LocalDate): Boolean {
+    if (schedule.wakeCheckMinutes == null) return false
+    if (schedule.skippedSessionStart == sessionStart) return false
+    return true
+}
+
+/**
+ * 停止時刻などの瞬間 at が属するセッションにおいて、起床確認を行うべきかを判定する。
+ * セッションの開始日を自動導出して起床確認要否を判断する。
+ */
+fun shouldPerformWakeCheck(schedule: AlarmSchedule, at: ZonedDateTime): Boolean =
+    shouldPerformWakeCheck(schedule, sessionStartDate(schedule, at))
+

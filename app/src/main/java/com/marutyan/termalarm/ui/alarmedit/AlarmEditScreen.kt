@@ -420,7 +420,8 @@ private fun PreviewBanner(startMinutes: Int, endMinutes: Int, intervalMinutes: I
     if (!isValid || intervalMinutes <= 0) return
     val schedule = remember(startMinutes, endMinutes, intervalMinutes) {
         AlarmSchedule(
-            id = 0, startMinutes = startMinutes, endMinutes = endMinutes, intervalMinutes = intervalMinutes,
+            id = 0, startMinutes = startMinutes, endMinutes = endMinutes,
+            startIntervalMinutes = intervalMinutes, endIntervalMinutes = intervalMinutes,
             repeatDays = emptySet(), label = "", soundUri = null, vibrate = false, enabled = true, skippedSessionStart = null,
         )
     }
