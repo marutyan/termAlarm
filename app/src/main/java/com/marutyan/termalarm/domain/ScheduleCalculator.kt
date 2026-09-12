@@ -5,6 +5,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZonedDateTime
+import kotlin.math.roundToInt
 
 // 1日の分数。日またぎ判定・時刻計算で繰り返し使う定数
 private const val MINUTES_PER_DAY = 1440
@@ -24,21 +25,46 @@ private fun sessionSpanMinutes(schedule: AlarmSchedule): Int =
     }
 
 /**
+ * 開始時刻を0分としたセッション内の全鳴動時刻の経過分オフセット列を逐次生成する内部関数。
+ * 可変間隔および等間隔のスケジュールから鳴動の列を算出し、回数算出や次回鳴動・残り回数の判定に共通で用いる。
+ */
+internal fun calculateOccurrenceOffsets(schedule: AlarmSchedule): List<Int> {
+    val span = sessionSpanMinutes(schedule)
+    if (span <= 0) return listOf(0)
+
+    val isVariable = schedule.startIntervalMinutes != schedule.endIntervalMinutes
+    val offsets = mutableListOf<Int>()
+    var t = 0
+    offsets.add(t)
+
+    while (t < span) {
+        val p = t.toDouble() / span.toDouble()
+        val rawInterval = schedule.startIntervalMinutes + (schedule.endIntervalMinutes - schedule.startIntervalMinutes) * p
+        val nextInterval = rawInterval.roundToInt().coerceAtLeast(1)
+        val nextT = t + nextInterval
+
+        if (nextT > span) {
+            if (isVariable) {
+                offsets.add(span)
+            }
+            break
+        } else if (nextT == span) {
+            offsets.add(span)
+            break
+        } else {
+            offsets.add(nextT)
+            t = nextT
+        }
+    }
+    return offsets
+}
+
+/**
  * 1セッションで実際に鳴る回数（occurrence数）を返す。
- * startMinutes・endMinutesの両端を含むため span/interval + 1 になる（docs/SPEC.md「鳴動回数」）。
+ * 開始時刻から終了時刻までのオフセット列の件数をそのまま返す。
  */
 fun occurrenceCount(schedule: AlarmSchedule): Int =
-    sessionSpanMinutes(schedule) / schedule.intervalMinutes + 1
-
-// セッション開始日の深夜0時から数えて、index番目(0始まり)の鳴動までの経過分
-private fun occurrenceOffsetMinutes(schedule: AlarmSchedule, index: Int): Int =
-    schedule.startMinutes + index * schedule.intervalMinutes
-
-// sessionStartDateに始まるセッションのうち、index番目(0始まり)の鳴動時刻。
-// plusMinutesの繰り上がりにより、日をまたぐ場合は自動的に翌日の日時になる
-private fun occurrenceDateTime(schedule: AlarmSchedule, sessionStartDate: LocalDate, index: Int): LocalDateTime =
-    LocalDateTime.of(sessionStartDate, LocalTime.MIDNIGHT)
-        .plusMinutes(occurrenceOffsetMinutes(schedule, index).toLong())
+    calculateOccurrenceOffsets(schedule).size
 
 /**
  * 瞬間atが属するセッションの開始日を求める。
@@ -69,6 +95,7 @@ fun nextTrigger(schedule: AlarmSchedule, now: ZonedDateTime): ZonedDateTime? {
     // 日またぎスケジュールは前日に始まったセッションがまだ終わっていない可能性があるため -1 日から調べる。
     // 日をまたがない場合、前日のセッションの鳴動は必ずnow以前になるため実害はない
     val dayOffsets = if (schedule.repeatDays.isEmpty()) -1..0 else -1..MAX_SEARCH_DAYS_AHEAD
+    val offsets = calculateOccurrenceOffsets(schedule)
 
     for (dayOffset in dayOffsets) {
         val sessionStart = now.toLocalDate().plusDays(dayOffset.toLong())
@@ -76,9 +103,10 @@ fun nextTrigger(schedule: AlarmSchedule, now: ZonedDateTime): ZonedDateTime? {
         if (schedule.repeatDays.isNotEmpty() && sessionStart.dayOfWeek !in schedule.repeatDays) continue
         if (sessionStart == schedule.skippedSessionStart) continue
 
-        val count = occurrenceCount(schedule)
-        for (index in 0 until count) {
-            val candidate = occurrenceDateTime(schedule, sessionStart, index).atZone(now.zone)
+        val baseDateTime = LocalDateTime.of(sessionStart, LocalTime.MIDNIGHT)
+            .plusMinutes(schedule.startMinutes.toLong())
+        for (offset in offsets) {
+            val candidate = baseDateTime.plusMinutes(offset.toLong()).atZone(now.zone)
             if (candidate.isAfter(now)) return candidate
         }
     }
@@ -93,11 +121,11 @@ fun nextTrigger(schedule: AlarmSchedule, now: ZonedDateTime): ZonedDateTime? {
  */
 fun remainingOccurrenceCount(schedule: AlarmSchedule, at: ZonedDateTime): Int {
     val sessionStart = sessionStartDate(schedule, at)
-    // セッション開始日の深夜0時からatまでの経過分。sessionStartDateの選び方によりstartMinutes以上になる
-    val elapsedMinutes = Duration.between(LocalDateTime.of(sessionStart, LocalTime.MIDNIGHT), at.toLocalDateTime()).toMinutes()
-    val index = ((elapsedMinutes - schedule.startMinutes) / schedule.intervalMinutes).toInt()
-    val count = occurrenceCount(schedule)
-    return (count - 1 - index).coerceAtLeast(0)
+    val sessionStartDateTime = LocalDateTime.of(sessionStart, LocalTime.MIDNIGHT)
+        .plusMinutes(schedule.startMinutes.toLong())
+    val elapsedMinutes = Duration.between(sessionStartDateTime, at.toLocalDateTime()).toMinutes().toInt()
+    val offsets = calculateOccurrenceOffsets(schedule)
+    return offsets.count { it > elapsedMinutes }
 }
 
 /**
@@ -140,7 +168,13 @@ fun remainingTimeUntilNextTrigger(schedule: AlarmSchedule, now: ZonedDateTime): 
  */
 fun scheduleSummary(schedule: AlarmSchedule): String {
     val count = occurrenceCount(schedule)
-    return if (count <= 1) "1回のみ" else "${schedule.intervalMinutes}分ごと · ${count}回"
+    return if (count <= 1) {
+        "1回のみ"
+    } else if (schedule.startIntervalMinutes == schedule.endIntervalMinutes) {
+        "${schedule.startIntervalMinutes}分ごと · ${count}回"
+    } else {
+        "${schedule.startIntervalMinutes}〜${schedule.endIntervalMinutes}分ごと · ${count}回"
+    }
 }
 
 /**

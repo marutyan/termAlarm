@@ -31,11 +31,14 @@ data class AlarmScheduleEntity(
 )
 
 // data層のEntityからdomain層のAlarmScheduleへ変換する
+// 暫定処置: 可変間隔の保存は後続タスクでDBを作り直して対応するため、
+// 現在は既存のintervalMinutesカラムの値をstartIntervalMinutesとendIntervalMinutesの両方へ格納する。
 internal fun AlarmScheduleEntity.toDomain() = AlarmSchedule(
     id = id,
     startMinutes = startMinutes,
     endMinutes = endMinutes,
-    intervalMinutes = intervalMinutes,
+    startIntervalMinutes = intervalMinutes,
+    endIntervalMinutes = intervalMinutes,
     repeatDays = repeatDays,
     label = label,
     soundUri = soundUri,
@@ -48,11 +51,13 @@ internal fun AlarmScheduleEntity.toDomain() = AlarmSchedule(
 )
 
 // domain層のAlarmScheduleをRoomで保存するEntityへ変換する
+// 暫定処置: 可変間隔の保存は後続タスクでDBを作り直して対応するため、
+// 現在はstartIntervalMinutesの値を既存のintervalMinutesカラムへ保存する。
 internal fun AlarmSchedule.toEntity() = AlarmScheduleEntity(
     id = id,
     startMinutes = startMinutes,
     endMinutes = endMinutes,
-    intervalMinutes = intervalMinutes,
+    intervalMinutes = startIntervalMinutes,
     repeatDays = repeatDays,
     label = label,
     soundUri = soundUri,

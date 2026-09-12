@@ -4,7 +4,7 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 
 /**
- * アラーム1件を表すデータモデル。時刻の範囲（startMinutes〜endMinutes）と間隔（intervalMinutes）を持ち、
+ * アラーム1件を表すデータモデル。時刻の範囲（startMinutes〜endMinutes）と間隔（startIntervalMinutes〜endIntervalMinutes）を持ち、
  * 1件の設定から複数回の鳴動（occurrence）が生成される。
  * domain/data/alarm/ui の各担当が前提とする共通契約のため、フィールド名・型・順序を変更しない（docs/SPEC.md参照）。
  */
@@ -12,7 +12,8 @@ data class AlarmSchedule(
     val id: Long,
     val startMinutes: Int, // 0..1439。深夜0時からの経過分
     val endMinutes: Int, // 0..1439。startMinutes と同値なら単発
-    val intervalMinutes: Int, // 1以上
+    val startIntervalMinutes: Int, // 1以上。範囲の始めの間隔
+    val endIntervalMinutes: Int, // 1以上。範囲の終わりの間隔。startと同値なら等間隔
     val repeatDays: Set<DayOfWeek>, // 空集合なら「次の1回だけ」
     val label: String,
     val soundUri: String?, // null ならシステム既定のアラーム音
