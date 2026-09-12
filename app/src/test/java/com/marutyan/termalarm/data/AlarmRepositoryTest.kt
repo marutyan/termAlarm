@@ -67,27 +67,23 @@ class AlarmRepositoryTest {
     }
 
     /**
-     * チャレンジ強度、開始音量、終了音量、起床確認の各設定値が保存・読み出しで正しく保たれることを検証する。
+     * チャレンジ強度、起床確認の各設定値が保存・読み出しで正しく保たれることを検証する。
      * 朝に弱い人向けの新設定がDBに永続化され、既定値で上書きされずに復元されることを保証するために必要。
      */
     @Test
-    fun `チャレンジの強さ開始音量終了音量起床確認の分数が保存して読み直しても保たれる`() = runTest {
+    fun `チャレンジの強さ起床確認の分数が保存して読み直しても保たれる`() = runTest {
         val repository = AlarmRepository(FakeAlarmDao())
         val original = schedule(
             startMinutes = 7 * 60,
             endMinutes = 9 * 60,
         ).copy(
             challenge = ChallengeLevel.HARD,
-            startVolumePercent = 20,
-            endVolumePercent = 80,
             wakeCheckMinutes = 15,
         )
         val id = repository.add(original)
 
         val loaded = repository.getById(id)
         assertEquals(ChallengeLevel.HARD, loaded?.challenge)
-        assertEquals(20, loaded?.startVolumePercent)
-        assertEquals(80, loaded?.endVolumePercent)
         assertEquals(15, loaded?.wakeCheckMinutes)
     }
 

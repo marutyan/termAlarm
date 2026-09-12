@@ -23,8 +23,6 @@ private fun schedule(
     enabled: Boolean = true,
     skippedSessionStart: LocalDate? = null,
     challenge: ChallengeLevel = ChallengeLevel.NONE,
-    startVolumePercent: Int = 100,
-    endVolumePercent: Int = 100,
     wakeCheckMinutes: Int? = null,
 ) = AlarmSchedule(
     id = 1L,
@@ -39,8 +37,6 @@ private fun schedule(
     enabled = enabled,
     skippedSessionStart = skippedSessionStart,
     challenge = challenge,
-    startVolumePercent = startVolumePercent,
-    endVolumePercent = endVolumePercent,
     wakeCheckMinutes = wakeCheckMinutes,
 )
 
@@ -547,77 +543,17 @@ class ScheduleCalculatorTest {
         assertEquals(listOf(0), calculateOccurrenceOffsets(s))
     }
 
-    // --- 鳴動ごとの音量上限 ---
-
-    @Test
-    fun `音量上限 開始40・終了100でpに応じて40、70、100になる`() {
-        val s = schedule(
-            startMinutes = 7 * 60,
-            endMinutes = 9 * 60,
-            startIntervalMinutes = 10,
-            startVolumePercent = 40,
-            endVolumePercent = 100,
-        )
-        // 手計算:
-        // p = 0.0 -> 40 + (100 - 40) * 0.0 = 40
-        // p = 0.5 -> 40 + (100 - 40) * 0.5 = 70
-        // p = 1.0 -> 40 + (100 - 40) * 1.0 = 100
-        assertEquals(40, maxVolumePercent(s, 0.0))
-        assertEquals(70, maxVolumePercent(s, 0.5))
-        assertEquals(100, maxVolumePercent(s, 1.0))
-    }
-
-    @Test
-    fun `音量上限 開始と終了が同値ならpによらずその値になる`() {
-        val s = schedule(
-            startMinutes = 7 * 60,
-            endMinutes = 9 * 60,
-            startIntervalMinutes = 10,
-            startVolumePercent = 60,
-            endVolumePercent = 60,
-        )
-        assertEquals(60, maxVolumePercent(s, 0.0))
-        assertEquals(60, maxVolumePercent(s, 0.3))
-        assertEquals(60, maxVolumePercent(s, 0.5))
-        assertEquals(60, maxVolumePercent(s, 0.8))
-        assertEquals(60, maxVolumePercent(s, 1.0))
-    }
-
-    @Test
-    fun `音量上限 計算結果が1から100の外へ出ない`() {
-        val lowerSchedule = schedule(
-            startMinutes = 7 * 60,
-            endMinutes = 9 * 60,
-            startIntervalMinutes = 10,
-            startVolumePercent = 0,
-            endVolumePercent = 0,
-        )
-        assertEquals(1, maxVolumePercent(lowerSchedule, 0.0))
-        assertEquals(1, maxVolumePercent(lowerSchedule, 1.0))
-
-        val upperSchedule = schedule(
-            startMinutes = 7 * 60,
-            endMinutes = 9 * 60,
-            startIntervalMinutes = 10,
-            startVolumePercent = 120,
-            endVolumePercent = 150,
-        )
-        assertEquals(100, maxVolumePercent(upperSchedule, 0.0))
-        assertEquals(100, maxVolumePercent(upperSchedule, 0.5))
-        assertEquals(100, maxVolumePercent(upperSchedule, 1.0))
-    }
-
     // --- 解除チャレンジの問題数 ---
 
     @Test
-    fun `問題数 NONEで0、LIGHTで常に1になる`() {
+    fun `問題数 NONEで0、EASYで常に1になる`() {
         assertEquals(0, challengeQuestionCount(ChallengeLevel.NONE, 0.0))
         assertEquals(0, challengeQuestionCount(ChallengeLevel.NONE, 0.5))
         assertEquals(0, challengeQuestionCount(ChallengeLevel.NONE, 1.0))
 
-        assertEquals(1, challengeQuestionCount(ChallengeLevel.LIGHT, 0.0))
-        assertEquals(1, challengeQuestionCount(ChallengeLevel.LIGHT, 0.5))
-        assertEquals(1, challengeQuestionCount(ChallengeLevel.LIGHT, 1.0))
+        assertEquals(1, challengeQuestionCount(ChallengeLevel.EASY, 0.0))
+        assertEquals(1, challengeQuestionCount(ChallengeLevel.EASY, 0.5))
+        assertEquals(1, challengeQuestionCount(ChallengeLevel.EASY, 1.0))
     }
 
     @Test

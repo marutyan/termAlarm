@@ -31,8 +31,6 @@ data class AlarmScheduleEntity(
     val skipGame: Boolean = false, // 当日終了の前にゲームを1問挟むか（既定false）
     val snoozeMinutes: Int? = null, // スヌーズの分数。nullなら無効（既定null）
     val challenge: ChallengeLevel,
-    val startVolumePercent: Int,
-    val endVolumePercent: Int,
     val wakeCheckMinutes: Int?,
 )
 
@@ -53,8 +51,6 @@ internal fun AlarmScheduleEntity.toDomain() = AlarmSchedule(
     skipGame = skipGame,
     snoozeMinutes = snoozeMinutes,
     challenge = challenge,
-    startVolumePercent = startVolumePercent,
-    endVolumePercent = endVolumePercent,
     wakeCheckMinutes = wakeCheckMinutes,
 )
 
@@ -75,7 +71,5 @@ internal fun AlarmSchedule.toEntity() = AlarmScheduleEntity(
     skipGame = skipGame,
     snoozeMinutes = snoozeMinutes,
     challenge = challenge,
-    startVolumePercent = startVolumePercent,
-    endVolumePercent = endVolumePercent,
     wakeCheckMinutes = wakeCheckMinutes,
 )

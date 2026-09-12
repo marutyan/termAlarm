@@ -232,35 +232,13 @@ fun occurrenceProgress(schedule: AlarmSchedule, occurrenceIndex: Int): Double {
 }
 
 /**
- * 進捗率 progress (0.0..1.0) における音量上限を返す。
- * 端末のアラーム音量に対する割合（1..100%）という意味を持ち、フェードインの到達点となる。音を鳴らす処理自体は対象外。
- * startVolumePercent と endVolumePercent が同値のときは進捗率によらずその値をそのまま返す。
- */
-fun maxVolumePercent(schedule: AlarmSchedule, progress: Double): Int {
-    if (schedule.startVolumePercent == schedule.endVolumePercent) {
-        return schedule.startVolumePercent.coerceIn(1, 100)
-    }
-    val raw = schedule.startVolumePercent + (schedule.endVolumePercent - schedule.startVolumePercent) * progress
-    return raw.roundToInt().coerceIn(1, 100)
-}
-
-/**
- * 指定した鳴動回（occurrenceIndex: 0始まり）の音量上限を返す。
- * 端末のアラーム音量に対する割合（1..100%）という意味を持ち、フェードインの到達点となる。音を鳴らす処理自体は対象外。
- */
-fun maxVolumePercent(schedule: AlarmSchedule, occurrenceIndex: Int): Int {
-    val p = occurrenceProgress(schedule, occurrenceIndex)
-    return maxVolumePercent(schedule, p)
-}
-
-/**
  * 解除チャレンジの強さと進捗率 progress (0.0..1.0) から、その回に出題する問題数を返す。
  * 朝の二度寝を防ぐため、HARD では進捗に応じて 1〜3 問を出題し、境界値（1/3, 2/3）はその値を含む側が大きい方の問題数となる。
  */
 fun challengeQuestionCount(challenge: ChallengeLevel, progress: Double): Int =
     when (challenge) {
         ChallengeLevel.NONE -> 0
-        ChallengeLevel.LIGHT -> 1
+        ChallengeLevel.EASY -> 1
         ChallengeLevel.HARD -> when {
             progress < 1.0 / 3.0 -> 1
             progress < 2.0 / 3.0 -> 2

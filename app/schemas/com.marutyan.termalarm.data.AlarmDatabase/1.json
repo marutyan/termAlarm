@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "50bd3373a629e1948585edf67dfc32d4",
+    "identityHash": "33bf8e31a4d1c377e311e9281c4ba756",
     "entities": [
       {
         "tableName": "alarm_schedule",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `startMinutes` INTEGER NOT NULL, `endMinutes` INTEGER NOT NULL, `startIntervalMinutes` INTEGER NOT NULL, `endIntervalMinutes` INTEGER NOT NULL, `repeatDays` INTEGER NOT NULL, `label` TEXT NOT NULL, `soundUri` TEXT, `vibrate` INTEGER NOT NULL, `enabled` INTEGER NOT NULL, `skippedSessionStart` INTEGER, `skipRequiresApp` INTEGER NOT NULL, `skipGame` INTEGER NOT NULL, `snoozeMinutes` INTEGER, `challenge` TEXT NOT NULL, `startVolumePercent` INTEGER NOT NULL, `endVolumePercent` INTEGER NOT NULL, `wakeCheckMinutes` INTEGER)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `startMinutes` INTEGER NOT NULL, `endMinutes` INTEGER NOT NULL, `startIntervalMinutes` INTEGER NOT NULL, `endIntervalMinutes` INTEGER NOT NULL, `repeatDays` INTEGER NOT NULL, `label` TEXT NOT NULL, `soundUri` TEXT, `vibrate` INTEGER NOT NULL, `enabled` INTEGER NOT NULL, `skippedSessionStart` INTEGER, `skipRequiresApp` INTEGER NOT NULL, `skipGame` INTEGER NOT NULL, `snoozeMinutes` INTEGER, `challenge` TEXT NOT NULL, `wakeCheckMinutes` INTEGER)",
         "fields": [
           {
             "fieldPath": "id",
@@ -93,18 +93,6 @@
             "fieldPath": "challenge",
             "columnName": "challenge",
             "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "startVolumePercent",
-            "columnName": "startVolumePercent",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "endVolumePercent",
-            "columnName": "endVolumePercent",
-            "affinity": "INTEGER",
             "notNull": true
           },
           {
@@ -362,7 +350,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '50bd3373a629e1948585edf67dfc32d4')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '33bf8e31a4d1c377e311e9281c4ba756')"
     ]
   }
 }
