@@ -7,111 +7,148 @@
 <body>
 <x-dc>
 <helmet>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@200;300;400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap">
   <style>
-    body { margin: 0; font-family: 'Space Grotesk', 'Helvetica Neue', system-ui, sans-serif; }
-    a { color: #F2A65A; } a:hover { color: #FFC489; }
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+    a { color: #A3E635; } a:hover { color: #BEF264; }
   </style>
 </helmet>
-<div style="width: 390px; height: 844px; background: #0B0E14; color: #E8E4DC; box-sizing: border-box; padding: 56px 24px 0; display: flex; flex-direction: column; gap: 20px;">
+<div style="width: 390px; height: 844px; background: #0A0A0A; color: #E5E5E5; box-sizing: border-box; display: flex;">
 
-  <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-    <div style="display: flex; flex-direction: column; gap: 2px;">
-      <div style="font-size: 52px; font-weight: 300; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums;">7:12</div>
-      <div style="font-size: 13px; font-weight: 400; color: #8A8F9C;">9月13日 土曜日</div>
+  <div style="width: 54px; flex-shrink: 0; border-right: 1px solid #1F1F1F; display: flex; flex-direction: column; align-items: center; padding: 56px 0 24px; gap: 28px;">
+    <div style="width: 32px; height: 32px; border-radius: 3px; background: #A3E635; display: flex; align-items: center; justify-content: center;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M5 3L2 6M19 3l3 3"/></svg>
     </div>
-    <div style="display: flex; gap: 14px; padding-top: 8px;">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8A8F9C" stroke-width="1.6" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-    </div>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#525252" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#525252" stroke-width="1.6" stroke-linecap="round"><path d="M12 13V8M9 3h6M5 13a7 7 0 1014 0 7 7 0 00-14 0z"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#525252" stroke-width="1.6" stroke-linecap="round"><path d="M4 19V9M10 19V5M16 19v-7M22 19h-20"/></svg>
+    <div style="flex-grow: 1;"></div>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#525252" stroke-width="1.6" stroke-linecap="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
   </div>
 
-  <div style="display: flex; gap: 16px; align-items: center;">
-    <div style="flex-grow: 1; height: 1px; background: #222833;"></div>
-    <div style="font-size: 11px; letter-spacing: 0.16em; color: #5E6472;">進行中</div>
-  </div>
+  <div style="flex-grow: 1; box-sizing: border-box; padding: 52px 16px 0; display: flex; flex-direction: column; gap: 13px; overflow: hidden;">
 
-  <div style="display: flex; gap: 18px; flex-grow: 1;">
-
-    <div style="display: flex; flex-direction: column; justify-content: space-between; padding: 2px 0 40px; font-size: 12px; font-variant-numeric: tabular-nums; color: #5E6472;">
-      <div style="color: #F2A65A;">7:00</div>
-      <div>8:00</div>
-      <div>9:00</div>
+    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+      <div style="font-size: 64px; font-weight: 200; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.045em; line-height: 0.9;">7:12</div>
+      <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px; padding-bottom: 5px;">
+        <div style="font-size: 17px; font-weight: 300; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; color: #737373;">44</div>
+        <div style="font-size: 11px; color: #525252; font-family: 'IBM Plex Mono', monospace;">土 09.13</div>
+      </div>
     </div>
 
-    <div style="position: relative; width: 26px;">
-      <div style="position: absolute; left: 12px; top: 6px; bottom: 46px; width: 2px; background: #1C222D;"></div>
-      <div style="position: absolute; left: 12px; top: 6px; height: 42px; width: 2px; background: #F2A65A;"></div>
-      <div style="display: flex; flex-direction: column; gap: 9px; padding-top: 2px;">
-        <sc-for list="{{dots}}" as="dot" hint-placeholder-count="25">
-          <div style="width: 26px; height: 8px; display: flex; align-items: center;">
-            <div style="width: {{dot.size}}; height: {{dot.size}}; border-radius: 50%; background: {{dot.fill}}; border: 1.5px solid {{dot.ring}}; box-sizing: border-box; margin-left: {{dot.offset}};"></div>
+    <div style="background: #111111; border: 1px solid #1F1F1F; border-radius: 3px; padding: 15px 15px 13px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 27px; font-weight: 300; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1;">7:00 – 9:00</div>
+        <div style="font-size: 9.5px; letter-spacing: 0.14em; color: #A3E635; font-family: 'IBM Plex Mono', monospace;">04 / 25</div>
+      </div>
+
+      <div style="display: flex; gap: 5px;">
+        <sc-for list="{{days}}" as="day" hint-placeholder-count="7">
+          <div style="width: 21px; height: 21px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10.5px; background: {{day.bg}}; color: {{day.fg}};">{{day.name}}</div>
+        </sc-for>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 2px;">
+        <sc-for list="{{slots}}" as="slot" hint-placeholder-count="25">
+          <div style="flex-grow: 1; height: 18px; background: {{slot.color}};"></div>
+        </sc-for>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <div style="font-size: 9.5px; letter-spacing: 0.12em; color: #737373; font-family: 'IBM Plex Mono', monospace;">つぎ</div>
+          <div style="font-size: 26px; font-weight: 300; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 1;">7:15</div>
+        </div>
+        <div style="font-size: 11.5px; color: #737373; text-align: right; line-height: 1.5;">5分ごと<br>あと22回</div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px;">
+      <div style="background: #111111; border: 1px solid #1F1F1F; border-radius: 3px; padding: 10px 9px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-size: 8.5px; letter-spacing: 0.1em; color: #737373; font-family: 'IBM Plex Mono', monospace;">平均</div>
+        <div style="font-size: 21px; font-weight: 300; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 1;">6.2</div>
+        <div style="font-size: 9.5px; color: #525252;">回目で起床</div>
+      </div>
+      <div style="background: #111111; border: 1px solid #1F1F1F; border-radius: 3px; padding: 10px 9px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-size: 8.5px; letter-spacing: 0.1em; color: #737373; font-family: 'IBM Plex Mono', monospace;">平均</div>
+        <div style="font-size: 21px; font-weight: 300; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 1;">31<span style="font-size: 11px; color: #737373;">分</span></div>
+        <div style="font-size: 9.5px; color: #525252;">開始から</div>
+      </div>
+      <div style="background: #111111; border: 1px solid #1F1F1F; border-radius: 3px; padding: 10px 9px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-size: 8.5px; letter-spacing: 0.1em; color: #737373; font-family: 'IBM Plex Mono', monospace;">長押し</div>
+        <div style="font-size: 21px; font-weight: 300; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 1; color: #F59E0B;">18<span style="font-size: 11px; color: #737373;">%</span></div>
+        <div style="font-size: 9.5px; color: #525252;">で緊急停止</div>
+      </div>
+    </div>
+
+    <div style="background: #111111; border: 1px solid #1F1F1F; border-radius: 3px; padding: 12px 14px 10px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="font-size: 9.5px; letter-spacing: 0.12em; color: #737373; font-family: 'IBM Plex Mono', monospace;">直近7日 何回目で起きたか</div>
+      <div style="display: flex; align-items: flex-end; gap: 6px; height: 62px;">
+        <sc-for list="{{bars}}" as="bar" hint-placeholder-count="7">
+          <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;">
+            <div style="width: 100%; height: {{bar.h}}; background: {{bar.color}}; border-radius: 1px;"></div>
+            <div style="font-size: 8.5px; color: #525252; font-family: 'IBM Plex Mono', monospace;">{{bar.day}}</div>
           </div>
         </sc-for>
       </div>
     </div>
 
-    <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 4px; padding-top: 0;">
-      <div style="font-size: 19px; font-weight: 500; letter-spacing: -0.01em;">起きる</div>
-      <div style="font-size: 12.5px; color: #8A8F9C; line-height: 1.5;">5分ごと・25回<br>平日と土曜</div>
-
-      <div style="height: 26px;"></div>
-
-      <div style="border-left: 2px solid #F2A65A; padding-left: 12px; display: flex; flex-direction: column; gap: 3px;">
-        <div style="font-size: 10.5px; letter-spacing: 0.14em; color: #5E6472;">つぎ</div>
-        <div style="font-size: 30px; font-weight: 400; line-height: 1; font-variant-numeric: tabular-nums;">7:15</div>
-        <div style="font-size: 12.5px; color: #8A8F9C;">あと22回</div>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #111111; border: 1px solid #1F1F1F; border-radius: 3px;">
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 4px;">
+          <div style="font-size: 15px; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; color: #A3A3A3;">9:30 – 10:00</div>
+          <div style="display: flex; gap: 4px;">
+            <sc-for list="{{sundayOnly}}" as="day" hint-placeholder-count="7">
+              <div style="width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8.5px; background: {{day.bg}}; color: {{day.fg}};">{{day.name}}</div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
+          <div style="width: 30px; height: 17px; border-radius: 9px; background: #262626; display: flex; align-items: center; padding: 2px; box-sizing: border-box;">
+            <div style="width: 13px; height: 13px; border-radius: 50%; background: #525252;"></div>
+          </div>
+          <div style="font-size: 9.5px; color: #525252; font-family: 'IBM Plex Mono', monospace;">10分 · 4回</div>
+        </div>
       </div>
 
-      <div style="height: 20px;"></div>
-
-      <div style="display: flex; flex-direction: column; gap: 3px;">
-        <div style="font-size: 10.5px; letter-spacing: 0.14em; color: #5E6472;">きょう</div>
-        <div style="font-size: 12.5px; color: #8A8F9C; line-height: 1.5;">3回鳴って<br>まだ起きていない</div>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 7px; padding: 11px; border: 1px dashed #262626; border-radius: 3px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#525252" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <div style="font-size: 11.5px; color: #525252;">タームを追加</div>
       </div>
     </div>
+
   </div>
-
-  <div style="display: flex; flex-direction: column; gap: 10px; padding-bottom: 22px;">
-    <div style="display: flex; align-items: center; gap: 12px; padding: 13px 16px; background: #12161F; border-radius: 4px;">
-      <div style="width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid #3A4150; box-sizing: border-box;"></div>
-      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 1px;">
-        <div style="font-size: 14.5px; font-variant-numeric: tabular-nums; color: #8A8F9C;">9:30 – 10:00</div>
-        <div style="font-size: 11.5px; color: #5E6472;">昼寝から戻る・10分ごと</div>
-      </div>
-      <div style="font-size: 11px; color: #5E6472;">日</div>
-    </div>
-
-    <div style="display: flex; gap: 10px;">
-      <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border: 1px solid #222833; border-radius: 4px; font-size: 13px; color: #8A8F9C;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8A8F9C" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-        追加
-      </div>
-      <div style="display: flex; align-items: center; justify-content: center; padding: 14px 18px; border: 1px solid #222833; border-radius: 4px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A8F9C" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2"/></svg>
-      </div>
-      <div style="display: flex; align-items: center; justify-content: center; padding: 14px 18px; border: 1px solid #222833; border-radius: 4px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A8F9C" stroke-width="1.6" stroke-linecap="round"><path d="M4 19V9M10 19V5M16 19v-7M22 19h-20"/></svg>
-      </div>
-    </div>
-  </div>
-
 </div>
 </x-dc>
 <script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
   renderVals() {
-    const dots = [];
+    const slots = [];
     for (let i = 0; i < 25; i++) {
       const done = i < 3;
-      const next = i === 3;
-      dots.push({
-        size: next ? '10px' : '6px',
-        offset: next ? '8px' : '10px',
-        fill: done ? '#F2A65A' : (next ? '#0B0E14' : 'transparent'),
-        ring: done ? '#F2A65A' : (next ? '#F2A65A' : '#2A3140'),
-      });
+      const now = i === 3;
+      slots.push({ color: done ? '#3F4A1C' : (now ? '#A3E635' : '#1C1C1C') });
     }
-    return { dots };
+    const names = ['月', '火', '水', '木', '金', '土', '日'];
+    const weekdaysPlusSat = [true, true, true, true, true, true, false];
+    const days = names.map((n, i) => ({
+      name: n,
+      bg: weekdaysPlusSat[i] ? '#A3E635' : 'transparent',
+      fg: weekdaysPlusSat[i] ? '#0A0A0A' : '#3F3F3F',
+    }));
+    const sunday = [false, false, false, false, false, false, true];
+    const sundayOnly = names.map((n, i) => ({
+      name: n,
+      bg: sunday[i] ? '#3F3F3F' : 'transparent',
+      fg: sunday[i] ? '#A3A3A3' : '#2E2E2E',
+    }));
+    const counts = [8, 5, 11, 4, 6, 3, 7];
+    const bars = counts.map((c, i) => ({
+      h: Math.round((c / 12) * 62) + 'px',
+      color: c >= 9 ? '#F59E0B' : '#A3E635',
+      day: names[(i + 6) % 7],
+    }));
+    return { slots, days, sundayOnly, bars };
   }
 }
 </script>
