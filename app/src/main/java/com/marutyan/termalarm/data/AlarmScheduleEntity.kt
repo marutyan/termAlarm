@@ -9,9 +9,9 @@ import java.time.LocalDate
 
 /**
  * AlarmSchedule をRoomで永続化するためのテーブル定義。
- * repeatDays(Set<DayOfWeek>)とskippedSessionStart(LocalDate)はConvertersに登録したTypeConverterで
- * DB用のプリミティブ型に変換される。domain.AlarmScheduleとの相互変換はtoDomain()/toEntity()で行い、
- * domain層をRoomに依存させない。
+ * repeatDays(Set<DayOfWeek>)、skippedSessionStart(LocalDate)、challenge(ChallengeLevel)は
+ * Convertersに登録したTypeConverterでDB用のプリミティブ型に変換される。
+ * domain.AlarmScheduleとの相互変換はtoDomain()/toEntity()で行い、domain層をRoomに依存させない。
  */
 @Entity(tableName = "alarm_schedule")
 data class AlarmScheduleEntity(
@@ -19,7 +19,8 @@ data class AlarmScheduleEntity(
     val id: Long,
     val startMinutes: Int,
     val endMinutes: Int,
-    val intervalMinutes: Int,
+    val startIntervalMinutes: Int,
+    val endIntervalMinutes: Int,
     val repeatDays: Set<DayOfWeek>,
     val label: String,
     val soundUri: String?,
@@ -29,17 +30,19 @@ data class AlarmScheduleEntity(
     val skipRequiresApp: Boolean = true, // 当日終了をアプリからのみ許すか（既定true）
     val skipGame: Boolean = false, // 当日終了の前にゲームを1問挟むか（既定false）
     val snoozeMinutes: Int? = null, // スヌーズの分数。nullなら無効（既定null）
+    val challenge: ChallengeLevel,
+    val startVolumePercent: Int,
+    val endVolumePercent: Int,
+    val wakeCheckMinutes: Int?,
 )
 
 // data層のEntityからdomain層のAlarmScheduleへ変換する
-// 暫定処置: 可変間隔および朝に弱い人向けの新設定（challenge, startVolumePercent, endVolumePercent, wakeCheckMinutes）の保存は
-// 後続タスクでデータ層を作り直す際にDBへ対応するため、現在は既定値を補い、既存のカラム値のみ変換する。
 internal fun AlarmScheduleEntity.toDomain() = AlarmSchedule(
     id = id,
     startMinutes = startMinutes,
     endMinutes = endMinutes,
-    startIntervalMinutes = intervalMinutes,
-    endIntervalMinutes = intervalMinutes,
+    startIntervalMinutes = startIntervalMinutes,
+    endIntervalMinutes = endIntervalMinutes,
     repeatDays = repeatDays,
     label = label,
     soundUri = soundUri,
@@ -49,20 +52,19 @@ internal fun AlarmScheduleEntity.toDomain() = AlarmSchedule(
     skipRequiresApp = skipRequiresApp,
     skipGame = skipGame,
     snoozeMinutes = snoozeMinutes,
-    challenge = ChallengeLevel.NONE,
-    startVolumePercent = 100,
-    endVolumePercent = 100,
-    wakeCheckMinutes = null,
+    challenge = challenge,
+    startVolumePercent = startVolumePercent,
+    endVolumePercent = endVolumePercent,
+    wakeCheckMinutes = wakeCheckMinutes,
 )
 
 // domain層のAlarmScheduleをRoomで保存するEntityへ変換する
-// 暫定処置: 朝に弱い人向けの新設定（challenge, startVolumePercent, endVolumePercent, wakeCheckMinutes）は
-// 後続タスクでデータ層を作り直す際に保存するため、現在はEntityに含めず捨てている。
 internal fun AlarmSchedule.toEntity() = AlarmScheduleEntity(
     id = id,
     startMinutes = startMinutes,
     endMinutes = endMinutes,
-    intervalMinutes = startIntervalMinutes,
+    startIntervalMinutes = startIntervalMinutes,
+    endIntervalMinutes = endIntervalMinutes,
     repeatDays = repeatDays,
     label = label,
     soundUri = soundUri,
@@ -72,4 +74,8 @@ internal fun AlarmSchedule.toEntity() = AlarmScheduleEntity(
     skipRequiresApp = skipRequiresApp,
     skipGame = skipGame,
     snoozeMinutes = snoozeMinutes,
+    challenge = challenge,
+    startVolumePercent = startVolumePercent,
+    endVolumePercent = endVolumePercent,
+    wakeCheckMinutes = wakeCheckMinutes,
 )

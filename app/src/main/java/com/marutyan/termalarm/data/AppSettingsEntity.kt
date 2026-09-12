@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.marutyan.termalarm.domain.AlarmDismissMethod
 import com.marutyan.termalarm.domain.AppSettings
+import com.marutyan.termalarm.domain.AppTheme
 import com.marutyan.termalarm.domain.VolumeButtonAction
 import com.marutyan.termalarm.domain.WeekStart
 
@@ -25,6 +26,7 @@ data class AppSettingsEntity(
     val timerSoundUri: String?,
     val timerFadeInSeconds: Float,
     val timerVibration: Boolean,
+    val theme: String,
 ) {
     companion object {
         const val SINGLE_ROW_ID = 0
@@ -45,6 +47,7 @@ internal fun AppSettingsEntity.toDomain(): AppSettings = AppSettings(
     timerSoundUri = timerSoundUri,
     timerFadeInSeconds = timerFadeInSeconds,
     timerVibration = timerVibration,
+    theme = runCatching { AppTheme.valueOf(theme) }.getOrDefault(AppSettings().theme),
 )
 
 internal fun AppSettings.toEntity(): AppSettingsEntity = AppSettingsEntity(
@@ -58,4 +61,5 @@ internal fun AppSettings.toEntity(): AppSettingsEntity = AppSettingsEntity(
     timerSoundUri = timerSoundUri,
     timerFadeInSeconds = timerFadeInSeconds,
     timerVibration = timerVibration,
+    theme = theme.name,
 )

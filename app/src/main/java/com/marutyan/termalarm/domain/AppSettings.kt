@@ -27,6 +27,15 @@ enum class WeekStart {
 }
 
 /**
+ * アプリの配色テーマ。設定画面で利用者が選択する。
+ * 画面全体の配色を切り替えるために使用し、アプリアイコン由来のNAVYと黒基調のBLACKの2種類を持つ。
+ */
+enum class AppTheme {
+    NAVY,
+    BLACK,
+}
+
+/**
  * アプリ全体の設定値（docs/OFFICIAL_SETTINGS.md「作る設定の一覧」）。
  * 時計のアナログ/デジタル表示だけは既存のClockDisplayMode/ClockSettingsEntityで既に管理されているため、
  * ここには含めない（重複した保存先を作らない）。アラームの音量は端末のSTREAM_ALARMを直接操作するだけで
@@ -49,4 +58,5 @@ data class AppSettings(
     val timerSoundUri: String? = null,
     val timerFadeInSeconds: Float = 1.5f,
     val timerVibration: Boolean = true,
+    val theme: AppTheme = AppTheme.NAVY,
 )

@@ -1,11 +1,12 @@
 package com.marutyan.termalarm.data
 
 import androidx.room.TypeConverter
+import com.marutyan.termalarm.domain.ChallengeLevel
 import java.time.DayOfWeek
 import java.time.LocalDate
 
 /**
- * Room が素のままでは保存できない型（Set<DayOfWeek>、LocalDate）をDB用のプリミティブ型と相互変換する。
+ * Room が素のままでは保存できない型（Set<DayOfWeek>、LocalDate、ChallengeLevel）をDB用のプリミティブ型と相互変換する。
  * AlarmDatabase に登録して使う。
  */
 class Converters {
@@ -24,4 +25,19 @@ class Converters {
 
     @TypeConverter
     fun toLocalDate(epochDay: Long?): LocalDate? = epochDay?.let(LocalDate::ofEpochDay)
+
+    /**
+     * 解除チャレンジの強さを文字列へ変換する。
+     * RoomでChallengeLevelの列をTEXT型として保存するために必要。
+     */
+    @TypeConverter
+    fun fromChallengeLevel(challenge: ChallengeLevel): String = challenge.name
+
+    /**
+     * 保存された文字列から解除チャレンジの強さを復元する。
+     * DBから読み出した文字列をdomainの型へ戻すために必要。未知の文字列に当たった場合はNONEへ倒す。
+     */
+    @TypeConverter
+    fun toChallengeLevel(name: String): ChallengeLevel =
+        runCatching { ChallengeLevel.valueOf(name) }.getOrDefault(ChallengeLevel.NONE)
 }

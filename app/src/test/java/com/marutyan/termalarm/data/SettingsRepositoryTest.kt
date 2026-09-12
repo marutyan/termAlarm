@@ -2,6 +2,7 @@ package com.marutyan.termalarm.data
 
 import com.marutyan.termalarm.domain.AlarmDismissMethod
 import com.marutyan.termalarm.domain.AppSettings
+import com.marutyan.termalarm.domain.AppTheme
 import com.marutyan.termalarm.domain.VolumeButtonAction
 import com.marutyan.termalarm.domain.WeekStart
 import kotlinx.coroutines.flow.first
@@ -34,6 +35,7 @@ class SettingsRepositoryTest {
             timerSoundUri = "content://media/timer",
             timerFadeInSeconds = 3f,
             timerVibration = false,
+            theme = AppTheme.BLACK,
         )
 
         repository.update(settings)
@@ -54,6 +56,21 @@ class SettingsRepositoryTest {
         assertEquals(20, loaded.defaultSnoozeMinutes)
     }
 
+    /**
+     * 利用者が選んだ配色テーマが正しく保存され復元されることを検証する。
+     * 設定画面で選択したテーマがアプリ起動時や画面再描画時にも保たれるために必要。
+     */
+    @Test
+    fun `配色の設定が保存して読み直しても保たれる`() = runTest {
+        val repository = SettingsRepository(FakeAppSettingsDao())
+        val settings = AppSettings(theme = AppTheme.BLACK)
+
+        repository.update(settings)
+
+        val loaded = repository.observe().first()
+        assertEquals(AppTheme.BLACK, loaded.theme)
+    }
+
     @Test
     fun `未知のenum文字列は既定値へ倒す`() {
         val entity = AppSettingsEntity(
@@ -67,6 +84,7 @@ class SettingsRepositoryTest {
             timerSoundUri = null,
             timerFadeInSeconds = 1.5f,
             timerVibration = true,
+            theme = "UNKNOWN",
         )
 
         val domain = entity.toDomain()
@@ -74,5 +92,6 @@ class SettingsRepositoryTest {
         assertEquals(AppSettings().dismissMethod, domain.dismissMethod)
         assertEquals(AppSettings().volumeButtonAction, domain.volumeButtonAction)
         assertEquals(AppSettings().weekStart, domain.weekStart)
+        assertEquals(AppSettings().theme, domain.theme)
     }
 }

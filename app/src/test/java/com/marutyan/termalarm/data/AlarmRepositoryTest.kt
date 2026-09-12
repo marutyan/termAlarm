@@ -1,6 +1,7 @@
 package com.marutyan.termalarm.data
 
 import com.marutyan.termalarm.domain.AlarmSchedule
+import com.marutyan.termalarm.domain.ChallengeLevel
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -42,6 +43,71 @@ class AlarmRepositoryTest {
         assertEquals(true, loaded?.skipRequiresApp)
         assertEquals(false, loaded?.skipGame)
         assertNull(loaded?.snoozeMinutes)
+    }
+
+    /**
+     * 開始間隔と終了間隔が異なる可変間隔アラームを保存し、読み直しても両方の値が正しく保たれることを検証する。
+     * 単一のintervalMinutesに縮約して終了間隔を捨てていた暫定処置が解消されたことを保証するために必要。
+     */
+    @Test
+    fun `開始間隔10分終了間隔3分のアラームを保存して読み直すと両方の値が保たれる`() = runTest {
+        val repository = AlarmRepository(FakeAlarmDao())
+        val original = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 9 * 60,
+        ).copy(
+            startIntervalMinutes = 10,
+            endIntervalMinutes = 3,
+        )
+        val id = repository.add(original)
+
+        val loaded = repository.getById(id)
+        assertEquals(10, loaded?.startIntervalMinutes)
+        assertEquals(3, loaded?.endIntervalMinutes)
+    }
+
+    /**
+     * チャレンジ強度、開始音量、終了音量、起床確認の各設定値が保存・読み出しで正しく保たれることを検証する。
+     * 朝に弱い人向けの新設定がDBに永続化され、既定値で上書きされずに復元されることを保証するために必要。
+     */
+    @Test
+    fun `チャレンジの強さ開始音量終了音量起床確認の分数が保存して読み直しても保たれる`() = runTest {
+        val repository = AlarmRepository(FakeAlarmDao())
+        val original = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 9 * 60,
+        ).copy(
+            challenge = ChallengeLevel.HARD,
+            startVolumePercent = 20,
+            endVolumePercent = 80,
+            wakeCheckMinutes = 15,
+        )
+        val id = repository.add(original)
+
+        val loaded = repository.getById(id)
+        assertEquals(ChallengeLevel.HARD, loaded?.challenge)
+        assertEquals(20, loaded?.startVolumePercent)
+        assertEquals(80, loaded?.endVolumePercent)
+        assertEquals(15, loaded?.wakeCheckMinutes)
+    }
+
+    /**
+     * 起床確認を行わないアラーム（wakeCheckMinutesがnull）を保存し、読み直してもnullのまま保たれることを検証する。
+     * null許容列であるwakeCheckMinutesが正しく保存・復元されることを保証するために必要。
+     */
+    @Test
+    fun `起床確認の分数がnullのまま保たれる`() = runTest {
+        val repository = AlarmRepository(FakeAlarmDao())
+        val original = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 9 * 60,
+        ).copy(
+            wakeCheckMinutes = null,
+        )
+        val id = repository.add(original)
+
+        val loaded = repository.getById(id)
+        assertNull(loaded?.wakeCheckMinutes)
     }
 
     @Test
