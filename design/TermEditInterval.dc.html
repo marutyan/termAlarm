@@ -59,15 +59,20 @@
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 12px; padding-left: 74px;">
-        <div style="display: flex; align-items: baseline; gap: 5px; padding: 5px 11px 6px; border: 1px solid #1E3163; border-radius: 3px;">
-          <div style="font-size: 23px; font-weight: 300; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 1;">10<span style="font-size: 12px; color: #7B93BF;">分</span></div>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#55709E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg>
+        <div style="display: flex; align-items: baseline; gap: 5px; padding: 5px 11px 6px; border: 1px solid #8CDDC2; background: #123A3C; border-radius: 3px;">
+          <div style="font-size: 23px; font-weight: 300; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 1; color: #8CDDC2;">10<span style="font-size: 12px; color: #7B93BF;">分</span></div>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8CDDC2" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 15l-7-7-7 7"/></svg>
         </div>
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#55709E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M14 7l5 5-5 5"/></svg>
         <div style="display: flex; align-items: baseline; gap: 5px; padding: 5px 11px 6px; border: 1px solid #1E3163; border-radius: 3px;">
           <div style="font-size: 23px; font-weight: 300; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 1;">3<span style="font-size: 12px; color: #7B93BF;">分</span></div>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#55709E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg>
         </div>
+      </div>
+      <div style="display: flex; gap: 6px; padding-left: 74px;">
+        <sc-for list="{{chips}}" as="chip" hint-placeholder-count="8">
+          <div style="flex-shrink: 0; min-width: 44px; height: 44px; padding: 0 10px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: {{chip.bg}}; border: 1px solid {{chip.border}}; border-radius: 3px; font-size: 14px; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; color: {{chip.fg}};">{{chip.label}}</div>
+        </sc-for>
       </div>
       <div style="font-size: 11.5px; color: #7B93BF; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; padding-left: 74px;">7:00, 7:10, 7:19 … 7:58, 8:00 · 全11回</div>
     </div>
@@ -125,7 +130,17 @@ class Component extends DCLogic {
       border: on[i] ? '#8CDDC2' : '#1E3163',
       fg: on[i] ? '#0B1530' : '#55709E',
     }));
-    return { days };
+    // 間隔によく使う分数。末尾の「他」から任意の分数も選べる
+    const values = [1, 3, 5, 10, 15, 20];
+    const chips = values.map((v) => ({
+      label: String(v),
+      bg: v === 10 ? '#8CDDC2' : 'transparent',
+      border: v === 10 ? '#8CDDC2' : '#1E3163',
+      fg: v === 10 ? '#0B1530' : '#A9C0E4',
+    }));
+    chips.push({ label: '30', bg: 'transparent', border: '#1E3163', fg: '#A9C0E4' });
+    chips.push({ label: '他', bg: 'transparent', border: '#1E3163', fg: '#7B93BF' });
+    return { days, chips };
   }
 }
 </script>
