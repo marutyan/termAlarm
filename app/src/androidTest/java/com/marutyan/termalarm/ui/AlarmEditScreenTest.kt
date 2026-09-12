@@ -139,7 +139,7 @@ class AlarmEditScreenTest {
         val count = runBlocking { repository.observeAll().first().size }
         assertEquals(1, count)
         val savedSchedule = runBlocking { repository.observeAll().first().first() }
-        assertEquals(120, savedSchedule.intervalMinutes)
+        assertEquals(120, savedSchedule.startIntervalMinutes)
     }
 
     // 「止めにくさ」の既定値(skipRequiresApp=オン/skipGame=オフ/snooze=オフ)を保証する

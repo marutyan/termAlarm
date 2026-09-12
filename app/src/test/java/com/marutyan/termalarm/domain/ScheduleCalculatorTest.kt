@@ -182,6 +182,18 @@ class ScheduleCalculatorTest {
         assertEquals("1回のみ", scheduleSummary(schedule(startMinutes = 7 * 60, endMinutes = 7 * 60, startIntervalMinutes = 5)))
     }
 
+    // 可変間隔のときに「10〜3分ごと · 11回」の形式で要約文字列が生成されることを検証する
+    @Test
+    fun `可変間隔の要約文字列を組み立てる`() {
+        val s = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 8 * 60,
+            startIntervalMinutes = 10,
+            endIntervalMinutes = 3,
+        )
+        assertEquals("10〜3分ごと · 11回", scheduleSummary(s))
+    }
+
     // --- タイムゾーン・DST ---
 
     @Test
@@ -493,6 +505,46 @@ class ScheduleCalculatorTest {
         assertEquals(2, remainingOccurrenceCount(s, atMidnight)) // 00:40, 01:00
         assertEquals(1, remainingOccurrenceCount(s, at0040)) // 01:00
         assertEquals(0, remainingOccurrenceCount(s, atEnd))
+    }
+
+    // 間隔が範囲の長さより長い場合、1回目の次の鳴動が範囲外に出る。
+    // 等間隔（開始60分・終了60分）では開始時刻の1回だけ鳴るが、
+    // 可変間隔（開始60分・終了59分）では最後を終了時刻へ寄せる仕様により開始時刻と終了時刻の2回鳴る。
+    @Test
+    fun `最初の1回目で既に終了時刻を超える場合`() {
+        // 範囲が10分（7:00〜7:10）、等間隔（60分）なら開始時刻の1回だけ
+        val equalSchedule = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 7 * 60 + 10,
+            startIntervalMinutes = 60,
+            endIntervalMinutes = 60,
+        )
+        assertEquals(1, occurrenceCount(equalSchedule))
+        assertEquals(listOf(0), calculateOccurrenceOffsets(equalSchedule))
+
+        // 範囲が10分（7:00〜7:10）、可変間隔（開始60分・終了59分）なら開始時刻と終了時刻の2回
+        val variableSchedule = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 7 * 60 + 10,
+            startIntervalMinutes = 60,
+            endIntervalMinutes = 59,
+        )
+        assertEquals(2, occurrenceCount(variableSchedule))
+        assertEquals(listOf(0, 10), calculateOccurrenceOffsets(variableSchedule))
+    }
+
+    // 範囲の長さが0（開始時刻と終了時刻が同じ）のとき、開始間隔と終了間隔が異なっていても鳴動は1回だけになる。
+    // 可変かどうかの判定より前に範囲長0の判定を行う実装順序を固定する。
+    @Test
+    fun `開始時刻と終了時刻が同じで開始間隔と終了間隔が異なる場合`() {
+        val s = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 7 * 60,
+            startIntervalMinutes = 10,
+            endIntervalMinutes = 3,
+        )
+        assertEquals(1, occurrenceCount(s))
+        assertEquals(listOf(0), calculateOccurrenceOffsets(s))
     }
 
     // --- 鳴動ごとの音量上限 ---

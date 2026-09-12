@@ -99,7 +99,7 @@ class AlarmListScreenTest {
         composeTestRule.onNodeWithText("5分").assertIsOn()
 
         val restored = runBlocking { repository.getById(id) }
-        org.junit.Assert.assertEquals(5, restored?.intervalMinutes)
+        org.junit.Assert.assertEquals(5, restored?.startIntervalMinutes)
     }
 
     private fun context() = composeTestRule.activity
