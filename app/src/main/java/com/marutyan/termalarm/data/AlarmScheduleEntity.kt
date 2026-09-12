@@ -3,6 +3,7 @@ package com.marutyan.termalarm.data
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.marutyan.termalarm.domain.AlarmSchedule
+import com.marutyan.termalarm.domain.ChallengeLevel
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -31,8 +32,8 @@ data class AlarmScheduleEntity(
 )
 
 // data層のEntityからdomain層のAlarmScheduleへ変換する
-// 暫定処置: 可変間隔の保存は後続タスクでDBを作り直して対応するため、
-// 現在は既存のintervalMinutesカラムの値をstartIntervalMinutesとendIntervalMinutesの両方へ格納する。
+// 暫定処置: 可変間隔および朝に弱い人向けの新設定（challenge, startVolumePercent, endVolumePercent, wakeCheckMinutes）の保存は
+// 後続タスクでデータ層を作り直す際にDBへ対応するため、現在は既定値を補い、既存のカラム値のみ変換する。
 internal fun AlarmScheduleEntity.toDomain() = AlarmSchedule(
     id = id,
     startMinutes = startMinutes,
@@ -48,11 +49,15 @@ internal fun AlarmScheduleEntity.toDomain() = AlarmSchedule(
     skipRequiresApp = skipRequiresApp,
     skipGame = skipGame,
     snoozeMinutes = snoozeMinutes,
+    challenge = ChallengeLevel.NONE,
+    startVolumePercent = 100,
+    endVolumePercent = 100,
+    wakeCheckMinutes = null,
 )
 
 // domain層のAlarmScheduleをRoomで保存するEntityへ変換する
-// 暫定処置: 可変間隔の保存は後続タスクでDBを作り直して対応するため、
-// 現在はstartIntervalMinutesの値を既存のintervalMinutesカラムへ保存する。
+// 暫定処置: 朝に弱い人向けの新設定（challenge, startVolumePercent, endVolumePercent, wakeCheckMinutes）は
+// 後続タスクでデータ層を作り直す際に保存するため、現在はEntityに含めず捨てている。
 internal fun AlarmSchedule.toEntity() = AlarmScheduleEntity(
     id = id,
     startMinutes = startMinutes,

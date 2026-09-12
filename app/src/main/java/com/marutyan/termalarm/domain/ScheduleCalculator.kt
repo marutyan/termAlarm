@@ -25,6 +25,13 @@ private fun sessionSpanMinutes(schedule: AlarmSchedule): Int =
     }
 
 /**
+ * セッション全体の長さ span に対する経過分 t の進捗率 p (0.0..1.0) を求める。
+ * span が 0 以下のときは 0.0 とする。
+ */
+internal fun calculateProgress(t: Int, span: Int): Double =
+    if (span <= 0) 0.0 else t.toDouble() / span.toDouble()
+
+/**
  * 開始時刻を0分としたセッション内の全鳴動時刻の経過分オフセット列を逐次生成する内部関数。
  * 可変間隔および等間隔のスケジュールから鳴動の列を算出し、回数算出や次回鳴動・残り回数の判定に共通で用いる。
  */
@@ -38,7 +45,7 @@ internal fun calculateOccurrenceOffsets(schedule: AlarmSchedule): List<Int> {
     offsets.add(t)
 
     while (t < span) {
-        val p = t.toDouble() / span.toDouble()
+        val p = calculateProgress(t, span)
         val rawInterval = schedule.startIntervalMinutes + (schedule.endIntervalMinutes - schedule.startIntervalMinutes) * p
         val nextInterval = rawInterval.roundToInt().coerceAtLeast(1)
         val nextT = t + nextInterval
@@ -209,3 +216,99 @@ private fun hasSessionStarted(schedule: AlarmSchedule, now: ZonedDateTime): Bool
         minuteOfDay >= schedule.startMinutes
     }
 }
+
+/**
+ * そのセッションの指定回（occurrenceIndex: 0始まり）の鳴動における進捗率 p (0.0..1.0) を求める。
+ * calculateOccurrenceOffsets で算出したオフセット列から経過分 t を取得し、セッション長に対する進捗率を算出する。
+ */
+fun occurrenceProgress(schedule: AlarmSchedule, occurrenceIndex: Int): Double {
+    val span = sessionSpanMinutes(schedule)
+    if (span <= 0) return 0.0
+    val offsets = calculateOccurrenceOffsets(schedule)
+    val t = offsets.getOrElse(occurrenceIndex) {
+        if (occurrenceIndex < 0) 0 else offsets.last()
+    }
+    return calculateProgress(t, span)
+}
+
+/**
+ * 進捗率 progress (0.0..1.0) における音量上限を返す。
+ * 端末のアラーム音量に対する割合（1..100%）という意味を持ち、フェードインの到達点となる。音を鳴らす処理自体は対象外。
+ * startVolumePercent と endVolumePercent が同値のときは進捗率によらずその値をそのまま返す。
+ */
+fun maxVolumePercent(schedule: AlarmSchedule, progress: Double): Int {
+    if (schedule.startVolumePercent == schedule.endVolumePercent) {
+        return schedule.startVolumePercent.coerceIn(1, 100)
+    }
+    val raw = schedule.startVolumePercent + (schedule.endVolumePercent - schedule.startVolumePercent) * progress
+    return raw.roundToInt().coerceIn(1, 100)
+}
+
+/**
+ * 指定した鳴動回（occurrenceIndex: 0始まり）の音量上限を返す。
+ * 端末のアラーム音量に対する割合（1..100%）という意味を持ち、フェードインの到達点となる。音を鳴らす処理自体は対象外。
+ */
+fun maxVolumePercent(schedule: AlarmSchedule, occurrenceIndex: Int): Int {
+    val p = occurrenceProgress(schedule, occurrenceIndex)
+    return maxVolumePercent(schedule, p)
+}
+
+/**
+ * 解除チャレンジの強さと進捗率 progress (0.0..1.0) から、その回に出題する問題数を返す。
+ * 朝の二度寝を防ぐため、HARD では進捗に応じて 1〜3 問を出題し、境界値（1/3, 2/3）はその値を含む側が大きい方の問題数となる。
+ */
+fun challengeQuestionCount(challenge: ChallengeLevel, progress: Double): Int =
+    when (challenge) {
+        ChallengeLevel.NONE -> 0
+        ChallengeLevel.LIGHT -> 1
+        ChallengeLevel.HARD -> when {
+            progress < 1.0 / 3.0 -> 1
+            progress < 2.0 / 3.0 -> 2
+            else -> 3
+        }
+    }
+
+/**
+ * スケジュールと進捗率 progress (0.0..1.0) から、その回に出題する解除チャレンジの問題数を返す。
+ * アラームごとの難易度設定に応じて問題数を導出する。
+ */
+fun challengeQuestionCount(schedule: AlarmSchedule, progress: Double): Int =
+    challengeQuestionCount(schedule.challenge, progress)
+
+/**
+ * スケジュールと指定した鳴動回（occurrenceIndex: 0始まり）から、その回に出題する解除チャレンジの問題数を返す。
+ * 何回目の鳴動かに応じた進捗率から出題数を決定する。
+ */
+fun challengeQuestionCount(schedule: AlarmSchedule, occurrenceIndex: Int): Int {
+    val p = occurrenceProgress(schedule, occurrenceIndex)
+    return challengeQuestionCount(schedule.challenge, p)
+}
+
+/**
+ * 範囲の最後の鳴動を停止した後に、本当に起きたかを確認する起床確認の時刻を求める。
+ * wakeCheckMinutes が null の場合は確認を行わないため null を返す。
+ * 有効な場合は、実際に停止した時刻 lastDismissedAt に wakeCheckMinutes 分を足した時刻を返す。
+ */
+fun wakeCheckTime(schedule: AlarmSchedule, lastDismissedAt: ZonedDateTime): ZonedDateTime? {
+    val minutes = schedule.wakeCheckMinutes ?: return null
+    return lastDismissedAt.plusMinutes(minutes.toLong())
+}
+
+/**
+ * そのセッションにおいて起床確認を行うべきかを判定する。
+ * wakeCheckMinutes が null の場合、または「今日はもう止める」が実行され
+ * skippedSessionStart がセッション開始日と一致する場合は確認を行わないため false を返す。
+ */
+fun shouldPerformWakeCheck(schedule: AlarmSchedule, sessionStart: LocalDate): Boolean {
+    if (schedule.wakeCheckMinutes == null) return false
+    if (schedule.skippedSessionStart == sessionStart) return false
+    return true
+}
+
+/**
+ * 停止時刻などの瞬間 at が属するセッションにおいて、起床確認を行うべきかを判定する。
+ * セッションの開始日を自動導出して起床確認要否を判断する。
+ */
+fun shouldPerformWakeCheck(schedule: AlarmSchedule, at: ZonedDateTime): Boolean =
+    shouldPerformWakeCheck(schedule, sessionStartDate(schedule, at))
+

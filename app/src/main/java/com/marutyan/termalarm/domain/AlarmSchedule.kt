@@ -23,4 +23,8 @@ data class AlarmSchedule(
     val skipRequiresApp: Boolean = true, // 当日終了をアプリからのみ許すか。falseなら鳴動画面にも導線を出す（docs/SPEC.md「誤操作の防止と当日終了」）
     val skipGame: Boolean = false, // 当日終了の前にゲームを1問挟むか。skipRequiresAppがfalseのときは無視する
     val snoozeMinutes: Int? = null, // スヌーズの分数。nullならスヌーズ無効（既定オフ、docs/SPEC.md「スヌーズ」）
+    val challenge: ChallengeLevel = ChallengeLevel.NONE, // 解除チャレンジの強さ
+    val startVolumePercent: Int = 100, // 範囲の始めの音量上限。1..100（端末のアラーム音量に対する割合）
+    val endVolumePercent: Int = 100, // 範囲の終わりの音量上限。1..100。startと同値なら一定
+    val wakeCheckMinutes: Int? = null, // 範囲終了後に起床確認を行うまでの分数。null なら確認しない
 )
