@@ -68,7 +68,7 @@ fun TermIntervalBarsIcon(
 
 /**
  * デザインHTMLで指定された丸囲みクエスチョンアイコンを描画するComposable。
- * 解除チャレンジ設定行およびポップアップの見出しアイコンとして用いる。
+ * 解除チャレンジ設定行およびポップアップの見出しアイコンとして用い、20dpのサイズでも疑問符と識別できるよう太さと大きさを最適化している。
  */
 @Composable
 fun TermQuestionCircleIcon(
@@ -76,7 +76,7 @@ fun TermQuestionCircleIcon(
     color: Color = MaterialTheme.customColors.subtleText,
 ) {
     val questionPath = remember {
-        PathParser().parsePathString("M9.6 9.3a2.5 2.5 0 014.9.6c0 1.6-2.4 2-2.4 3.6").toPath()
+        PathParser().parsePathString("M9.2 8.8a3 3 0 015.6 1.5c0 1.8-2.8 2.2-2.8 4.2").toPath()
     }
     Canvas(modifier = modifier) {
         val scale = size.width / 24f
@@ -84,17 +84,17 @@ fun TermQuestionCircleIcon(
             color = color,
             radius = 9f * scale,
             center = Offset(12f * scale, 12f * scale),
-            style = Stroke(width = 1.6f * scale),
+            style = Stroke(width = 1.8f * scale),
         )
         drawPath(
             path = questionPath,
             color = color,
-            style = Stroke(width = 1.6f * scale, cap = StrokeCap.Round, join = StrokeJoin.Round),
+            style = Stroke(width = 2.2f * scale, cap = StrokeCap.Round, join = StrokeJoin.Round),
         )
         drawCircle(
             color = color,
-            radius = 0.9f * scale,
-            center = Offset(12f * scale, 17f * scale),
+            radius = 1.3f * scale,
+            center = Offset(12f * scale, 17.2f * scale),
         )
     }
 }

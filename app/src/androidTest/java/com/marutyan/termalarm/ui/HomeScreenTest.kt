@@ -2,9 +2,11 @@ package com.marutyan.termalarm.ui
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmDatabase
@@ -13,6 +15,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -124,6 +127,23 @@ class HomeScreenTest {
         }
         val updated = runBlocking { repository.getById(id) }
         assertEquals(now.toLocalDate(), updated?.skippedSessionStart)
+    }
+
+    // ホームの時刻が、ステータスバーの下端から74dp以上空いていることを保証する
+    @Test
+    fun ホームの時刻がステータスバーの下端から74dp空いている() {
+        composeTestRule.setContent { ListEditHost(repository) }
+
+        // 現在時刻のノードを取得
+        val now = java.time.LocalTime.now()
+        val expectedTime = "${now.hour}:${now.minute.toString().padStart(2, '0')}"
+        val clockNode = composeTestRule.onNodeWithText(expectedTime)
+        clockNode.assertExists()
+        val rootBounds = composeTestRule.onRoot().getBoundsInRoot()
+        val clockBounds = clockNode.getBoundsInRoot()
+        val topOffset = (clockBounds.top - rootBounds.top).value
+        // ステータスバー(通常24dp以上)+74dp = 最低74dp以上空いていることを保証
+        assertTrue("ホームの時刻の上余白($topOffset dp)が74dp以上であること", topOffset >= 74f)
     }
 
     private fun context() = composeTestRule.activity

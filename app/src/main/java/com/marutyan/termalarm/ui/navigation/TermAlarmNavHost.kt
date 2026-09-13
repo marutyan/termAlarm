@@ -73,6 +73,9 @@ const val EXTRA_DEEPLINK_ALARM_ID = "com.marutyan.termalarm.ui.EXTRA_DEEPLINK_AL
 // どの画面を開いた状態で始めるかを指定する拡張。タイマーの通知から開いたときにタイマー画面が出るようにするために使う。
 const val EXTRA_DEEPLINK_TAB = "com.marutyan.termalarm.ui.EXTRA_DEEPLINK_TAB"
 
+// 鳴動画面の「タームを終了」から遷移した際に、当日終了確認ダイアログを開く対象のアラームidを指定する拡張。他パッケージから参照するためpublic。
+const val EXTRA_DEEPLINK_END_TERM_ID = "com.marutyan.termalarm.ui.EXTRA_DEEPLINK_END_TERM_ID"
+
 /**
  * アプリ全体の画面遷移を管理するNavHost。
  * 左側に幅54dpの縦ナビ(TermAlarmNavRail)を配し、右側に主要画面または個別機能画面を横並びで表示する。
@@ -154,7 +157,13 @@ fun TermAlarmNavHost(
                 composable(NavItem.TERMS.route) {
                     val viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory(repository))
                     val terms by viewModel.terms.collectAsStateWithLifecycle()
-                    var termEndAlarmId by remember { mutableStateOf<Long?>(null) }
+                    val activity = context as? Activity
+                    val initialTermEndId = remember {
+                        val id = activity?.intent?.getLongExtra(EXTRA_DEEPLINK_END_TERM_ID, -1L) ?: -1L
+                        activity?.intent?.removeExtra(EXTRA_DEEPLINK_END_TERM_ID)
+                        if (id >= 0) id else null
+                    }
+                    var termEndAlarmId by remember { mutableStateOf<Long?>(initialTermEndId) }
 
                     HomeScreen(
                         viewModel = viewModel,

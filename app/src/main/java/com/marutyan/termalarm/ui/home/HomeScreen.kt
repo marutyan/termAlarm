@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -126,11 +129,14 @@ fun HomeScreen(
     }
     val nextTriggerTime = activeSchedule?.let { nextTrigger(it, now) }
 
+    // ステータスバーの下端から74dp空けるため、WindowInsets.statusBarsの高さを足す
+    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(top = 74.dp, start = 18.dp, end = 18.dp, bottom = 26.dp),
+            .padding(top = statusBarTop + 74.dp, start = 18.dp, end = 18.dp, bottom = 26.dp),
     ) {
         // 1. 現在時刻。78sp、太さ200、等幅数字。秒を33spで右へ添える
         val timePattern = remember { clockTimePattern(false) }

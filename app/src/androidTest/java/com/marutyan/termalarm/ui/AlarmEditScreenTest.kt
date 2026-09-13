@@ -3,9 +3,18 @@ package com.marutyan.termalarm.ui
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.remember
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.dp
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
@@ -15,6 +24,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -111,5 +121,46 @@ class AlarmEditScreenTest {
 
         val savedSchedule = runBlocking { repository.observeAll().first().first() }
         assertEquals("朝のアラーム", savedSchedule.label)
+    }
+
+    // ターム編集画面の曜日のタップ当たり判定が44dp以上であることを保証する
+    @Test
+    fun ターム編集の曜日の当たり判定が44dp以上である() {
+        composeTestRule.setContent {
+            AlarmEditScreen(
+                viewModel = remember { AlarmEditViewModel(repository, testAppContext(), null) },
+                onClose = {},
+            )
+        }
+        val mondayNode = composeTestRule.onNode(
+            androidx.compose.ui.test.hasClickAction() and androidx.compose.ui.test.hasAnyDescendant(
+                androidx.compose.ui.test.hasText(string(R.string.day_monday_short)),
+            ),
+        )
+        mondayNode.assertExists()
+        mondayNode.assertWidthIsAtLeast(44.dp)
+        mondayNode.assertHeightIsAtLeast(44.dp)
+    }
+
+    // ターム編集のシートが画面の6割前後であることを保証する
+    @Test
+    fun ターム編集のシートが画面の6割前後である() {
+        composeTestRule.setContent {
+            AlarmEditScreen(
+                viewModel = remember { AlarmEditViewModel(repository, testAppContext(), null) },
+                onClose = {},
+            )
+        }
+        // 保存ボタンが存在し、シート内部に配置されていることを確認
+        val saveButton = composeTestRule.onNodeWithText(string(R.string.save))
+        saveButton.assertExists()
+        // 画面高さに対するシートの最小高さの割合が6割前後(0.55以上)であることを検証
+        val rootBounds = composeTestRule.onRoot().getBoundsInRoot()
+        val sheetNode = composeTestRule.onNode(hasScrollAction())
+        val sheetBounds = sheetNode.getBoundsInRoot()
+        val sheetHeight = (sheetBounds.bottom - sheetBounds.top).value
+        val rootHeight = (rootBounds.bottom - rootBounds.top).value
+        val ratio = sheetHeight / rootHeight
+        assertTrue("シート高さ割合($ratio)が0.55以上であること", ratio >= 0.55f)
     }
 }

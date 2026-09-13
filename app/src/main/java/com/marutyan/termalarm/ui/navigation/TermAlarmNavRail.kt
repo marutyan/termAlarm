@@ -6,10 +6,13 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -36,6 +39,8 @@ fun TermAlarmNavRail(
     modifier: Modifier = Modifier,
 ) {
     val outlineVariantColor = MaterialTheme.colorScheme.outlineVariant
+    // ステータスバーの下端から78dp空けるため、WindowInsets.statusBarsの高さを足す
+    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
     Column(
         modifier = modifier
@@ -50,7 +55,7 @@ fun TermAlarmNavRail(
                     strokeWidth = strokeWidth,
                 )
             }
-            .padding(top = 71.dp, bottom = 19.dp),
+            .padding(top = statusBarTop + 78.dp, bottom = 19.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         val topItems = listOf(

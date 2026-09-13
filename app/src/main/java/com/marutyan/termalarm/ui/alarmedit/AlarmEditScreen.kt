@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -101,11 +105,17 @@ fun AlarmEditScreen(
     var showChallengePicker by rememberSaveable { mutableStateOf(false) }
     var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFF060C1C)),
     ) {
+        val screenHeight = maxHeight
+        // ターム編集シートの高さを画面の6割前後に設定する（デザイン TermEdit.dc.html に合わせる）
+        val sheetMinHeight = screenHeight * 0.60f
+        // 背景時計エリアの上の余白もステータスバーの下端から74dp空ける
+        val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+
         // 背景の薄いホーム時計表示（上部エリア・タップで閉じるScrim）
         val now = remember { ZonedDateTime.now() }
         val currentTimeString = remember(now) { now.format(DateTimeFormatter.ofPattern("H:mm", Locale.getDefault())) }
@@ -126,7 +136,7 @@ fun AlarmEditScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(start = 20.dp, top = 74.dp, end = 20.dp),
+                    .padding(start = 20.dp, top = statusBarTop + 74.dp, end = 20.dp),
             ) {
                 Row(
                     verticalAlignment = Alignment.Bottom,
@@ -166,10 +176,11 @@ fun AlarmEditScreen(
                 )
             }
 
-            // 下部シート領域（デザイン: background #0B1530, border-radius 24dp 24dp 0 0）
+            // 下部シート領域（デザイン: background #0B1530, border-radius 24dp 24dp 0 0、画面の6割前後を確保）
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(min = sheetMinHeight)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -259,48 +270,66 @@ fun AlarmEditScreen(
                     )
                 }
 
-                // 2. 曜日（直径44dpの丸7つ、月から日の順で均等配置）
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    DAYS_OF_WEEK_ORDER.forEach { day ->
-                        val isSelected = day in uiState.repeatDays
-                        val dayLabel = when (day) {
-                            DayOfWeek.MONDAY -> stringResource(R.string.day_monday_short)
-                            DayOfWeek.TUESDAY -> stringResource(R.string.day_tuesday_short)
-                            DayOfWeek.WEDNESDAY -> stringResource(R.string.day_wednesday_short)
-                            DayOfWeek.THURSDAY -> stringResource(R.string.day_thursday_short)
-                            DayOfWeek.FRIDAY -> stringResource(R.string.day_friday_short)
-                            DayOfWeek.SATURDAY -> stringResource(R.string.day_saturday_short)
-                            DayOfWeek.SUNDAY -> stringResource(R.string.day_sunday_short)
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                )
-                                .border(
-                                    width = 1.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                                    shape = CircleShape,
-                                )
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = ripple(),
-                                    role = Role.Checkbox,
-                                    onClick = { viewModel.toggleDay(day) },
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = dayLabel,
-                                fontSize = 14.sp,
-                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.customColors.subtleText,
-                            )
+                // 2. 曜日（直径44dpの丸7つ、月から日の順で均等配置。当たり判定44dp以上を確保）
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val availableWidth = maxWidth
+                    val idealCircleSize = 44.dp
+                    // 7つの丸が44dpで収まるか判定（44dp * 7 = 308dp）
+                    val circleVisualSize = if (availableWidth >= idealCircleSize * 7) {
+                        idealCircleSize
+                    } else {
+                        (availableWidth / 7).coerceAtLeast(28.dp)
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        DAYS_OF_WEEK_ORDER.forEach { day ->
+                            val isSelected = day in uiState.repeatDays
+                            val dayLabel = when (day) {
+                                DayOfWeek.MONDAY -> stringResource(R.string.day_monday_short)
+                                DayOfWeek.TUESDAY -> stringResource(R.string.day_tuesday_short)
+                                DayOfWeek.WEDNESDAY -> stringResource(R.string.day_wednesday_short)
+                                DayOfWeek.THURSDAY -> stringResource(R.string.day_thursday_short)
+                                DayOfWeek.FRIDAY -> stringResource(R.string.day_friday_short)
+                                DayOfWeek.SATURDAY -> stringResource(R.string.day_saturday_short)
+                                DayOfWeek.SUNDAY -> stringResource(R.string.day_sunday_short)
+                            }
+                            // 外側は最低44dp×44dpのタップ当たり判定を保証
+                            Box(
+                                modifier = Modifier
+                                    .defaultMinSize(minWidth = 44.dp, minHeight = 44.dp)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = ripple(bounded = false, radius = 22.dp),
+                                        role = Role.Checkbox,
+                                        onClick = { viewModel.toggleDay(day) },
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(circleVisualSize)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                        )
+                                        .border(
+                                            width = 1.dp,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                            shape = CircleShape,
+                                        ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = dayLabel,
+                                        fontSize = 14.sp,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.customColors.subtleText,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
