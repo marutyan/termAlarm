@@ -89,7 +89,7 @@
 
     <!-- 新ターム編集画面 -->
     <string name="term_edit_interval_label">間隔</string>
-    <string name="term_edit_challenge_label">問題</string>
+    <string name="term_edit_challenge_label">ミッション</string>
     <string name="term_edit_wake_check_label">二度寝チェック</string>
     <string name="term_edit_wake_check_desc">ターム終了の5分後に再度鳴動</string>
     <string name="term_edit_delete">削除</string>
@@ -104,17 +104,17 @@
     <string name="term_edit_interval_constant_note">全%1$d回</string>
     <string name="term_edit_custom_interval_title">間隔を入力</string>
 
-    <!-- 問題選択ダイアログ -->
+    <!-- ミッション選択ダイアログ -->
     <string name="challenge_timing_never">出さない</string>
     <string name="challenge_timing_never_desc">押すだけで停止します</string>
     <string name="challenge_timing_end_only">ターム終了時だけ</string>
-    <string name="challenge_timing_end_only_desc">最後の1回だけ問題を出します。途中は押すだけで停止します</string>
+    <string name="challenge_timing_end_only_desc">最後の1回だけミッションを出します。途中は押すだけで停止します</string>
     <string name="challenge_timing_every_time">毎回</string>
-    <string name="challenge_timing_every_time_desc">鳴動のたびに出題します</string>
+    <string name="challenge_timing_every_time_desc">鳴動のたびにミッションを出します</string>
     <string name="challenge_difficulty">難易度</string>
     <string name="challenge_level_easy">Easy</string>
     <string name="challenge_level_hard">Hard</string>
-    <string name="challenge_hard_note">Hardは終了に近づくほど出題数が増えます</string>
+    <string name="challenge_hard_note">Hardは終了に近づくほどミッションが増えます</string>
     <string name="challenge_summary_format">%1$s · %2$s</string>
 
     <!-- ターム終了ダイアログ -->
@@ -269,7 +269,7 @@
     <string name="settings_sound_item_title">音</string>
     <string name="settings_silence_after_item_title">消音までの時間</string>
     <string name="settings_wake_check_item_title">二度寝チェックまで</string>
-    <string name="settings_mini_games_item_title">ミニゲーム</string>
+    <string name="settings_mini_games_item_title">ミッション</string>
     <string name="settings_mini_games_count_format">%1$d種類</string>
     <string name="settings_theme_item_title">配色</string>
     <string name="settings_theme_navy">紺</string>
@@ -282,9 +282,9 @@
     <string name="settings_picker_none">なし</string>
     <string name="settings_minutes_format">%1$d分</string>
 
-    <!-- 使うミニゲームを選ぶ画面 (design/GameList.dc.html) -->
-    <string name="game_list_title">ミニゲーム</string>
-    <string name="game_list_subtitle">選択した種類からランダムに出題されます。</string>
+    <!-- 使うミッションを選ぶ画面 (design/GameList.dc.html) -->
+    <string name="game_list_title">ミッション</string>
+    <string name="game_list_subtitle">選択した種類からランダムにミッションが出されます。</string>
     <string name="game_note_arithmetic">四則演算</string>
     <string name="game_note_sequential_tap">1から12を昇順</string>
     <string name="game_note_transcribe">英数字8文字</string>

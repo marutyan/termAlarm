@@ -161,11 +161,11 @@ fun HomeScreen(
         }
 
         Row(
-            verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(7.dp),
         ) {
             Text(
                 text = currentTimeString,
+                modifier = Modifier.alignByBaseline(),
                 style = TextStyle(
                     fontFamily = ibmPlexMonoFontFamily(200),
                     fontWeight = FontWeight.W200,
@@ -178,6 +178,7 @@ fun HomeScreen(
             )
             Text(
                 text = currentSecondString,
+                modifier = Modifier.alignByBaseline(),
                 style = TextStyle(
                     fontFamily = ibmPlexMonoFontFamily(200),
                     fontWeight = FontWeight.W200,
@@ -187,7 +188,6 @@ fun HomeScreen(
                     letterSpacing = (-0.04).em,
                 ),
                 color = MaterialTheme.customColors.subtleText,
-                modifier = Modifier.padding(bottom = 6.dp),
             )
         }
 

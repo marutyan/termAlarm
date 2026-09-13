@@ -683,7 +683,7 @@ data class PickerOption<T>(
 
 /**
  * design/SettingsPicker.dc.htmlの設計に基づく中央ポップアップダイアログ。
- * アイコン、タイトル、ラジオボタン意匠の選択肢リスト、キャンセルボタンを描画し、選択時に即座に閉じる。
+ * アイコン、タイトル、ラジオボタン意匠の選択肢リスト、キャンセル・決定ボタンを描画し、決定時に確定する。
  */
 @Composable
 fun <T> SettingsPickerPopup(
@@ -695,6 +695,8 @@ fun <T> SettingsPickerPopup(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var tempSelectedValue by remember(selectedValue) { mutableStateOf(selectedValue) }
+
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = modifier
@@ -739,39 +741,65 @@ fun <T> SettingsPickerPopup(
                         .verticalScroll(rememberScrollState()),
                 ) {
                     options.forEach { option ->
-                        val isSelected = option.value == selectedValue
+                        val isSelected = option.value == tempSelectedValue
                         PickerOptionRow(
                             label = option.label,
                             isSelected = isSelected,
-                            onClick = { onSelect(option.value) },
+                            onClick = { tempSelectedValue = option.value },
                         )
                     }
                 }
 
-                // キャンセルボタン
+                // ボタン行（キャンセル・決定）
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.End,
+                        .padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    // キャンセルボタン
                     Box(
                         modifier = Modifier
-                            .heightIn(min = 44.dp)
+                            .height(44.dp)
                             .clip(RoundedCornerShape(22.dp))
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = ripple(),
                                 onClick = onDismiss,
                             )
-                            .padding(horizontal = 22.dp, vertical = 12.dp),
+                            .padding(horizontal = 20.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = stringResource(R.string.cancel),
                             style = TextStyle(
                                 fontSize = 14.5.sp,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                        )
+                    }
+
+                    // 決定ボタン
+                    Box(
+                        modifier = Modifier
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(MaterialTheme.colorScheme.primary)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = ripple(),
+                                onClick = { onSelect(tempSelectedValue) },
+                            )
+                            .padding(horizontal = 24.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.decide),
+                            style = TextStyle(
+                                fontSize = 14.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onPrimary,
                             ),
                         )
                     }

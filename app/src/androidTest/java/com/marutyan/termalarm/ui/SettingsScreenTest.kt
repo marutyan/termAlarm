@@ -84,13 +84,14 @@ class SettingsScreenTest {
         composeTestRule.onNodeWithText(string(R.string.settings_about_item_title)).assertExists()
     }
 
-    // 消音までの時間のダイアログを開いて値を選択すると画面とRepositoryに保存されることを保証する
+    // 消音までの時間のダイアログを開いて値を選択し、決定を押すと画面とRepositoryに保存されることを保証する
     @Test
     fun 消音までの時間を変更すると画面とRepositoryに反映される() {
         setScreen()
 
         composeTestRule.onNodeWithText(string(R.string.settings_silence_after_item_title)).performClick()
         composeTestRule.onNode(hasText("5分") and hasAnyAncestor(isDialog())).performClick()
+        composeTestRule.onNode(hasText(string(R.string.decide)) and hasAnyAncestor(isDialog())).performClick()
 
         composeTestRule.waitUntil(5_000) {
             runBlocking { settingsRepository.observe().first().silenceAfterMinutes == 5 }
@@ -100,13 +101,29 @@ class SettingsScreenTest {
         assertEquals(5, saved.silenceAfterMinutes)
     }
 
-    // アラームの音量徐々に増加ダイアログを開いて選択すると画面とRepositoryに保存されることを保証する
+    // 消音までの時間のダイアログで値を選んでもキャンセルした場合は変更されないことを保証する
+    @Test
+    fun 消音までの時間でキャンセルを押すと値は変更されない() {
+        setScreen()
+
+        val initialMinutes = runBlocking { settingsRepository.observe().first().silenceAfterMinutes }
+
+        composeTestRule.onNodeWithText(string(R.string.settings_silence_after_item_title)).performClick()
+        composeTestRule.onNode(hasText("5分") and hasAnyAncestor(isDialog())).performClick()
+        composeTestRule.onNode(hasText(string(R.string.cancel)) and hasAnyAncestor(isDialog())).performClick()
+
+        val saved = runBlocking { settingsRepository.observe().first() }
+        assertEquals(initialMinutes, saved.silenceAfterMinutes)
+    }
+
+    // アラームの音量徐々に増加ダイアログを開いて選択し、決定を押すと画面とRepositoryに保存されることを保証する
     @Test
     fun アラームの徐々に音量を上げるを変更すると画面とRepositoryに反映される() {
         setScreen()
 
         composeTestRule.onNodeWithText(string(R.string.settings_fade_in_title)).performClick()
         composeTestRule.onNode(hasText("10秒") and hasAnyAncestor(isDialog())).performClick()
+        composeTestRule.onNode(hasText(string(R.string.decide)) and hasAnyAncestor(isDialog())).performClick()
 
         composeTestRule.waitUntil(5_000) {
             runBlocking { settingsRepository.observe().first().fadeInSeconds == 10 }

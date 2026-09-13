@@ -120,11 +120,11 @@ fun StopwatchScreen(
         // 2. 経過時間: 分と秒を66sp・太さ200・等幅数字、小数以下を34spで主役の色
         val (mainPart, centisPart) = formatStopwatchMain(elapsed)
         Row(
-            verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
                 text = mainPart,
+                modifier = Modifier.alignByBaseline(),
                 style = TextStyle(
                     fontFamily = IbmPlexMono,
                     fontWeight = FontWeight.W200,
@@ -137,6 +137,7 @@ fun StopwatchScreen(
             )
             Text(
                 text = centisPart,
+                modifier = Modifier.alignByBaseline(),
                 style = TextStyle(
                     fontFamily = IbmPlexMono,
                     fontWeight = FontWeight.W200,

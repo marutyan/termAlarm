@@ -253,13 +253,15 @@ fun ChallengePickerDialog(
                         modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 9.dp),
                     )
 
-                    // キャンセルボタン（変更を保存して閉じる）
+                    // ボタン行（キャンセル・決定）
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 8.dp),
-                        horizontalArrangement = Arrangement.End,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        // キャンセルボタン（元の値のまま閉じる）
                         Box(
                             modifier = Modifier
                                 .height(44.dp)
@@ -267,18 +269,39 @@ fun ChallengePickerDialog(
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = ripple(),
-                                    onClick = {
-                                        onConfirm(timing, level)
-                                        onDismiss()
-                                    },
+                                    onClick = onDismiss,
                                 )
-                                .padding(horizontal = 22.dp),
+                                .padding(horizontal = 20.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 text = stringResource(R.string.cancel),
                                 fontSize = 14.5.sp,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        // 決定ボタン（変更を確定して閉じる）
+                        Box(
+                            modifier = Modifier
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(MaterialTheme.colorScheme.primary)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(),
+                                    onClick = {
+                                        onConfirm(timing, level)
+                                    },
+                                )
+                                .padding(horizontal = 24.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.decide),
+                                fontSize = 14.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onPrimary,
                             )
                         }
                     }
