@@ -3,6 +3,7 @@ package com.marutyan.termalarm.ui
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.remember
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.getBoundsInRoot
@@ -132,14 +133,18 @@ class AlarmEditScreenTest {
                 onClose = {},
             )
         }
-        val mondayNode = composeTestRule.onNode(
+        // 月曜の丸は、当たり判定の箱と見た目の丸が入れ子になっている。
+        // どちらも44dp以上であることを確かめ、内側だけが小さい状態を見逃さないようにする
+        val mondayNodes = composeTestRule.onAllNodes(
             androidx.compose.ui.test.hasClickAction() and androidx.compose.ui.test.hasAnyDescendant(
                 androidx.compose.ui.test.hasText(string(R.string.day_monday_short)),
             ),
         )
-        mondayNode.assertExists()
-        mondayNode.assertWidthIsAtLeast(44.dp)
-        mondayNode.assertHeightIsAtLeast(44.dp)
+        mondayNodes.assertCountEquals(2)
+        repeat(2) { index ->
+            mondayNodes[index].assertWidthIsAtLeast(44.dp)
+            mondayNodes[index].assertHeightIsAtLeast(44.dp)
+        }
     }
 
     // ターム編集のシートが画面の6割前後であることを保証する

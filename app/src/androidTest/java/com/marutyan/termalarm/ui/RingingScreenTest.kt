@@ -43,7 +43,9 @@ class RingingScreenTest {
             endMinutes = 9 * 60, // 9:00
             startIntervalMinutes = 5,
             endIntervalMinutes = 5,
-            repeatDays = setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY),
+            // 実行する曜日で次の鳴動が翌週へずれないよう、全曜日を有効にする。
+            // この検証の目的は画面の並びであって、曜日の判定ではない
+            repeatDays = DayOfWeek.entries.toSet(),
             label = "朝の起床ターム",
             enabled = true,
         )

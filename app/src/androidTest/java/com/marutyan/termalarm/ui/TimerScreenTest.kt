@@ -77,22 +77,20 @@ class TimerScreenTest {
         }
     }
 
-    // 動作中のタイマーが1件も無いとき、純正と同じくテンキーがそのまま出ることを保証する。
-    // 戻る先が無いので取り消し(×)は出さない
+    // 動作中のタイマーが1件も無いとき、追加ボタンだけが出ることを保証する。
+    // テンキーは追加ボタンを押してから出す(docs/SPEC.md「タイマー」)
     @Test
-    fun タイマーが無いときテンキーが出る() {
+    fun タイマーが無いとき追加ボタンが出る() {
         setScreen()
-        composeTestRule.waitUntilAtLeastOneExists(hasText("5"), 5_000)
-        composeTestRule.onNodeWithContentDescription(string(R.string.timer_start)).assertExists()
-        composeTestRule.onNodeWithContentDescription(string(R.string.timer_cancel)).assertDoesNotExist()
-        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).assertExists()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_start)).assertDoesNotExist()
     }
 
-    // テンキーで5分00秒(5 → 0 → 0)を入力して開始すると、一覧に1件現れることを保証する。
-    // 1件も無い間はテンキーがそのまま出ているため、追加ボタンを押す手順は要らない。
+    // 追加ボタンからテンキーを開き、5分00秒(5 → 0 → 0)を入力して開始すると一覧に1件現れることを保証する。
     @Test
     fun 開始すると一覧に1件現れる() {
         setScreen()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).performClick()
         composeTestRule.waitUntilAtLeastOneExists(hasText("5"), 5_000)
         composeTestRule.onNodeWithText("5").performClick()
         composeTestRule.onNodeWithText("0").performClick()
@@ -114,7 +112,8 @@ class TimerScreenTest {
         val addDescription = string(R.string.timer_add)
         val startDescription = string(R.string.timer_start)
 
-        // 1件目は、1件も無いときにそのまま出ているテンキーで 5分00秒 (5 → 0 → 0) を入力して開始する
+        // 1件目は、追加ボタンからテンキーを開いて 5分00秒 (5 → 0 → 0) を入力して開始する
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).performClick()
         composeTestRule.waitUntilAtLeastOneExists(hasText("5"), 5_000)
         composeTestRule.onNodeWithText("5").performClick()
         composeTestRule.onNodeWithText("0").performClick()
@@ -236,8 +235,8 @@ class TimerScreenTest {
         composeTestRule.onNodeWithContentDescription(string(R.string.timer_delete)).performClick()
 
         composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().isEmpty() } }
-        // 最後の1件を消すと、純正と同じくテンキーへ戻る
-        composeTestRule.waitUntilAtLeastOneExists(hasText("5"), 5_000)
+        // 最後の1件を消すと、追加ボタンだけが残る
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).assertExists()
     }
 
     /**
