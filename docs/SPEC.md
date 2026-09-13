@@ -85,13 +85,25 @@ span = if (endMinutes >= startMinutes) endMinutes - startMinutes
 
 鳴動画面に問題を出し、正解するまで音が止まらない。
 
-画面には「なし」「Easy」「Hard」と出す。内部の名前も同じにする。
+**いつ出すか**と**どれだけ厳しいか**を分けて選ぶ。この2つは別の話であり、
+1つの選択肢へまとめると「終了時だけ厳しく」のような組み合わせが選べなくなる。
+
+いつ出すか（`challengeTiming`）
 
 | 設定値 | 挙動 |
 |---|---|
-| `NONE` | 問題を出さない。押すだけで止まる |
-| `EASY` | 毎回1問 |
+| `NEVER` | 問題を出さない。押すだけで止まる |
+| `END_ONLY` | ターム終了時の1回だけ問題を出す。途中は押すだけで止まる |
+| `EVERY_TIME` | 鳴るたびに問題を出す |
+
+どれだけ厳しいか（`challenge`）。画面には「Easy」「Hard」と出す。
+
+| 設定値 | 挙動 |
+|---|---|
+| `EASY` | 1問 |
 | `HARD` | 範囲の進み具合に応じて1〜3問。終了時刻に近いほど増える |
+
+`challengeTiming` が `NEVER` のとき、`challenge` は使われない。
 
 出題は毎回ランダムに種類を選ぶ。同じ問題が続くと手が覚えて考えずに解けるため。
 
@@ -196,8 +208,9 @@ span = if (endMinutes >= startMinutes) endMinutes - startMinutes
 ホーム画面に置く**時計ウィジェット**を1つ作る。Glance（Compose for Widgets）で実装する。
 
 - 現在時刻を大きく、読みやすく出す。
-- 次の鳴動時刻と、その時間帯の残り回数を一緒に出す（例: 「7:35 / あと23回」）。
+- 次の鳴動時刻と、その時間帯の残り回数を一緒に出す（例: 「7:15 / あと22回」）。
 - サイズを変えられる。小さいときは時刻と次の鳴動時刻だけにする。
+- **無地と透明を選べる。** 透明は壁紙の上に文字だけが乗るため、読めるように文字へ薄い影を付ける。
 - 鳴動中は、鳴っていることが分かる表示にする。
 
 タイマーとロック画面向けのウィジェットは今回作らない。
@@ -215,11 +228,10 @@ span = if (endMinutes >= startMinutes) endMinutes - startMinutes
 
 残すが、主役ではない。純正と同じ機能一覧を揃えることを目的にしない。
 
-## 時計
+## 時計の欄は作らない
 
-- アナログとデジタルを切り替えられる、秒まで見える時計。
-- **世界時計は作らない。** 都市の追加・削除・並べ替え、時差表示、天気は入れない。
-  （旧版に実装済みのコードがあるが、刷新で削除する）
+ホームに現在時刻を大きく出しているため、同じものを別の欄へ置く意味がない。
+世界時計も作らない。旧版に実装済みの世界時計とアナログ時計のコードは、刷新で削除する。
 
 ## タイマー
 
@@ -274,7 +286,7 @@ domain には色の値を持たせない。enumだけを持ち、実際の色は
 ## 画面の構成
 
 純正時計アプリのように4つのタブを横へ並べる形は取らない。左端に細い縦のナビを置く。
-アラーム（ターム）、記録、時計、タイマー、ストップウォッチ。
+アラーム（ターム）、記録、タイマー、ストップウォッチの4つと、いちばん下に設定。
 
 ### ホーム
 
@@ -394,7 +406,8 @@ data class AlarmSchedule(
     val soundUri: String?,          // null ならシステム既定のアラーム音
     val vibrate: Boolean,
     val enabled: Boolean,
-    val challenge: ChallengeLevel,  // NONE / EASY / HARD
+    val challengeTiming: ChallengeTiming, // NEVER / END_ONLY / EVERY_TIME
+    val challenge: ChallengeLevel,  // EASY / HARD。timingがNEVERなら使わない
     val wakeCheckMinutes: Int?,     // ターム終了後、二度寝チェックまでの分数。null なら行わない
     val skippedSessionStart: LocalDate?, // 「今日はもう止める」で終了させたセッションの開始日
 )
