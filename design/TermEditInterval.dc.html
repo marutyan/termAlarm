@@ -15,7 +15,7 @@
 </helmet>
 <div style="width: 390px; height: 844px; background: #060C1C; color: #E8EEF9; box-sizing: border-box; display: flex; flex-direction: column;">
 
-  <div style="flex-grow: 1; display: flex; flex-direction: column; padding: 74px 20px 0; opacity: 0.22;">
+  <div style="flex-grow: 1; display: flex; flex-direction: column; padding: 74px 20px 0; opacity: 0.2;">
     <div style="display: flex; align-items: baseline; gap: 7px;">
       <div style="font-size: 78px; font-weight: 200; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.05em; line-height: 0.9;">7:12</div>
       <div style="font-size: 33px; font-weight: 200; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; color: #8AA0C9;">44</div>
@@ -24,7 +24,7 @@
     <div style="font-size: 14.5px; color: #8AA0C9; font-family: 'IBM Plex Mono', monospace; padding-left: 9px;">09.11 金</div>
   </div>
 
-  <div style="background: #0B1530; border-radius: 22px 22px 0 0; box-sizing: border-box; padding: 12px 20px 26px; display: flex; flex-direction: column; gap: 16px;">
+  <div style="background: #0B1530; border-radius: 22px 22px 0 0; box-sizing: border-box; padding: 6px 20px 24px; display: flex; flex-direction: column; gap: 14px;">
 
     <div style="display: flex; align-items: center; justify-content: space-between; height: 44px;">
       <div style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: flex-start;">
@@ -34,70 +34,74 @@
       <div style="width: 44px;"></div>
     </div>
 
-    <div style="display: flex; align-items: flex-end; gap: 12px;">
-      <div style="display: flex; flex-direction: column; gap: 4px;">
+    <div style="display: flex; align-items: flex-end; justify-content: space-between;">
+      <div style="display: flex; flex-direction: column; gap: 5px;">
         <div style="font-size: 11px; letter-spacing: 0.14em; color: #8AA0C9; font-family: 'IBM Plex Mono', monospace;">はじめ</div>
-        <div style="font-size: 42px; font-weight: 200; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.04em; border-bottom: 2px solid #8CDDC2; padding-bottom: 5px;">7:00</div>
+        <div style="font-size: 44px; font-weight: 200; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.04em; border-bottom: 2px solid #8CDDC2; padding-bottom: 5px;">7:00</div>
       </div>
-      <div style="font-size: 22px; color: #8AA0C9; padding-bottom: 9px;">–</div>
-      <div style="display: flex; flex-direction: column; gap: 4px;">
+      <div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-end;">
         <div style="font-size: 11px; letter-spacing: 0.14em; color: #8AA0C9; font-family: 'IBM Plex Mono', monospace;">おわり</div>
-        <div style="font-size: 42px; font-weight: 200; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.04em; border-bottom: 2px solid #1E3163; padding-bottom: 5px;">9:00</div>
+        <div style="font-size: 44px; font-weight: 200; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.04em; border-bottom: 2px solid #1E3163; padding-bottom: 5px;">9:00</div>
       </div>
     </div>
 
-    <div style="display: flex; gap: 5px;">
+    <div style="display: flex; justify-content: space-between;">
       <sc-for list="{{days}}" as="day" hint-placeholder-count="7">
-        <div style="width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13.5px; background: {{day.bg}}; border: 1px solid {{day.border}}; box-sizing: border-box; color: {{day.fg}};">{{day.name}}</div>
+        <div style="width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; background: {{day.bg}}; border: 1px solid {{day.border}}; box-sizing: border-box; color: {{day.fg}};">{{day.name}}</div>
       </sc-for>
     </div>
 
+    <div style="display: flex; align-items: center; gap: 11px; height: 44px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8AA0C9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4l-7.2 7.2a2 2 0 01-2.8 0l-7.2-7.2A2 2 0 013 12V5a2 2 0 012-2h7a2 2 0 011.4.6l7.2 7.2a2 2 0 010 2.6z"/><circle cx="7.8" cy="7.8" r="1.3" fill="#8AA0C9" stroke="none"/></svg>
+      <div style="font-size: 15px; color: #E8EEF9;">起きる</div>
+    </div>
+
     <div style="height: 1px; background: #1E3163;"></div>
 
-    <div style="display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: flex; flex-direction: column; gap: 9px;">
       <div style="display: flex; align-items: center; gap: 12px;">
-        <div style="width: 62px; font-size: 13px; color: #A9C0E4;">間隔</div>
+        <div style="width: 78px; font-size: 14px; color: #A9C0E4;">間隔</div>
         <div style="flex-grow: 1; display: flex; gap: 6px;">
-          <div style="flex-grow: 1; height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #1E3163; border-radius: 3px; font-size: 13.5px; color: #8AA0C9;">等間隔</div>
-          <div style="flex-grow: 1; height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #2E5A57; background: #123A3C; border-radius: 3px; font-size: 13.5px; color: #8CDDC2;">加速</div>
+          <div style="flex-grow: 1; height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #1E3163; border-radius: 3px; font-size: 14px; color: #8AA0C9;">等間隔</div>
+          <div style="flex-grow: 1; height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #8CDDC2; background: #123A3C; border-radius: 3px; font-size: 14px; color: #8CDDC2;">加速</div>
         </div>
       </div>
-      <div style="display: flex; align-items: center; gap: 12px; padding-left: 74px;">
-        <div style="display: flex; align-items: baseline; gap: 5px; padding: 5px 11px 6px; border: 1px solid #8CDDC2; background: #123A3C; border-radius: 3px;">
-          <div style="font-size: 23px; font-weight: 300; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 1; color: #8CDDC2;">10<span style="font-size: 12px; color: #8AA0C9;">分</span></div>
+      <div style="display: flex; align-items: center; gap: 11px; padding-left: 90px;">
+        <div style="display: flex; align-items: baseline; gap: 5px; padding: 4px 10px 5px; border: 1px solid #8CDDC2; background: #123A3C; border-radius: 3px;">
+          <div style="font-size: 22px; font-weight: 300; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 1; color: #8CDDC2;">10<span style="font-size: 12px; color: #8AA0C9;">分</span></div>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8CDDC2" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 15l-7-7-7 7"/></svg>
         </div>
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8AA0C9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M14 7l5 5-5 5"/></svg>
-        <div style="display: flex; align-items: baseline; gap: 5px; padding: 5px 11px 6px; border: 1px solid #1E3163; border-radius: 3px;">
-          <div style="font-size: 23px; font-weight: 300; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 1;">3<span style="font-size: 12px; color: #8AA0C9;">分</span></div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8AA0C9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M14 7l5 5-5 5"/></svg>
+        <div style="display: flex; align-items: baseline; gap: 5px; padding: 4px 10px 5px; border: 1px solid #1E3163; border-radius: 3px;">
+          <div style="font-size: 22px; font-weight: 300; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 1;">3<span style="font-size: 12px; color: #8AA0C9;">分</span></div>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8AA0C9" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg>
         </div>
       </div>
-      <div style="display: flex; gap: 6px; padding-left: 74px;">
-        <sc-for list="{{chips}}" as="chip" hint-placeholder-count="8">
-          <div style="flex-shrink: 0; min-width: 44px; height: 44px; padding: 0 10px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: {{chip.bg}}; border: 1px solid {{chip.border}}; border-radius: 3px; font-size: 14px; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; color: {{chip.fg}};">{{chip.label}}</div>
+      <div style="display: flex; gap: 6px; padding-left: 90px;">
+        <sc-for list="{{chips}}" as="chip" hint-placeholder-count="6">
+          <div style="flex-shrink: 0; min-width: 44px; height: 44px; padding: 0 9px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: {{chip.bg}}; border: 1px solid {{chip.border}}; border-radius: 3px; font-size: 14px; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; color: {{chip.fg}};">{{chip.label}}</div>
         </sc-for>
       </div>
-      <div style="font-size: 11.5px; color: #8AA0C9; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; padding-left: 74px;">7:00, 7:10, 7:19 … 7:58, 8:00 · 全11回</div>
+      <div style="font-size: 11.5px; color: #8AA0C9; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; padding-left: 90px;">7:00, 7:10, 7:19 … 7:58, 8:00 · 全11回</div>
     </div>
 
     <div style="height: 1px; background: #1E3163;"></div>
 
     <div style="display: flex; flex-direction: column; gap: 9px;">
       <div style="display: flex; align-items: center; gap: 12px;">
-        <div style="width: 62px; font-size: 13px; color: #A9C0E4;">問題の出題</div>
+        <div style="width: 78px; font-size: 14px; color: #A9C0E4;">問題</div>
         <div style="flex-grow: 1; display: flex; gap: 6px;">
-          <div style="flex-grow: 1; height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #1E3163; border-radius: 3px; font-size: 13.5px; color: #8AA0C9;">なし</div>
-          <div style="flex-grow: 1; height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #1E3163; border-radius: 3px; font-size: 13.5px; color: #8AA0C9;">Easy</div>
-          <div style="flex-grow: 1; height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #2E5A57; background: #123A3C; border-radius: 3px; font-size: 13.5px; color: #8CDDC2;">Hard</div>
+          <div style="flex-grow: 1; height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #1E3163; border-radius: 3px; font-size: 14px; color: #8AA0C9;">なし</div>
+          <div style="flex-grow: 1; height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #1E3163; border-radius: 3px; font-size: 14px; color: #8AA0C9;">Easy</div>
+          <div style="flex-grow: 1; height: 44px; display: flex; align-items: center; justify-content: center; border: 1px solid #8CDDC2; background: #123A3C; border-radius: 3px; font-size: 14px; color: #8CDDC2;">Hard</div>
         </div>
       </div>
-      <div style="font-size: 11.5px; color: #8AA0C9; padding-left: 74px;">Hardは終わりに近づくほど問題数が増えます</div>
+      <div style="font-size: 11.5px; color: #8AA0C9; padding-left: 90px;">終わりに近づくほど問題数が増えます</div>
     </div>
 
     <div style="height: 1px; background: #1E3163;"></div>
 
-    <div style="display: flex; flex-direction: column; gap: 9px;">
+    <div style="display: flex; flex-direction: column; gap: 7px;">
       <div style="display: flex; align-items: center; gap: 12px; height: 44px;">
         <div style="flex-grow: 1; font-size: 14px; color: #E8EEF9;">二度寝チェック</div>
         <div style="width: 44px; height: 26px; border-radius: 13px; background: #8CDDC2; display: flex; align-items: center; justify-content: flex-end; padding: 3px; box-sizing: border-box;">
@@ -107,16 +111,8 @@
       <div style="font-size: 11.5px; color: #8AA0C9;">ターム終了の5分後に再度鳴動します</div>
     </div>
 
-    <div style="height: 1px; background: #1E3163;"></div>
-
-    <div style="display: flex; align-items: center; gap: 12px; height: 46px;">
-      <div style="width: 62px; font-size: 13px; color: #A9C0E4;">名前</div>
-      <div style="flex-grow: 1; font-size: 14px; color: #8AA0C9;">つけなくてよい</div>
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8AA0C9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
-    </div>
-
-    <div style="display: flex; gap: 8px;">
-      <div style="width: 108px; height: 50px; display: flex; align-items: center; justify-content: center; border: 1px solid #27407C; border-radius: 3px; font-size: 13.5px; color: #A9C0E4;">削除</div>
+    <div style="display: flex; gap: 8px; padding-top: 2px;">
+      <div style="width: 96px; height: 50px; display: flex; align-items: center; justify-content: center; border: 1px solid #27407C; border-radius: 3px; font-size: 14px; color: #A9C0E4;">削除</div>
       <div style="flex-grow: 1; height: 50px; display: flex; align-items: center; justify-content: center; background: #8CDDC2; border-radius: 3px; font-size: 15px; font-weight: 500; color: #0B1530;">保存</div>
     </div>
 
@@ -135,14 +131,13 @@ class Component extends DCLogic {
       fg: on[i] ? '#0B1530' : '#8AA0C9',
     }));
     // 間隔によく使う分数。末尾の「他」から任意の分数も選べる
-    const values = [1, 3, 5, 10, 15, 20];
+    const values = [1, 3, 5, 10, 15];
     const chips = values.map((v) => ({
       label: String(v),
       bg: v === 10 ? '#8CDDC2' : 'transparent',
       border: v === 10 ? '#8CDDC2' : '#1E3163',
       fg: v === 10 ? '#0B1530' : '#A9C0E4',
     }));
-    chips.push({ label: '30', bg: 'transparent', border: '#1E3163', fg: '#A9C0E4' });
     chips.push({ label: '他', bg: 'transparent', border: '#1E3163', fg: '#8AA0C9' });
     return { days, chips };
   }
