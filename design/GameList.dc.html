@@ -20,7 +20,7 @@
     <div style="font-size: 24px; font-weight: 300;">ミニゲーム</div>
   </div>
 
-  <div style="font-size: 12.5px; color: #8AA0C9; line-height: 1.6;">選んだ中からランダムに出ます。毎回ちがう種類が出るほど、慣れて寝たまま解いてしまうことが減ります。</div>
+  <div style="font-size: 12.5px; color: #8AA0C9; line-height: 1.6;">選択した種類からランダムに出題されます。</div>
 
   <div style="background: #142449; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column;">
     <sc-for list="{{games}}" as="game" hint-placeholder-count="10">
@@ -36,25 +36,20 @@
 
   <div style="flex-grow: 1;"></div>
 
-  <div style="display: flex; align-items: flex-start; gap: 11px; background: #142449; border-radius: 14px; padding: 14px 16px; margin-bottom: 26px;">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8AA0C9" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r="0.9" fill="#8AA0C9" stroke="none"/></svg>
-    <div style="font-size: 11.5px; color: #8AA0C9; line-height: 1.7;">「歩く」は端末を持って歩くまで止まりません。ベッドから出る必要があるので、いちばん効きますが時間もかかります。</div>
-  </div>
-
 </div>
 </x-dc>
 <script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
   renderVals() {
     const data = [
-      { name: '計算', note: '2桁のたし算・ひき算', on: true },
-      { name: '順にタップ', note: '1から12まで', on: true },
+      { name: '計算', note: '四則演算', on: true },
+      { name: '順にタップ', note: '1から12を昇順', on: true },
       { name: '書き写し', note: '英数字8文字', on: true },
-      { name: '鏡文字', note: '左右反転した文字', on: true },
-      { name: '光った順を再現', note: '短期記憶', on: true },
-      { name: '神経衰弱', note: '3×4のペア', on: true },
-      { name: '図形を数える', note: '指定の図形の数', on: true },
-      { name: '色と文字', note: '文字の色を答える', on: true },
+      { name: '鏡文字', note: '左右反転した文字列', on: true },
+      { name: '光った順を再現', note: '順番を記憶', on: true },
+      { name: '神経衰弱', note: '3×4', on: true },
+      { name: '図形を数える', note: '指定した図形の数', on: true },
+      { name: '色と文字', note: '文字の色を回答', on: true },
       { name: '端末を振る', note: '軽い', on: false },
       { name: '歩く', note: '30歩', on: true },
     ];

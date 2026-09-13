@@ -48,7 +48,7 @@
       <div style="background: #142449; border: 1px solid #1E3163; border-radius: 3px; padding: 12px 10px; display: flex; flex-direction: column; gap: 5px;">
         <div style="font-size: 11px; letter-spacing: 0.1em; color: #8AA0C9; font-family: 'IBM Plex Mono', monospace;">放置</div>
         <div style="font-size: 25px; font-weight: 300; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; line-height: 1; color: #FEE48F;">31<span style="font-size: 12px; color: #8AA0C9;">%</span></div>
-        <div style="font-size: 11px; color: #8AA0C9;">で鳴り止んだ</div>
+        <div style="font-size: 11px; color: #8AA0C9;">が放置で鳴り止んだ</div>
       </div>
     </div>
 
@@ -89,8 +89,8 @@ class Component extends DCLogic {
     // 週は月曜から始める。今日は金曜で、土日はまだ来ていない
     const week = [
       { day: '月', date: '09.07', n: 5, min: 21, method: '長押し', state: 'done' },
-      { day: '火', date: '09.08', n: 6, min: 27, method: '問題に正解', state: 'done' },
-      { day: '水', date: '09.09', n: 4, min: 18, method: '問題に正解', state: 'done' },
+      { day: '火', date: '09.08', n: 6, min: 27, method: '正解', state: 'done' },
+      { day: '水', date: '09.09', n: 4, min: 18, method: '正解', state: 'done' },
       { day: '木', date: '09.10', n: 11, min: 52, method: '長押し', state: 'done' },
       { day: '金', date: '09.11', n: null, min: null, method: '', state: 'today' },
       { day: '土', date: '09.12', n: null, min: null, method: '', state: 'future' },
@@ -116,8 +116,8 @@ class Component extends DCLogic {
     const rows = [
       { date: '09.11 金', occurrence: '進行中', duration: '4回目が鳴っている', color: '#8CDDC2', method: '', methodColor: '#8AA0C9' },
       { date: '09.10 木', occurrence: '11回目', duration: '52分', color: '#FEE48F', method: '長押し', methodColor: '#FEE48F' },
-      { date: '09.09 水', occurrence: '4回目', duration: '18分', color: '#E8EEF9', method: '問題に正解', methodColor: '#8AA0C9' },
-      { date: '09.08 火', occurrence: '6回目', duration: '27分', color: '#E8EEF9', method: '問題に正解', methodColor: '#8AA0C9' },
+      { date: '09.09 水', occurrence: '4回目', duration: '18分', color: '#E8EEF9', method: '正解', methodColor: '#8AA0C9' },
+      { date: '09.08 火', occurrence: '6回目', duration: '27分', color: '#E8EEF9', method: '正解', methodColor: '#8AA0C9' },
       { date: '09.07 月', occurrence: '5回目', duration: '21分', color: '#E8EEF9', method: '長押し', methodColor: '#FEE48F' },
     ];
     return { bars, rows };
