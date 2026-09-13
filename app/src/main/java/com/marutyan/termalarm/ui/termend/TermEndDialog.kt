@@ -37,11 +37,12 @@ import com.marutyan.termalarm.ui.common.formatClockMinutes
 import com.marutyan.termalarm.ui.theme.customColors
 import com.marutyan.termalarm.ui.theme.ibmPlexMonoFontFamily
 import java.time.ZonedDateTime
+import com.marutyan.termalarm.domain.challengeQuestionCount
 import kotlinx.coroutines.launch
 
 /**
  * 当日分のターム鳴動を終了する確認ポップアップComposable。
- * 対象タームの時刻範囲と残り回数を表示し、実行時にAlarmRepository.endTodaySessionを呼び出して当日鳴動をスキップする。
+ * 対象タームの時刻範囲と残り回数を表示し、出題設定時はミニゲームへ遷移、非出題時は直接AlarmRepository.endTodaySessionを実行する。
  */
 @Composable
 fun TermEndDialog(
@@ -49,6 +50,7 @@ fun TermEndDialog(
     repository: AlarmRepository,
     now: ZonedDateTime,
     onDismiss: () -> Unit,
+    onStartChallenge: (Long) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -169,9 +171,15 @@ fun TermEndDialog(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = ripple(),
                                     onClick = {
-                                        coroutineScope.launch {
-                                            repository.endTodaySession(schedule.id, now)
+                                        val questionCount = challengeQuestionCount(schedule, 1.0)
+                                        if (questionCount > 0) {
+                                            onStartChallenge(schedule.id)
                                             onDismiss()
+                                        } else {
+                                            coroutineScope.launch {
+                                                repository.endTodaySession(schedule.id, now)
+                                                onDismiss()
+                                            }
                                         }
                                     },
                                 )

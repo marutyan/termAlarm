@@ -226,7 +226,13 @@ private fun RingingScreen(
         val repository = remember { Repositories.alarm(context) }
         val hasShake = remember { hasShakeSensor(context) }
         val gameViewModel: SkipGameViewModel = viewModel(
-            factory = SkipGameViewModelFactory(repository, context, alarmId, hasShake),
+            factory = SkipGameViewModelFactory(
+                repository = repository,
+                context = context,
+                alarmId = alarmId,
+                hasShakeSensor = hasShake,
+                occurrenceIndex = currentOccurrenceIndex,
+            ),
         )
         SkipGameScreen(
             viewModel = gameViewModel,

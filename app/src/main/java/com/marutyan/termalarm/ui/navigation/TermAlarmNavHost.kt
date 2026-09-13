@@ -180,6 +180,10 @@ fun TermAlarmNavHost(
                                 repository = repository,
                                 now = ZonedDateTime.now(),
                                 onDismiss = { termEndAlarmId = null },
+                                onStartChallenge = { challengeAlarmId ->
+                                    termEndAlarmId = null
+                                    navController.navigate("$ROUTE_END_TODAY_GAME/$challengeAlarmId")
+                                },
                             )
                         }
                     }

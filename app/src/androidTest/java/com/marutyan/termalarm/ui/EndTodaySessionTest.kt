@@ -128,10 +128,30 @@ class EndTodaySessionTest {
             is GameQuestion.SequentialTap -> (1..12).forEach { n -> composeTestRule.onNodeWithText(n.toString()).performClick() }
             is GameQuestion.ColorWord -> composeTestRule.onNodeWithText(question.correctAnswer).performClick()
             is GameQuestion.ShakeDevice -> error("hasShakeSensor=falseのためSHAKE_DEVICEは出題されないはず")
-            is GameQuestion.MirrorText,
-            is GameQuestion.SequenceRecall,
-            is GameQuestion.MemoryPairs,
-            is GameQuestion.Walk -> error("新ゲームはUIが未実装のため出題されないはず: $question")
+            is GameQuestion.MirrorText -> {
+                composeTestRule.onNode(hasSetTextAction()).performTextInput(question.text)
+                composeTestRule.onNodeWithText(decide).performClick()
+            }
+            is GameQuestion.SequenceRecall -> {
+                // 提示完了後に正解シーケンスを順にタップする
+                composeTestRule.waitUntil(5_000) {
+                    composeTestRule.onAllNodesWithText(question.sequence.first().toString()).fetchSemanticsNodes().isNotEmpty()
+                }
+                question.sequence.forEach { n ->
+                    composeTestRule.onNodeWithText(n.toString()).performClick()
+                }
+            }
+            is GameQuestion.MemoryPairs -> {
+                // 全ペアを順に揃える
+                val glyphs = listOf("\u2605", "\u25CF", "\u25B2", "\u25A0", "\u25C6", "\u2660")
+                for (cardId in 0 until 6) {
+                    val matchingIndices = question.cards.mapIndexedNotNull { idx, c -> if (c == cardId) idx else null }
+                    matchingIndices.forEach { _ ->
+                        composeTestRule.onNodeWithText("?").performClick()
+                    }
+                }
+            }
+            is GameQuestion.Walk -> error("hasShakeSensor=falseのためWALKは出題されないはず")
         }
     }
 
@@ -154,10 +174,26 @@ class EndTodaySessionTest {
                 composeTestRule.onNodeWithText(wrongChoice).performClick()
             }
             is GameQuestion.ShakeDevice -> error("hasShakeSensor=falseのためSHAKE_DEVICEは出題されないはず")
-            is GameQuestion.MirrorText,
-            is GameQuestion.SequenceRecall,
-            is GameQuestion.MemoryPairs,
-            is GameQuestion.Walk -> error("新ゲームはUIが未実装のため出題されないはず: $question")
+            is GameQuestion.MirrorText -> {
+                composeTestRule.onNode(hasSetTextAction()).performTextInput("WRONGWRONG")
+                composeTestRule.onNodeWithText(decide).performClick()
+            }
+            is GameQuestion.SequenceRecall -> {
+                composeTestRule.waitUntil(5_000) {
+                    composeTestRule.onAllNodesWithText("1").fetchSemanticsNodes().isNotEmpty()
+                }
+                repeat(5) {
+                    composeTestRule.onNodeWithText("1").performClick()
+                }
+            }
+            is GameQuestion.MemoryPairs -> {
+                // 不一致のペアを2枚タップ
+                val firstCardId = question.cards[0]
+                val mismatchIdx = question.cards.indexOfFirst { it != firstCardId }
+                composeTestRule.onAllNodesWithText("?")[0].performClick()
+                composeTestRule.onAllNodesWithText("?")[0].performClick()
+            }
+            is GameQuestion.Walk -> error("hasShakeSensor=falseのためWALKは出題されないはず")
         }
     }
 
