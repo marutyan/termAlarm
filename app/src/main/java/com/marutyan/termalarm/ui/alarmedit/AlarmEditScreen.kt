@@ -1,444 +1,662 @@
 package com.marutyan.termalarm.ui.alarmedit
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.ToggleButton
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.marutyan.termalarm.R
-import com.marutyan.termalarm.ui.theme.COMPACT_SCREEN_HEIGHT_THRESHOLD
-import com.marutyan.termalarm.ui.theme.alarmCardClock
-import com.marutyan.termalarm.domain.AlarmSchedule
-import com.marutyan.termalarm.domain.occurrenceCount
-import com.marutyan.termalarm.ui.alarmlist.orderedDaysOfWeek
+import com.marutyan.termalarm.domain.ChallengeLevel
+import com.marutyan.termalarm.domain.ChallengeTiming
 import com.marutyan.termalarm.ui.common.formatClockMinutes
-import com.marutyan.termalarm.ui.common.clockTimePattern
-import com.marutyan.termalarm.ui.theme.tabularNums
+import com.marutyan.termalarm.ui.theme.customColors
+import com.marutyan.termalarm.ui.theme.ibmPlexMonoFontFamily
 import java.time.DayOfWeek
-import kotlin.math.roundToInt
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+// 月曜から日曜の順序リスト
+private val DAYS_OF_WEEK_ORDER = listOf(
+    DayOfWeek.MONDAY,
+    DayOfWeek.TUESDAY,
+    DayOfWeek.WEDNESDAY,
+    DayOfWeek.THURSDAY,
+    DayOfWeek.FRIDAY,
+    DayOfWeek.SATURDAY,
+    DayOfWeek.SUNDAY,
+)
 
 /**
- * アラーム追加・編集画面。design/AlarmEdit.dc.htmlを再現する。
- * idがnullなら新規作成、そうでなければ既存アラームの編集として動作する(ViewModelがロードを担う)。
+ * ターム編集画面の最上位Composable。design/TermEdit.dc.htmlを再現する。
+ * 下から持ち上がるシート形式で構成し、時刻範囲、曜日、設定行、二度寝チェック、保存・削除ボタンを提供する。
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AlarmEditScreen(
     viewModel: AlarmEditViewModel,
     onClose: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val uiState = viewModel.uiState
 
-    // 保存・削除が完了したら呼び出し側(NavHost)に画面を閉じてもらう
+    // 保存または削除が完了したら閉じる
     LaunchedEffect(uiState.isSaved, uiState.isDeleted) {
         if (uiState.isSaved || uiState.isDeleted) onClose()
     }
 
+    // 端末の戻る操作で閉じる
+    BackHandler(onBack = onClose)
+
     var showStartPicker by rememberSaveable { mutableStateOf(false) }
     var showEndPicker by rememberSaveable { mutableStateOf(false) }
     var showLabelDialog by rememberSaveable { mutableStateOf(false) }
+    var showIntervalSheet by rememberSaveable { mutableStateOf(false) }
+    var showChallengePicker by rememberSaveable { mutableStateOf(false) }
     var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        if (uiState.id == null) stringResource(R.string.edit_title_new) else stringResource(R.string.edit_title_existing),
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close))
-                    }
-                },
-                actions = {
-                    Button(onClick = viewModel::save, modifier = Modifier.padding(end = 12.dp)) {
-                        Text(stringResource(R.string.save))
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        BoxWithConstraints(
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color(0xFF060C1C)),
+    ) {
+        // 背景の薄いホーム時計表示（上部エリア・タップで閉じるScrim）
+        val now = remember { ZonedDateTime.now() }
+        val currentTimeString = remember(now) { now.format(DateTimeFormatter.ofPattern("H:mm", Locale.getDefault())) }
+        val currentSecondString = remember(now) { now.format(DateTimeFormatter.ofPattern("ss", Locale.getDefault())) }
+        val currentDateString = remember(now) { now.format(DateTimeFormatter.ofPattern("MM.dd E", Locale.JAPANESE)) }
+
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onClose,
+                ),
         ) {
-            val isCompact = maxHeight < COMPACT_SCREEN_HEIGHT_THRESHOLD
-            val itemSpacing = if (isCompact) 12.dp else 20.dp
-            val bottomSpacerHeight = if (isCompact) 12.dp else 24.dp
-
+            // 背景の時計（opacity 0.2）
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(itemSpacing),
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, top = 74.dp, end = 20.dp),
             ) {
-                TimeRangeRow(
-                    startMinutes = uiState.startMinutes,
-                    endMinutes = uiState.endMinutes,
-                    onStartClick = { showStartPicker = true },
-                    onEndClick = { showEndPicker = true },
-                    isCompact = isCompact,
-                )
-
-                IntervalSection(
-                    intervalMinutes = uiState.intervalMinutes,
-                    useCustomInterval = uiState.useCustomInterval,
-                    onSelectPreset = viewModel::selectPresetInterval,
-                    onSelectCustom = viewModel::selectCustomInterval,
-                    onCustomIntervalChange = viewModel::setCustomInterval,
-                )
-
-                PreviewBanner(
-                    startMinutes = uiState.startMinutes,
-                    endMinutes = uiState.endMinutes,
-                    intervalMinutes = uiState.intervalMinutes,
-                    isValid = uiState.validationError == null,
-                )
-
-                uiState.validationError?.let { error ->
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    modifier = Modifier.padding(bottom = 7.dp),
+                ) {
                     Text(
-                        text = stringResource(validationMessageRes(error)),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
+                        text = currentTimeString,
+                        style = TextStyle(
+                            fontFamily = ibmPlexMonoFontFamily(200),
+                            fontSize = 78.sp,
+                            lineHeight = 70.sp,
+                            letterSpacing = (-0.05).em,
+                            fontFeatureSettings = "tnum",
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+                    )
+                    Text(
+                        text = currentSecondString,
+                        style = TextStyle(
+                            fontFamily = ibmPlexMonoFontFamily(200),
+                            fontSize = 33.sp,
+                            fontFeatureSettings = "tnum",
+                        ),
+                        color = MaterialTheme.customColors.subtleText.copy(alpha = 0.2f),
+                        modifier = Modifier.padding(bottom = 6.dp),
+                    )
+                }
+                Text(
+                    text = currentDateString,
+                    style = TextStyle(
+                        fontFamily = ibmPlexMonoFontFamily(400),
+                        fontSize = 14.5.sp,
+                    ),
+                    color = MaterialTheme.customColors.subtleText.copy(alpha = 0.2f),
+                    modifier = Modifier.padding(start = 9.dp),
+                )
+            }
+
+            // 下部シート領域（デザイン: background #0B1530, border-radius 24dp 24dp 0 0）
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}, // シート内部のタップは背後に伝播させない
+                    )
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 20.dp, top = 10.dp, end = 20.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+            ) {
+                // 上部中央ドラッグ目印（38dp×4dp）
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(width = 38.dp, height = 4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.outline),
                     )
                 }
 
-                RepeatDaysSection(selectedDays = uiState.repeatDays, onToggleDay = viewModel::toggleDay)
-
-                GeneralSettingsSection(
-                    label = uiState.label,
-                    onLabelClick = { showLabelDialog = true },
-                )
-
-                if (uiState.id != null) {
-                    OutlinedButton(
-                        onClick = { showDeleteConfirm = true },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                // 1. 時刻の範囲と有効・無効切り替え
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(9.dp),
                     ) {
-                        Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.size(8.dp))
-                        Text(stringResource(R.string.delete_alarm))
+                        val timePattern = remember { com.marutyan.termalarm.ui.common.clockTimePattern(false) }
+                        // 開始時刻（押すと選べる）
+                        Text(
+                            text = formatClockMinutes(uiState.startMinutes, timePattern),
+                            style = TextStyle(
+                                fontFamily = ibmPlexMonoFontFamily(200),
+                                fontSize = 40.sp,
+                                lineHeight = 40.sp,
+                                letterSpacing = (-0.04).em,
+                                fontFeatureSettings = "tnum",
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(),
+                                    onClick = { showStartPicker = true },
+                                )
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                        )
+                        Text(
+                            text = "\u2013",
+                            fontSize = 20.sp,
+                            color = MaterialTheme.customColors.subtleText,
+                        )
+                        // 終了時刻（押すと選べる）
+                        Text(
+                            text = formatClockMinutes(uiState.endMinutes, timePattern),
+                            style = TextStyle(
+                                fontFamily = ibmPlexMonoFontFamily(200),
+                                fontSize = 40.sp,
+                                lineHeight = 40.sp,
+                                letterSpacing = (-0.04).em,
+                                fontFeatureSettings = "tnum",
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(),
+                                    onClick = { showEndPicker = true },
+                                )
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                        )
+                    }
+
+                    // タームの有効・無効スイッチ
+                    TermEditSwitch(
+                        checked = uiState.enabled,
+                        onCheckedChange = viewModel::setEnabled,
+                    )
+                }
+
+                // 2. 曜日（直径44dpの丸7つ、月から日の順で均等配置）
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    DAYS_OF_WEEK_ORDER.forEach { day ->
+                        val isSelected = day in uiState.repeatDays
+                        val dayLabel = when (day) {
+                            DayOfWeek.MONDAY -> stringResource(R.string.day_monday_short)
+                            DayOfWeek.TUESDAY -> stringResource(R.string.day_tuesday_short)
+                            DayOfWeek.WEDNESDAY -> stringResource(R.string.day_wednesday_short)
+                            DayOfWeek.THURSDAY -> stringResource(R.string.day_thursday_short)
+                            DayOfWeek.FRIDAY -> stringResource(R.string.day_friday_short)
+                            DayOfWeek.SATURDAY -> stringResource(R.string.day_saturday_short)
+                            DayOfWeek.SUNDAY -> stringResource(R.string.day_sunday_short)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                    shape = CircleShape,
+                                )
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(),
+                                    role = Role.Checkbox,
+                                    onClick = { viewModel.toggleDay(day) },
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = dayLabel,
+                                fontSize = 14.sp,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.customColors.subtleText,
+                            )
+                        }
                     }
                 }
 
-                Spacer(Modifier.height(bottomSpacerHeight))
-            }
-        }
-    }
-
-    if (showStartPicker) {
-        TimePickerDialogBox(
-            initialMinutes = uiState.startMinutes,
-            onDismiss = { showStartPicker = false },
-            onConfirm = { minutes -> viewModel.setStartMinutes(minutes); showStartPicker = false },
-        )
-    }
-    if (showEndPicker) {
-        TimePickerDialogBox(
-            initialMinutes = uiState.endMinutes,
-            onDismiss = { showEndPicker = false },
-            onConfirm = { minutes -> viewModel.setEndMinutes(minutes); showEndPicker = false },
-        )
-    }
-    if (showLabelDialog) {
-        LabelEditDialog(
-            initialLabel = uiState.label,
-            onDismiss = { showLabelDialog = false },
-            onConfirm = { newLabel -> viewModel.setLabel(newLabel); showLabelDialog = false },
-        )
-    }
-    if (showDeleteConfirm) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            title = { Text(stringResource(R.string.delete_alarm)) },
-            text = { Text(stringResource(R.string.delete_alarm_confirm_message)) },
-            confirmButton = {
-                TextButton(onClick = { showDeleteConfirm = false; viewModel.delete() }) {
-                    Text(stringResource(R.string.delete_alarm), color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.cancel)) } },
-        )
-    }
-}
-
-// 検証エラーの種類をユーザー向け文言のリソースIDへ変換する
-private fun validationMessageRes(error: AlarmEditValidationError): Int = when (error) {
-    AlarmEditValidationError.INTERVAL_NOT_POSITIVE -> R.string.error_interval_not_positive
-    AlarmEditValidationError.INTERVAL_TOO_LARGE -> R.string.error_interval_too_large
-    AlarmEditValidationError.CUSTOM_INTERVAL_INVALID -> R.string.error_custom_interval_invalid
-}
-
-// 開始・終了時刻の2枚のカード。狭い画面(isCompact=true)ではカード内の余白と文字を詰める。
-@Composable
-private fun TimeRangeRow(
-    startMinutes: Int,
-    endMinutes: Int,
-    onStartClick: () -> Unit,
-    onEndClick: () -> Unit,
-    isCompact: Boolean = false,
-) {
-    Row(horizontalArrangement = Arrangement.spacedBy(if (isCompact) 8.dp else 12.dp)) {
-        TimeCard(
-            label = stringResource(R.string.start_time),
-            minutes = startMinutes,
-            highlighted = true,
-            modifier = Modifier.weight(1f),
-            onClick = onStartClick,
-            isCompact = isCompact,
-        )
-        TimeCard(
-            label = stringResource(R.string.end_time),
-            minutes = endMinutes,
-            highlighted = false,
-            modifier = Modifier.weight(1f),
-            onClick = onEndClick,
-            isCompact = isCompact,
-        )
-    }
-}
-
-@Composable
-private fun TimeCard(
-    label: String,
-    minutes: Int,
-    highlighted: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-    isCompact: Boolean = false,
-) {
-    val containerColor = if (highlighted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
-    val contentColor = if (highlighted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-    val cardPadding = if (isCompact) 10.dp else 16.dp
-    val textStyle = if (isCompact) {
-        MaterialTheme.typography.titleLarge.alarmCardClock().copy(fontSize = 32.sp, lineHeight = 38.sp)
-    } else {
-        MaterialTheme.typography.displayLarge.alarmCardClock()
-    }
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(if (isCompact) 16.dp else 24.dp))
-            .background(containerColor)
-            .clickable(onClick = onClick)
-            .padding(cardPadding),
-    ) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = contentColor)
-        // 一覧のカードと同じ大きさにする。狭い画面でははみ出しを防ぐため一段階小さくする
-        Text(
-            text = formatClockMinutes(minutes, clockTimePattern()),
-            style = textStyle,
-            color = contentColor,
-            maxLines = 1,
-            softWrap = false,
-        )
-    }
-}
-
-// 「その他」選択時に大きな数字とスライダーで間隔(1〜120分)を直感的に指定する入力欄。
-// 小さな文字入力欄に比べて視認性を高め、指で素早く調整できるようにするために必要
-@Composable
-private fun CustomIntervalPicker(
-    intervalMinutes: Int,
-    onIntervalChange: (Int) -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                text = intervalMinutes.toString(),
-                style = MaterialTheme.typography.displayMedium.tabularNums(),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Spacer(Modifier.size(4.dp))
-            Text(
-                text = stringResource(R.string.unit_minutes),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-        }
-        Slider(
-            value = intervalMinutes.toFloat().coerceIn(CUSTOM_INTERVAL_MIN.toFloat(), CUSTOM_INTERVAL_MAX.toFloat()),
-            onValueChange = { onIntervalChange(it.roundToInt().coerceIn(CUSTOM_INTERVAL_MIN, CUSTOM_INTERVAL_MAX)) },
-            valueRange = CUSTOM_INTERVAL_MIN.toFloat()..CUSTOM_INTERVAL_MAX.toFloat(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
-}
-
-// 鳴らす間隔の選択チップ。Material3 ExpressiveのToggleButtonを使う
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun IntervalSection(
-    intervalMinutes: Int,
-    useCustomInterval: Boolean,
-    onSelectPreset: (Int) -> Unit,
-    onSelectCustom: () -> Unit,
-    onCustomIntervalChange: (Int) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(stringResource(R.string.interval_section_title), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        // 行ごとに中央へ寄せる。端から端へ散らすと、2行目に少数のボタンが残ったとき左右へ離れて偏る
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            INTERVAL_PRESETS_MINUTES.forEach { minutes ->
-                val selected = !useCustomInterval && intervalMinutes == minutes
-                ToggleButton(checked = selected, onCheckedChange = { onSelectPreset(minutes) }) {
-                    Text(stringResource(R.string.interval_minutes_label, minutes))
-                }
-            }
-            ToggleButton(checked = useCustomInterval, onCheckedChange = { onSelectCustom() }) {
-                Text(stringResource(R.string.interval_custom_label))
-            }
-        }
-        if (useCustomInterval) {
-            CustomIntervalPicker(
-                intervalMinutes = intervalMinutes,
-                onIntervalChange = onCustomIntervalChange,
-            )
-        }
-    }
-}
-
-// 「7:00から9:00まで25回鳴ります」のリアルタイムプレビュー。回数計算はdomain.occurrenceCountをそのまま使う
-@Composable
-private fun PreviewBanner(startMinutes: Int, endMinutes: Int, intervalMinutes: Int, isValid: Boolean) {
-    if (!isValid || intervalMinutes <= 0) return
-    val schedule = remember(startMinutes, endMinutes, intervalMinutes) {
-        AlarmSchedule(
-            id = 0, startMinutes = startMinutes, endMinutes = endMinutes,
-            startIntervalMinutes = intervalMinutes, endIntervalMinutes = intervalMinutes,
-            repeatDays = emptySet(), label = "", enabled = true, skippedSessionStart = null,
-        )
-    }
-    val count = occurrenceCount(schedule)
-    val pattern = clockTimePattern()
-    val message = if (startMinutes == endMinutes) {
-        stringResource(R.string.preview_single, formatClockMinutes(startMinutes, pattern))
-    } else {
-        stringResource(R.string.preview_range, formatClockMinutes(startMinutes, pattern), formatClockMinutes(endMinutes, pattern), count)
-    }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.secondaryContainer)
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_clock),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSecondaryContainer,
-            modifier = Modifier.size(22.dp),
-        )
-        Text(message, color = MaterialTheme.colorScheme.onSecondaryContainer, style = MaterialTheme.typography.bodyMedium)
-    }
-}
-
-// 繰り返す曜日の選択。design/AlarmEdit.dc.htmlと同じ真円のチップに合わせるため、ToggleButtonではなく直接描画する
-@Composable
-private fun RepeatDaysSection(selectedDays: Set<DayOfWeek>, onToggleDay: (DayOfWeek) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(stringResource(R.string.repeat_section_title), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        // 固定間隔で並べると7つが左へ寄って右に余白ができるため、幅いっぱいに均等配置する
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            orderedDaysOfWeek().forEach { day ->
-                val selected = day in selectedDays
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
-                        .clickable { onToggleDay(day) },
-                    contentAlignment = Alignment.Center,
+                // 3. カード1枚にまとめた3行（ラベル、間隔、問題。各行58dp）
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(
-                        dayShortLabel(day),
-                        color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    Column {
+                        // 行1: ラベル
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 58.dp)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(),
+                                    onClick = { showLabelDialog = true },
+                                )
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            TermTagIcon(color = MaterialTheme.customColors.subtleText)
+                            Text(
+                                text = stringResource(R.string.label_title),
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (uiState.label.isNotBlank()) {
+                                Text(
+                                    text = uiState.label,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.customColors.subtleText,
+                                )
+                            }
+                            TermChevronRightIcon(color = MaterialTheme.customColors.subtleText)
+                        }
+
+                        // 区切り線
+                        Spacer(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(1.dp)
+                                .background(MaterialTheme.colorScheme.surface),
+                        )
+
+                        // 行2: 間隔
+                        val intervalSummary = if (uiState.isVariableInterval) {
+                            stringResource(
+                                R.string.term_edit_interval_accelerate_summary,
+                                uiState.startIntervalMinutes,
+                                uiState.endIntervalMinutes,
+                            )
+                        } else {
+                            stringResource(
+                                R.string.term_edit_interval_constant_summary,
+                                uiState.startIntervalMinutes,
+                            )
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 58.dp)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(),
+                                    onClick = { showIntervalSheet = true },
+                                )
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            TermIntervalBarsIcon(color = MaterialTheme.customColors.subtleText)
+                            Text(
+                                text = stringResource(R.string.term_edit_interval_label),
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                text = intervalSummary,
+                                fontSize = 14.sp,
+                                fontFamily = ibmPlexMonoFontFamily(400),
+                                color = MaterialTheme.customColors.subtleText,
+                            )
+                            TermChevronRightIcon(color = MaterialTheme.customColors.subtleText)
+                        }
+
+                        // 区切り線
+                        Spacer(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(1.dp)
+                                .background(MaterialTheme.colorScheme.surface),
+                        )
+
+                        // 行3: 問題
+                        val challengeSummary = when (uiState.challengeTiming) {
+                            ChallengeTiming.NEVER -> stringResource(R.string.challenge_timing_never)
+                            ChallengeTiming.END_ONLY -> {
+                                val timingLabel = stringResource(R.string.challenge_timing_end_only)
+                                val levelLabel = if (uiState.challenge == ChallengeLevel.HARD) {
+                                    stringResource(R.string.challenge_level_hard)
+                                } else {
+                                    stringResource(R.string.challenge_level_easy)
+                                }
+                                stringResource(R.string.challenge_summary_format, timingLabel, levelLabel)
+                            }
+                            ChallengeTiming.EVERY_TIME -> {
+                                val timingLabel = stringResource(R.string.challenge_timing_every_time)
+                                val levelLabel = if (uiState.challenge == ChallengeLevel.HARD) {
+                                    stringResource(R.string.challenge_level_hard)
+                                } else {
+                                    stringResource(R.string.challenge_level_easy)
+                                }
+                                stringResource(R.string.challenge_summary_format, timingLabel, levelLabel)
+                            }
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 58.dp)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(),
+                                    onClick = { showChallengePicker = true },
+                                )
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            TermQuestionCircleIcon(color = MaterialTheme.customColors.subtleText)
+                            Text(
+                                text = stringResource(R.string.term_edit_challenge_label),
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                text = challengeSummary,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.customColors.subtleText,
+                            )
+                            TermChevronRightIcon(color = MaterialTheme.customColors.subtleText)
+                        }
+                    }
+                }
+
+                // 4. カード1枚の二度寝チェック（58dp、左にアイコン、右に切り替え、下に説明1行）
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 58.dp)
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        TermWakeCheckIcon(color = MaterialTheme.customColors.subtleText)
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.term_edit_wake_check_label),
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = stringResource(R.string.term_edit_wake_check_desc),
+                                fontSize = 11.5.sp,
+                                color = MaterialTheme.customColors.subtleText,
+                            )
+                        }
+                        TermEditSwitch(
+                            checked = uiState.wakeCheck,
+                            onCheckedChange = viewModel::setWakeCheck,
+                        )
+                    }
+                }
+
+                // 5. 削除と保存ボタン（ピル形）
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // 削除ボタン（既存タームの場合に表示）
+                    if (uiState.id != null) {
+                        Box(
+                            modifier = Modifier
+                                .heightIn(min = 52.dp)
+                                .clip(RoundedCornerShape(26.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainer)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(),
+                                    onClick = { showDeleteConfirm = true },
+                                )
+                                .padding(horizontal = 28.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.term_edit_delete),
+                                fontSize = 14.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.size(1.dp))
+                    }
+
+                    // 保存ボタン
+                    Box(
+                        modifier = Modifier
+                            .heightIn(min = 52.dp)
+                            .clip(RoundedCornerShape(26.dp))
+                            .background(MaterialTheme.colorScheme.primary)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = ripple(),
+                                onClick = viewModel::save,
+                            )
+                            .padding(horizontal = 36.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.save),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
                 }
             }
         }
+
+        // --- サブ画面・ダイアログ ---
+
+        // 開始時刻選択ダイアログ
+        if (showStartPicker) {
+            TimePickerDialogBox(
+                initialMinutes = uiState.startMinutes,
+                onDismiss = { showStartPicker = false },
+                onConfirm = { minutes ->
+                    viewModel.setStartMinutes(minutes)
+                    showStartPicker = false
+                },
+            )
+        }
+
+        // 終了時刻選択ダイアログ
+        if (showEndPicker) {
+            TimePickerDialogBox(
+                initialMinutes = uiState.endMinutes,
+                onDismiss = { showEndPicker = false },
+                onConfirm = { minutes ->
+                    viewModel.setEndMinutes(minutes)
+                    showEndPicker = false
+                },
+            )
+        }
+
+        // ラベル入力ポップアップ
+        if (showLabelDialog) {
+            LabelInputDialog(
+                initialLabel = uiState.label,
+                onDismiss = { showLabelDialog = false },
+                onConfirm = { newLabel ->
+                    viewModel.setLabel(newLabel)
+                    showLabelDialog = false
+                },
+            )
+        }
+
+        // 問題選択ポップアップ
+        if (showChallengePicker) {
+            ChallengePickerDialog(
+                initialTiming = uiState.challengeTiming,
+                initialLevel = uiState.challenge,
+                onDismiss = { showChallengePicker = false },
+                onConfirm = { timing, level ->
+                    viewModel.setChallenge(timing, level)
+                    showChallengePicker = false
+                },
+            )
+        }
+
+        // 間隔設定シート（下から重なるシート）
+        if (showIntervalSheet) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { showIntervalSheet = false },
+                    ),
+                contentAlignment = Alignment.BottomCenter,
+            ) {
+                IntervalEditSheet(
+                    startMinutes = uiState.startMinutes,
+                    endMinutes = uiState.endMinutes,
+                    initialIsVariable = uiState.isVariableInterval,
+                    initialStartInterval = uiState.startIntervalMinutes,
+                    initialEndInterval = uiState.endIntervalMinutes,
+                    onConfirm = { isVariable, startInt, endInt ->
+                        viewModel.setInterval(isVariable, startInt, endInt)
+                        showIntervalSheet = false
+                    },
+                    modifier = Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}, // シート内タップは伝播させない
+                    ),
+                )
+            }
+        }
+
+        // 削除確認ダイアログ
+        if (showDeleteConfirm) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirm = false },
+                title = { Text(stringResource(R.string.delete_alarm)) },
+                text = { Text(stringResource(R.string.delete_alarm_confirm_message)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showDeleteConfirm = false
+                            viewModel.delete()
+                        },
+                    ) {
+                        Text(stringResource(R.string.term_edit_delete), color = MaterialTheme.colorScheme.primary)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteConfirm = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                },
+            )
+        }
     }
 }
-
-private fun dayShortLabel(day: DayOfWeek): String = when (day) {
-    DayOfWeek.MONDAY -> "月"
-    DayOfWeek.TUESDAY -> "火"
-    DayOfWeek.WEDNESDAY -> "水"
-    DayOfWeek.THURSDAY -> "木"
-    DayOfWeek.FRIDAY -> "金"
-    DayOfWeek.SATURDAY -> "土"
-    DayOfWeek.SUNDAY -> "日"
-}
-

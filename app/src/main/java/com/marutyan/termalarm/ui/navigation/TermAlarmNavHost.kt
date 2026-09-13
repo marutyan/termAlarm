@@ -12,13 +12,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
+import com.marutyan.termalarm.ui.termend.TermEndDialog
+import java.time.ZonedDateTime
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -148,12 +153,27 @@ fun TermAlarmNavHost(
                 // 1. ターム（ホーム画面）
                 composable(NavItem.TERMS.route) {
                     val viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory(repository))
+                    val terms by viewModel.terms.collectAsStateWithLifecycle()
+                    var termEndAlarmId by remember { mutableStateOf<Long?>(null) }
+
                     HomeScreen(
                         viewModel = viewModel,
                         onAddTerm = { navController.navigate(ROUTE_EDIT) },
                         onEditTerm = { id -> navController.navigate("$ROUTE_EDIT?$ARG_ALARM_ID=$id") },
-                        onEndTodayTerm = { id -> navController.navigate("$ROUTE_END_TODAY_GAME/$id") },
+                        onEndTodayTerm = { id -> termEndAlarmId = id },
                     )
+
+                    termEndAlarmId?.let { alarmId ->
+                        val targetSchedule = terms.find { it.id == alarmId }
+                        if (targetSchedule != null) {
+                            TermEndDialog(
+                                schedule = targetSchedule,
+                                repository = repository,
+                                now = ZonedDateTime.now(),
+                                onDismiss = { termEndAlarmId = null },
+                            )
+                        }
+                    }
                 }
 
                 // 2. 通常アラーム（準備中プレースホルダ）

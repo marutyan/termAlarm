@@ -2,7 +2,6 @@ package com.marutyan.termalarm.ui
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -20,7 +19,7 @@ import org.junit.Test
 
 /**
  * ホーム画面(HomeScreen)の主要操作と画面要素を保証するUIテスト。
- * ターム追加、一覧への反映、編集画面への復元、空状態の表示を検証する。
+ * ターム追加、一覧への反映、編集シートへの復元、空状態の表示を検証する。
  */
 @OptIn(ExperimentalTestApi::class)
 class HomeScreenTest {
@@ -51,15 +50,14 @@ class HomeScreenTest {
         composeTestRule.onNodeWithText(context().getString(R.string.home_add_term)).assertExists()
     }
 
-    // 「タームを追加」を押すと編集画面が開き、既定値のまま保存するとホームに1件現れ、
-    // 要約と時刻範囲が表示されることを保証する
+    // 「タームを追加」を押すと編集シートが開き、保存するとホームに1件現れ、要約と時刻範囲が表示されることを保証する
     @Test
     fun タームを追加して保存するとホームに反映される() {
         composeTestRule.setContent { ListEditHost(repository) }
 
         composeTestRule.onNodeWithText(context().getString(R.string.home_add_term)).performClick()
-        // 編集画面(新規)のタイトルが表示されるまで待つ
-        composeTestRule.waitUntilAtLeastOneExists(hasText(context().getString(R.string.edit_title_new)), 5_000)
+        // 編集シートの保存ボタンが表示されるまで待つ
+        composeTestRule.waitUntilAtLeastOneExists(hasText(context().getString(R.string.save)), 5_000)
 
         composeTestRule.onNodeWithText(context().getString(R.string.save)).performClick()
 
@@ -79,14 +77,53 @@ class HomeScreenTest {
         composeTestRule.setContent { ListEditHost(repository) }
 
         composeTestRule.onNodeWithText("5分ごと · 25回", useUnmergedTree = true).performClick()
-        composeTestRule.waitUntilAtLeastOneExists(hasText(context().getString(R.string.edit_title_existing)), 5_000)
+        // 編集シートの保存ボタンが表示されるまで待つ
+        composeTestRule.waitUntilAtLeastOneExists(hasText(context().getString(R.string.save)), 5_000)
 
         composeTestRule.onNodeWithText("7:00").assertExists()
         composeTestRule.onNodeWithText("9:00").assertExists()
-        composeTestRule.onNodeWithText("5分").assertIsOn()
+        composeTestRule.onNodeWithText(context().getString(R.string.term_edit_interval_constant_summary, 5)).assertExists()
 
         val restored = runBlocking { repository.getById(id) }
         assertEquals(5, restored?.startIntervalMinutes)
+    }
+
+    // 「このタームを終了」を押すと確認ダイアログが開き、終了するとskippedSessionStartが設定されることを保証する
+    @Test
+    fun このタームを終了で確認が開き実行すると鳴らなくなる() {
+        val now = java.time.ZonedDateTime.now()
+        val minuteOfDay = now.hour * 60 + now.minute
+        val startMinutes = (minuteOfDay - 10).coerceAtLeast(0)
+        val endMinutes = (minuteOfDay + 60).coerceAtMost(1439)
+        val id = runBlocking {
+            repository.add(
+                defaultTestSchedule(
+                    startMinutes = startMinutes,
+                    endMinutes = endMinutes,
+                    intervalMinutes = 5,
+                ),
+            )
+        }
+
+        composeTestRule.setContent { ListEditHost(repository) }
+
+        // 「このタームを終了」ボタンを押す
+        composeTestRule.waitUntilAtLeastOneExists(hasText(context().getString(R.string.home_end_term)), 5_000)
+        composeTestRule.onNodeWithText(context().getString(R.string.home_end_term)).performClick()
+
+        // ターム終了確認ダイアログの見出しが表示される
+        composeTestRule.waitUntilAtLeastOneExists(hasText(context().getString(R.string.term_end_title)), 5_000)
+
+        // 「終了する」を押す
+        composeTestRule.onNodeWithText(context().getString(R.string.term_end_confirm)).performClick()
+
+        // リポジトリのskippedSessionStartが設定されたことを確認
+        composeTestRule.waitUntil(5_000) {
+            val schedule = runBlocking { repository.getById(id) }
+            schedule?.skippedSessionStart != null
+        }
+        val updated = runBlocking { repository.getById(id) }
+        assertEquals(now.toLocalDate(), updated?.skippedSessionStart)
     }
 
     private fun context() = composeTestRule.activity

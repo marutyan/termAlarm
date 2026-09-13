@@ -108,6 +108,43 @@
     <string name="delete_alarm">このアラームを削除</string>
     <string name="delete_alarm_confirm_message">このアラームを削除します。この操作は元に戻せません。</string>
 
+    <!-- 新ターム編集画面 -->
+    <string name="term_edit_interval_label">間隔</string>
+    <string name="term_edit_challenge_label">問題</string>
+    <string name="term_edit_wake_check_label">二度寝チェック</string>
+    <string name="term_edit_wake_check_desc">ターム終了の5分後に再度鳴動</string>
+    <string name="term_edit_delete">削除</string>
+    <string name="term_edit_interval_constant">等間隔</string>
+    <string name="term_edit_interval_accelerate">加速</string>
+    <string name="term_edit_interval_start">開始</string>
+    <string name="term_edit_interval_end">終了</string>
+    <string name="term_edit_interval_other">他</string>
+    <string name="term_edit_interval_accelerate_summary">加速 %1$d→%2$d分</string>
+    <string name="term_edit_interval_constant_summary">等間隔 %1$d分</string>
+    <string name="term_edit_interval_accelerate_note">全%1$d回。終了時刻には必ず鳴動します</string>
+    <string name="term_edit_interval_constant_note">全%1$d回</string>
+    <string name="term_edit_custom_interval_title">間隔を入力</string>
+
+    <!-- 問題選択ダイアログ -->
+    <string name="challenge_timing_never">出さない</string>
+    <string name="challenge_timing_never_desc">押すだけで停止します</string>
+    <string name="challenge_timing_end_only">ターム終了時だけ</string>
+    <string name="challenge_timing_end_only_desc">最後の1回だけ問題を出します。途中は押すだけで停止します</string>
+    <string name="challenge_timing_every_time">毎回</string>
+    <string name="challenge_timing_every_time_desc">鳴動のたびに出題します</string>
+    <string name="challenge_difficulty">難易度</string>
+    <string name="challenge_level_easy">Easy</string>
+    <string name="challenge_level_hard">Hard</string>
+    <string name="challenge_hard_note">Hardは終了に近づくほど出題数が増えます</string>
+    <string name="challenge_summary_format">%1$s · %2$s</string>
+
+    <!-- ターム終了ダイアログ -->
+    <string name="term_end_title">タームを終了する</string>
+    <string name="term_end_remaining_note">本日の残り%1$d回は鳴動しません</string>
+    <string name="term_end_description">本日分のみ終了します。明日以降は通常どおり鳴動します。\n二度寝チェックも行いません。</string>
+    <string name="term_end_cancel">やめる</string>
+    <string name="term_end_confirm">終了する</string>
+
     <!-- 権限 -->
     <string name="notification_permission_banner">通知を許可すると、アラームの通知を確実に受け取れます</string>
     <string name="exact_alarm_permission_banner">正確なアラームの権限が無効になっています。設定から許可してください</string>

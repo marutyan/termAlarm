@@ -1,11 +1,12 @@
 package com.marutyan.termalarm.ui.alarmedit
 
-import com.marutyan.termalarm.domain.ChallengeTiming
 import com.marutyan.termalarm.domain.ChallengeLevel
+import com.marutyan.termalarm.domain.ChallengeTiming
+import java.time.DayOfWeek
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.DayOfWeek
 
 class AlarmEditViewModelKtTest {
 
@@ -39,9 +40,59 @@ class AlarmEditViewModelKtTest {
     }
 
     @Test
+    fun `加速設定時の開始間隔と終了間隔がAlarmScheduleに反映される`() {
+        val state = AlarmEditUiState(
+            id = 1L,
+            startMinutes = 420,
+            endMinutes = 540,
+            isVariableInterval = true,
+            startIntervalMinutes = 10,
+            endIntervalMinutes = 3,
+            repeatDays = emptySet(),
+            label = "加速テスト",
+            enabled = true,
+        )
+        val schedule = state.toSchedule(existingSkippedSessionStart = null)
+
+        assertEquals(10, schedule.startIntervalMinutes)
+        assertEquals(3, schedule.endIntervalMinutes)
+    }
+
+    @Test
+    fun `等間隔設定時は終了間隔が開始間隔と同じ値になる`() {
+        val state = AlarmEditUiState(
+            id = 1L,
+            startMinutes = 420,
+            endMinutes = 540,
+            isVariableInterval = false,
+            startIntervalMinutes = 15,
+            endIntervalMinutes = 5, // isVariableIntervalがfalseなら無視されて15になる
+            repeatDays = emptySet(),
+            label = "等間隔テスト",
+            enabled = true,
+        )
+        val schedule = state.toSchedule(existingSkippedSessionStart = null)
+
+        assertEquals(15, schedule.startIntervalMinutes)
+        assertEquals(15, schedule.endIntervalMinutes)
+    }
+
+    @Test
     fun `新規作成時のIDが0になる`() {
         val state = AlarmEditUiState(id = null)
         val schedule = state.toSchedule(existingSkippedSessionStart = null)
         assertEquals(0L, schedule.id)
+    }
+
+    @Test
+    fun `鳴動時刻のプレビュー文字列が2行以内で省略される`() {
+        val times = listOf(
+            "7:00", "7:10", "7:19", "7:27", "7:34",
+            "7:40", "7:45", "7:50", "7:54", "7:58", "8:00",
+        )
+        val preview = formatOccurrenceTimesPreview(times)
+        assertTrue(preview.contains("\n"))
+        assertTrue(preview.contains("\u2026 8:00"))
+        assertEquals(2, preview.lines().size)
     }
 }

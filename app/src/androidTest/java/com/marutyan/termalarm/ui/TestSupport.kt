@@ -2,6 +2,7 @@ package com.marutyan.termalarm.ui
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
@@ -113,12 +114,30 @@ private sealed interface ListEditScreen {
 internal fun ListEditHost(repository: AlarmRepository) {
     val context = testAppContext()
     var screen by remember { mutableStateOf<ListEditScreen>(ListEditScreen.List) }
+    var termEndAlarmId by remember { mutableStateOf<Long?>(null) }
+
     when (val current = screen) {
-        ListEditScreen.List -> HomeScreen(
-            viewModel = remember { HomeViewModel(repository) },
-            onAddTerm = { screen = ListEditScreen.Edit(null) },
-            onEditTerm = { id -> screen = ListEditScreen.Edit(id) },
-        )
+        ListEditScreen.List -> {
+            val homeViewModel = remember { HomeViewModel(repository) }
+            val terms by homeViewModel.terms.collectAsState(initial = emptyList())
+            HomeScreen(
+                viewModel = homeViewModel,
+                onAddTerm = { screen = ListEditScreen.Edit(null) },
+                onEditTerm = { id -> screen = ListEditScreen.Edit(id) },
+                onEndTodayTerm = { id -> termEndAlarmId = id },
+            )
+            termEndAlarmId?.let { id ->
+                val targetSchedule = terms.find { it.id == id }
+                if (targetSchedule != null) {
+                    com.marutyan.termalarm.ui.termend.TermEndDialog(
+                        schedule = targetSchedule,
+                        repository = repository,
+                        now = java.time.ZonedDateTime.now(),
+                        onDismiss = { termEndAlarmId = null },
+                    )
+                }
+            }
+        }
         is ListEditScreen.Edit -> AlarmEditScreen(
             viewModel = remember(current.id) { AlarmEditViewModel(repository, context, current.id) },
             onClose = { screen = ListEditScreen.List },
