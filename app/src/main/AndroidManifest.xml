@@ -163,6 +163,16 @@
             </intent-filter>
         </receiver>
 
+        <!-- ウィジェットを置くときに見た目を選ばせる画面 -->
+        <activity
+            android:name=".widget.WidgetConfigActivity"
+            android:exported="true"
+            android:theme="@style/Theme.TermAlarm">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <!-- ホーム画面へ置く時計ウィジェット -->
         <receiver
             android:name=".widget.TermAlarmWidgetReceiver"

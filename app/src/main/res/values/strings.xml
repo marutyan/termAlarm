@@ -376,4 +376,10 @@
     <!-- ウィジェット -->
     <string name="widget_description">時刻と次の鳴動を出す時計</string>
     <string name="widget_remaining">残り%1$d回</string>
+    <string name="widget_config_title">ウィジェットの見た目</string>
+    <string name="widget_config_color">色</string>
+    <string name="widget_config_background">背景</string>
+    <string name="widget_config_solid">無地</string>
+    <string name="widget_config_transparent">透明</string>
+    <string name="widget_config_decide">決定</string>
 </resources>

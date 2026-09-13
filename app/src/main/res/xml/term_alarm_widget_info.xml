@@ -11,4 +11,5 @@
     android:updatePeriodMillis="1800000"
     android:widgetCategory="home_screen"
     android:description="@string/widget_description"
-    android:initialLayout="@layout/glance_default_loading_layout" />
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:configure="com.marutyan.termalarm.widget.WidgetConfigActivity" />

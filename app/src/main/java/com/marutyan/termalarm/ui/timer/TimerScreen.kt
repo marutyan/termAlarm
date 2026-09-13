@@ -106,7 +106,7 @@ private fun Modifier.dashedBorder(
  * タイマータブの画面。design/Timer.dc.html を再現する。
  * 見出し「タイマー」(28sp、太さ300)、動作中タイマーのカード一覧(角丸16dp)、
  * 一覧下部の「タイマーを追加」破線ボタン(56dp)を配置する。
- * タイマーが0件のとき、または追加ボタン押下時はテンキーによる追加画面(TimerAddScreen)を表示する。
+ * 追加ボタンを押したときだけテンキーによる追加画面(TimerAddScreen)を表示する。0件のときは追加ボタンだけを出す。
  */
 @Composable
 fun TimerScreen(
@@ -125,7 +125,7 @@ fun TimerScreen(
     }
 
     // タイマーが1件も無いときは直接テンキー入力画面を表示する
-    val showKeypad = showAddScreen || sortedTimers.isEmpty()
+    val showKeypad = showAddScreen
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -148,7 +148,7 @@ fun TimerScreen(
                         viewModel.start(h, m, s)
                         showAddScreen = false
                     },
-                    onClose = if (sortedTimers.isEmpty()) null else ({ showAddScreen = false }),
+                    onClose = { showAddScreen = false },
                 )
             } else {
                 Column(

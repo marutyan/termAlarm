@@ -9,6 +9,11 @@ import androidx.glance.GlanceTheme
 import androidx.glance.LocalContext
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.currentState
+import androidx.glance.state.GlanceStateDefinition
+import androidx.glance.state.PreferencesGlanceStateDefinition
+import androidx.datastore.preferences.core.Preferences
 import androidx.glance.appwidget.SizeMode
 import android.content.Intent
 import androidx.glance.appwidget.action.actionStartActivity
@@ -29,10 +34,6 @@ import com.marutyan.termalarm.MainActivity
 import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.domain.nextTrigger
 import com.marutyan.termalarm.domain.remainingOccurrenceCount
-import com.marutyan.termalarm.ui.theme.NavyOnSurface
-import com.marutyan.termalarm.ui.theme.NavyPrimary
-import com.marutyan.termalarm.ui.theme.NavySubtleText
-import com.marutyan.termalarm.ui.theme.NavySurface
 import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -62,11 +63,15 @@ class TermAlarmWidget : GlanceAppWidget() {
     // 置かれた大きさに応じて中身を変えるため、システムに実際の大きさを渡してもらう
     override val sizeMode: SizeMode = SizeMode.Exact
 
+    // 配色と背景の選択をウィジェットごとに保存するため、Preferencesを状態として持つ
+    override val stateDefinition: GlanceStateDefinition<Preferences> = PreferencesGlanceStateDefinition
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val content = loadContent(context)
         provideContent {
+            val palette = widgetPalette(currentState<Preferences>())
             GlanceTheme {
-                WidgetBody(content)
+                WidgetBody(content, palette)
             }
         }
     }
@@ -91,11 +96,11 @@ class TermAlarmWidget : GlanceAppWidget() {
 
 // ウィジェットの中身。押すとアプリが開く
 @androidx.compose.runtime.Composable
-private fun WidgetBody(content: WidgetContent) {
+private fun WidgetBody(content: WidgetContent, palette: WidgetPalette) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(NavySurface)
+            .background(palette.background)
             .cornerRadius(22.dp)
             .padding(horizontal = 16.dp, vertical = 14.dp)
             .clickable(actionStartActivity(Intent(LocalContext.current, MainActivity::class.java))),
@@ -104,36 +109,36 @@ private fun WidgetBody(content: WidgetContent) {
     ) {
         Text(
             text = content.date,
-            style = TextStyle(color = androidx.glance.unit.ColorProvider(NavySubtleText), fontSize = 13.sp),
+            style = TextStyle(color = androidx.glance.unit.ColorProvider(palette.subtleText), fontSize = 13.sp),
         )
         Spacer(GlanceModifier.height(2.dp))
         Text(
             text = content.time,
             style = TextStyle(
-                color = androidx.glance.unit.ColorProvider(NavyOnSurface),
+                color = androidx.glance.unit.ColorProvider(palette.text),
                 fontSize = 44.sp,
                 fontWeight = FontWeight.Normal,
             ),
         )
         if (content.nextTime != null) {
             Spacer(GlanceModifier.height(4.dp))
-            NextRingRow(content.nextTime, content.remaining)
+            NextRingRow(content.nextTime, content.remaining, palette)
         }
     }
 }
 
 // 次に鳴る時刻と残り回数の行。次の鳴動が無いタームしか無い場合は呼ばれない
 @androidx.compose.runtime.Composable
-private fun NextRingRow(nextTime: String, remaining: Int) {
+private fun NextRingRow(nextTime: String, remaining: Int, palette: WidgetPalette) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = nextTime,
-            style = TextStyle(color = androidx.glance.unit.ColorProvider(NavyPrimary), fontSize = 14.sp),
+            style = TextStyle(color = androidx.glance.unit.ColorProvider(palette.accent), fontSize = 14.sp),
         )
         if (remaining > 0) {
             Text(
                 text = "  残り${remaining}回",
-                style = TextStyle(color = androidx.glance.unit.ColorProvider(NavySubtleText), fontSize = 12.sp),
+                style = TextStyle(color = androidx.glance.unit.ColorProvider(palette.subtleText), fontSize = 12.sp),
             )
         }
     }
