@@ -473,14 +473,38 @@ data class AlarmSchedule(
     val endIntervalMinutes: Int,    // 1以上。範囲の終わりの間隔。startと同値なら等間隔
     val repeatDays: Set<DayOfWeek>, // 空集合なら「次の1回だけ」
     val label: String,            // 既定は空。付けなければ画面には時刻の範囲だけが出る
-    val soundUri: String?,          // null ならシステム既定のアラーム音
-    val vibrate: Boolean,
     val enabled: Boolean,
     val challengeTiming: ChallengeTiming, // NEVER / END_ONLY / EVERY_TIME
     val challenge: ChallengeLevel,  // EASY / HARD。timingがNEVERなら使わない
-    val wakeCheckMinutes: Int?,     // ターム終了後、二度寝チェックまでの分数。null なら行わない
+    val wakeCheck: Boolean,         // ターム終了後に二度寝チェックを行うか
     val skippedSessionStart: LocalDate?, // 「タームを終了」で終了させたセッションの開始日
 )
+
+タームが持つのは「いつ・どれだけの頻度で鳴らすか」と「どう止めさせるか」だけにする。
+音、バイブ、二度寝チェックまでの分数のように、**タームごとに変える意味が薄いものは
+アプリ全体の設定へ置く**。タームの編集画面を短く保つため。
+
+## アプリ全体の設定
+
+```kotlin
+// アプリ全体の設定。タームごとに変える意味が薄いものをここへ集める
+data class AppSettings(
+    val alarmSoundUri: String?,      // null ならシステム既定のアラーム音
+    val vibration: Boolean,          // 鳴動時に振動するか
+    val fadeInSeconds: Int,          // 1回の鳴動の中で音量を上げきるまでの秒数
+    val silenceAfterMinutes: Int?,   // 放置したとき自動で止まるまでの分数。null なら止めない
+    val wakeCheckMinutes: Int,       // ターム終了後、二度寝チェックまでの分数。既定5
+    val enabledGames: Set<GameKind>, // 出題に使うミニゲームの種類
+    val theme: AppTheme,             // NAVY / LIGHT / BLACK / DYNAMIC
+)
+```
+
+`silenceAfterMinutes` の既定は `null`（自動で止めない）。
+止めるまで鳴り続けるのが、朝に弱い人のためのアラームとして素直なため。
+
+**スヌーズは作らない。** 範囲と間隔で繰り返し鳴る仕組みが、スヌーズの役割をすでに果たす。
+5分間隔なら止めても5分後に鳴るため、5分スヌーズは次回の鳴動と重なって意味を持たない。
+`SNOOZE_ALARM` インテントを受けた場合は、その回を止めるだけにする。
 ```
 
 `intervalMinutes` の単一値は `startIntervalMinutes == endIntervalMinutes` で表す。
@@ -508,7 +532,7 @@ data class AlarmSchedule(
 | `SET_ALARM` | 音声や他アプリから単発アラームを作る。開始と終了が同じアラームとして受ける |
 | `SHOW_ALARMS` | アラーム一覧を開く |
 | `DISMISS_ALARM` | 鳴っているアラームを止める |
-| `SNOOZE_ALARM` | スヌーズする |
+| `SNOOZE_ALARM` | 受けるが、スヌーズは作らないため、その回を止めるだけにする |
 
 ## 権限
 
