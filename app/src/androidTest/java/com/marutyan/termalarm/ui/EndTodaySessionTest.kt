@@ -18,8 +18,6 @@ import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.domain.ChallengeTiming
 import com.marutyan.termalarm.domain.GameQuestion
-import com.marutyan.termalarm.ui.alarmlist.AlarmListScreen
-import com.marutyan.termalarm.ui.alarmlist.AlarmListViewModel
 import com.marutyan.termalarm.ui.skipgame.SkipGameScreen
 import com.marutyan.termalarm.ui.skipgame.SkipGameViewModel
 import kotlin.random.Random
@@ -75,59 +73,7 @@ class EndTodaySessionTest {
 
     private fun string(resId: Int) = composeTestRule.activity.getString(resId)
 
-    // 出題設定がNEVERのアラームは、一覧から「今日はもう止める」→確認ダイアログの承認だけでゲーム無しに完了することを保証する
-    @Test
-    fun 出題なしなら確認だけで当日終了する() {
-        val id = runBlocking { repository.add(defaultTestSchedule(challengeTiming = ChallengeTiming.NEVER, startMinutes = 0, endMinutes = 23 * 60 + 59)) }
-        var navigatedToEndTodayGame = false
-        composeTestRule.setContent {
-            AlarmListScreen(
-                viewModel = remember { AlarmListViewModel(repository, testAppContext()) },
-                onAddAlarm = {},
-                onEditAlarm = {},
-                onOpenAbout = {},
-                onOpenPrivacyPolicy = {},
-                onOpenSettings = {},
-                onNavigateToEndTodayGame = { navigatedToEndTodayGame = true },
-                exactAlarmBanner = {},
-                notificationPermissionBanner = {},
-            )
-        }
-        // 一覧のカードは動きを付けて出るため、押せる状態になるまで待つ
-        composeTestRule.waitUntilAtLeastOneExists(hasText(string(R.string.ringing_skip_today)), 5_000)
-        composeTestRule.onNodeWithText(string(R.string.ringing_skip_today)).performClick()
-        // 出題設定がNEVERなのでゲーム画面へは遷移せず、確認ダイアログが出るはず
-        assertTrue(!navigatedToEndTodayGame)
-        composeTestRule.onNodeWithText(string(R.string.end_today_session_confirm)).performClick()
 
-        composeTestRule.waitUntil(5_000) { runBlocking { repository.getById(id)?.skippedSessionStart != null } }
-    }
-
-    // 出題設定があるアラームは、一覧の「今日はもう止める」から確認ダイアログを経ずゲーム画面へ遷移することを保証する
-    @Test
-    fun 出題ありならゲーム画面へ遷移する() {
-        runBlocking { repository.add(defaultTestSchedule(challengeTiming = ChallengeTiming.EVERY_TIME, startMinutes = 0, endMinutes = 23 * 60 + 59)) }
-        var navigatedId: Long? = null
-        composeTestRule.setContent {
-            AlarmListScreen(
-                viewModel = remember { AlarmListViewModel(repository, testAppContext()) },
-                onAddAlarm = {},
-                onEditAlarm = {},
-                onOpenAbout = {},
-                onOpenPrivacyPolicy = {},
-                onOpenSettings = {},
-                onNavigateToEndTodayGame = { id -> navigatedId = id },
-                exactAlarmBanner = {},
-                notificationPermissionBanner = {},
-            )
-        }
-        // 一覧のカードは動きを付けて出るため、押せる状態になるまで待つ
-        composeTestRule.waitUntilAtLeastOneExists(hasText(string(R.string.ringing_skip_today)), 5_000)
-        composeTestRule.onNodeWithText(string(R.string.ringing_skip_today)).performClick()
-        // 確認ダイアログを経由せず直接遷移するので、確認ボタンは存在しない
-        composeTestRule.onNodeWithText(string(R.string.end_today_session_confirm)).assertDoesNotExist()
-        assertNotNull(navigatedId)
-    }
 
     // ゲームに正解すると当日終了(skippedSessionStartの書き込み)が実行されることを保証する
     @Test

@@ -42,6 +42,32 @@
     <string name="end_today_session_confirm">今日は止める</string>
     <string name="end_today_session_confirm_message">「%1$s」の今日の鳴動(最大%2$d回)をすべて止めます。次回は通常どおり鳴ります。</string>
 
+    <!-- 縦ナビゲーション項目 -->
+    <string name="nav_terms">ターム</string>
+    <string name="nav_standard_alarm">通常アラーム</string>
+    <string name="nav_record">記録</string>
+    <string name="nav_timer">タイマー</string>
+    <string name="nav_stopwatch">ストップウォッチ</string>
+    <string name="nav_settings">設定</string>
+
+    <!-- ホーム画面 -->
+    <string name="home_next_trigger_label">次の鳴動</string>
+    <string name="home_remaining_count">残り%1$d回</string>
+    <string name="home_end_term">このタームを終了</string>
+    <string name="home_section_terms">ターム</string>
+    <string name="home_add_term">タームを追加</string>
+    <string name="home_term_switch_description">%1$sのタームの有効無効切り替え</string>
+    <string name="day_monday_short">月</string>
+    <string name="day_tuesday_short">火</string>
+    <string name="day_wednesday_short">水</string>
+    <string name="day_thursday_short">木</string>
+    <string name="day_friday_short">金</string>
+    <string name="day_saturday_short">土</string>
+    <string name="day_sunday_short">日</string>
+
+    <!-- プレースホルダ画面 -->
+    <string name="placeholder_coming_soon">準備中</string>
+
     <!-- 下部ナビ -->
     <string name="tab_alarm">アラーム</string>
     <string name="tab_clock">時計</string>

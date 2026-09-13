@@ -1,4 +1,4 @@
-package com.marutyan.termalarm.ui.clock
+package com.marutyan.termalarm.ui.home
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -11,9 +11,8 @@ import java.time.ZonedDateTime
 import kotlinx.coroutines.delay
 
 /**
- * 1秒ごとに更新される現在時刻を返す。アナログ表示は秒針が、デジタル表示は秒の数字が動くため、
- * どちらの表示モードでも秒単位の更新が必要(要件「1秒ごとの更新」)。次の秒の頭に合わせて起こし、
- * 無駄な再計算を避ける。
+ * 1秒ごとに更新される現在時刻を購読して提供するComposable関数。
+ * ホーム画面の現在時刻および秒表示を毎秒正確に追従させるために用いる。
  */
 @Composable
 fun rememberCurrentSecond(): ZonedDateTime {

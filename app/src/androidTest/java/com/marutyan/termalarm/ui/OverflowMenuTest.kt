@@ -14,10 +14,6 @@ import com.marutyan.termalarm.data.ClockSettingsRepository
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.data.StopwatchRepository
 import com.marutyan.termalarm.data.TimerRepository
-import com.marutyan.termalarm.ui.alarmlist.AlarmListScreen
-import com.marutyan.termalarm.ui.alarmlist.AlarmListViewModel
-import com.marutyan.termalarm.ui.clock.ClockScreen
-import com.marutyan.termalarm.ui.clock.ClockViewModel
 import com.marutyan.termalarm.ui.stopwatch.StopwatchScreen
 import com.marutyan.termalarm.ui.stopwatch.StopwatchViewModel
 import com.marutyan.termalarm.ui.timer.TimerScreen
@@ -43,8 +39,6 @@ class OverflowMenuTest {
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     private lateinit var db: AlarmDatabase
-    private lateinit var alarmRepository: AlarmRepository
-    private lateinit var clockRepository: ClockSettingsRepository
     private lateinit var timerRepository: TimerRepository
     private lateinit var stopwatchRepository: StopwatchRepository
     private lateinit var settingsRepository: SettingsRepository
@@ -55,10 +49,8 @@ class OverflowMenuTest {
      */
     @Before
     fun setUp() {
-        val (database, alarmRepo) = createTestRepository()
+        val (database, _) = createTestRepository()
         db = database
-        alarmRepository = alarmRepo
-        clockRepository = ClockSettingsRepository(db.clockSettingsDao())
         timerRepository = TimerRepository(db.timerDao())
         stopwatchRepository = StopwatchRepository(db.stopwatchDao())
         settingsRepository = SettingsRepository(db.appSettingsDao())
@@ -92,106 +84,7 @@ class OverflowMenuTest {
         composeTestRule.onNodeWithText(string(R.string.menu_license)).assertExists()
     }
 
-    // アラームタブで「⋮」メニューを開くと3項目(設定・プライバシーポリシー・ライセンス)が表示されることを保証する
-    @Test
-    fun アラームタブでメニューを開くと3項目が表示される() {
-        composeTestRule.setContent {
-            AlarmListScreen(
-                viewModel = remember { AlarmListViewModel(alarmRepository, testAppContext()) },
-                onAddAlarm = {},
-                onEditAlarm = {},
-                onOpenAbout = {},
-                onOpenPrivacyPolicy = {},
-                onOpenSettings = {},
-                onNavigateToEndTodayGame = {},
-                exactAlarmBanner = {},
-                notificationPermissionBanner = {},
-            )
-        }
-        assertThreeMenuItemsExist()
-    }
 
-    // アラームタブの「⋮」メニューの各項目から対応する画面への遷移コールバックが呼ばれることを保証する
-    @Test
-    fun アラームタブのメニューから各項目へ遷移できる() {
-        var openedSettings = false
-        var openedPrivacy = false
-        var openedAbout = false
-
-        composeTestRule.setContent {
-            AlarmListScreen(
-                viewModel = remember { AlarmListViewModel(alarmRepository, testAppContext()) },
-                onAddAlarm = {},
-                onEditAlarm = {},
-                onOpenAbout = { openedAbout = true },
-                onOpenPrivacyPolicy = { openedPrivacy = true },
-                onOpenSettings = { openedSettings = true },
-                onNavigateToEndTodayGame = {},
-                exactAlarmBanner = {},
-                notificationPermissionBanner = {},
-            )
-        }
-
-        // 設定へ遷移
-        composeTestRule.onNodeWithContentDescription(string(R.string.menu_more)).performClick()
-        composeTestRule.onNodeWithText(string(R.string.menu_settings)).performClick()
-        assertTrue("設定コールバックが呼ばれること", openedSettings)
-
-        // プライバシーポリシーへ遷移
-        composeTestRule.onNodeWithContentDescription(string(R.string.menu_more)).performClick()
-        composeTestRule.onNodeWithText(string(R.string.menu_privacy_policy)).performClick()
-        assertTrue("プライバシーポリシーコールバックが呼ばれること", openedPrivacy)
-
-        // ライセンスへ遷移
-        composeTestRule.onNodeWithContentDescription(string(R.string.menu_more)).performClick()
-        composeTestRule.onNodeWithText(string(R.string.menu_license)).performClick()
-        assertTrue("ライセンスコールバックが呼ばれること", openedAbout)
-    }
-
-    // 時計タブで「⋮」メニューを開くと3項目が表示されることを保証する
-    @Test
-    fun 時計タブでメニューを開くと3項目が表示される() {
-        composeTestRule.setContent {
-            ClockScreen(
-                viewModel = remember { ClockViewModel(clockRepository, settingsRepository) },
-                bottomBar = {},
-            )
-        }
-        assertThreeMenuItemsExist()
-    }
-
-    // 時計タブの「⋮」メニューの各項目から対応する画面への遷移コールバックが呼ばれることを保証する
-    @Test
-    fun 時計タブのメニューから各項目へ遷移できる() {
-        var openedSettings = false
-        var openedPrivacy = false
-        var openedAbout = false
-
-        composeTestRule.setContent {
-            ClockScreen(
-                viewModel = remember { ClockViewModel(clockRepository, settingsRepository) },
-                onOpenSettings = { openedSettings = true },
-                onOpenPrivacyPolicy = { openedPrivacy = true },
-                onOpenAbout = { openedAbout = true },
-                bottomBar = {},
-            )
-        }
-
-        // 設定へ遷移
-        composeTestRule.onNodeWithContentDescription(string(R.string.menu_more)).performClick()
-        composeTestRule.onNodeWithText(string(R.string.menu_settings)).performClick()
-        assertTrue("設定コールバックが呼ばれること", openedSettings)
-
-        // プライバシーポリシーへ遷移
-        composeTestRule.onNodeWithContentDescription(string(R.string.menu_more)).performClick()
-        composeTestRule.onNodeWithText(string(R.string.menu_privacy_policy)).performClick()
-        assertTrue("プライバシーポリシーコールバックが呼ばれること", openedPrivacy)
-
-        // ライセンスへ遷移
-        composeTestRule.onNodeWithContentDescription(string(R.string.menu_more)).performClick()
-        composeTestRule.onNodeWithText(string(R.string.menu_license)).performClick()
-        assertTrue("ライセンスコールバックが呼ばれること", openedAbout)
-    }
 
     // タイマータブで「⋮」メニューを開くと3項目が表示されることを保証する
     @Test

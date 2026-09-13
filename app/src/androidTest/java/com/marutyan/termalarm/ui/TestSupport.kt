@@ -27,8 +27,8 @@ import com.marutyan.termalarm.domain.ChallengeLevel
 import java.time.DayOfWeek
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditScreen
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditViewModel
-import com.marutyan.termalarm.ui.alarmlist.AlarmListScreen
-import com.marutyan.termalarm.ui.alarmlist.AlarmListViewModel
+import com.marutyan.termalarm.ui.home.HomeScreen
+import com.marutyan.termalarm.ui.home.HomeViewModel
 
 // UIテスト共通の下ごしらえ。各テストで3回以上使うため1箇所にまとめる(app/src/main/には触れない)。
 
@@ -114,16 +114,10 @@ internal fun ListEditHost(repository: AlarmRepository) {
     val context = testAppContext()
     var screen by remember { mutableStateOf<ListEditScreen>(ListEditScreen.List) }
     when (val current = screen) {
-        ListEditScreen.List -> AlarmListScreen(
-            viewModel = remember { AlarmListViewModel(repository, context) },
-            onAddAlarm = { screen = ListEditScreen.Edit(null) },
-            onEditAlarm = { id -> screen = ListEditScreen.Edit(id) },
-            onOpenAbout = {},
-            onOpenPrivacyPolicy = {},
-            onOpenSettings = {},
-            onNavigateToEndTodayGame = {},
-            exactAlarmBanner = {},
-            notificationPermissionBanner = {},
+        ListEditScreen.List -> HomeScreen(
+            viewModel = remember { HomeViewModel(repository) },
+            onAddTerm = { screen = ListEditScreen.Edit(null) },
+            onEditTerm = { id -> screen = ListEditScreen.Edit(id) },
         )
         is ListEditScreen.Edit -> AlarmEditScreen(
             viewModel = remember(current.id) { AlarmEditViewModel(repository, context, current.id) },

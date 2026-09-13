@@ -1,12 +1,14 @@
-package com.marutyan.termalarm.ui.alarmlist
+package com.marutyan.termalarm.ui.common
 
+import com.marutyan.termalarm.ui.alarmlist.orderedDaysOfWeek
 import java.time.DayOfWeek
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-// orderedDaysOfWeekは曜日チップの並び順（月曜始まり固定）。
-// ui/alarmedit/AlarmEditScreen.ktでも同じ関数を使い回すため、ここでまとめて検証する。
-class AlarmListScreenKtTest {
+/**
+ * AlarmListCompatの互換関数orderedDaysOfWeekの単体テスト。
+ */
+class AlarmListCompatTest {
 
     @Test
     fun `月曜始まりでDayOfWeekの並びそのまま`() {
