@@ -22,7 +22,8 @@ private fun schedule(
     repeatDays: Set<DayOfWeek> = emptySet(),
     enabled: Boolean = true,
     skippedSessionStart: LocalDate? = null,
-    challenge: ChallengeLevel = ChallengeLevel.NONE,
+    challengeTiming: ChallengeTiming = ChallengeTiming.NEVER,
+    challenge: ChallengeLevel = ChallengeLevel.EASY,
     wakeCheckMinutes: Int? = null,
 ) = AlarmSchedule(
     id = 1L,
@@ -36,6 +37,7 @@ private fun schedule(
     vibrate = true,
     enabled = enabled,
     skippedSessionStart = skippedSessionStart,
+    challengeTiming = challengeTiming,
     challenge = challenge,
     wakeCheckMinutes = wakeCheckMinutes,
 )
@@ -546,11 +548,7 @@ class ScheduleCalculatorTest {
     // --- 解除チャレンジの問題数 ---
 
     @Test
-    fun `問題数 NONEで0、EASYで常に1になる`() {
-        assertEquals(0, challengeQuestionCount(ChallengeLevel.NONE, 0.0))
-        assertEquals(0, challengeQuestionCount(ChallengeLevel.NONE, 0.5))
-        assertEquals(0, challengeQuestionCount(ChallengeLevel.NONE, 1.0))
-
+    fun `問題数 EASYで常に1になる`() {
         assertEquals(1, challengeQuestionCount(ChallengeLevel.EASY, 0.0))
         assertEquals(1, challengeQuestionCount(ChallengeLevel.EASY, 0.5))
         assertEquals(1, challengeQuestionCount(ChallengeLevel.EASY, 1.0))
@@ -568,6 +566,90 @@ class ScheduleCalculatorTest {
         // 境界値はその値を含む側が大きい方（1/3 <= p < 2/3 なら2、2/3 <= p なら3）
         assertEquals(2, challengeQuestionCount(ChallengeLevel.HARD, 1.0 / 3.0))
         assertEquals(3, challengeQuestionCount(ChallengeLevel.HARD, 2.0 / 3.0))
+    }
+
+    @Test
+    fun `NEVER のとき、どの鳴動でも出題数が0になること`() {
+        // 7:00〜7:30の10分間隔（全4回）
+        val schedule = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 7 * 60 + 30,
+            startIntervalMinutes = 10,
+            challengeTiming = ChallengeTiming.NEVER,
+            challenge = ChallengeLevel.HARD,
+        )
+        assertEquals(0, challengeQuestionCount(schedule, 0))
+        assertEquals(0, challengeQuestionCount(schedule, 1))
+        assertEquals(0, challengeQuestionCount(schedule, 2))
+        assertEquals(0, challengeQuestionCount(schedule, 3))
+    }
+
+    @Test
+    fun `END_ONLY のとき、セッションの最後の鳴動だけ出題数が1以上になり、途中は0になること`() {
+        // 7:00〜7:30の10分間隔（全4回、最後はindex 3）
+        val schedule = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 7 * 60 + 30,
+            startIntervalMinutes = 10,
+            challengeTiming = ChallengeTiming.END_ONLY,
+            challenge = ChallengeLevel.EASY,
+        )
+        assertEquals(0, challengeQuestionCount(schedule, 0))
+        assertEquals(0, challengeQuestionCount(schedule, 1))
+        assertEquals(0, challengeQuestionCount(schedule, 2))
+        assertEquals(1, challengeQuestionCount(schedule, 3))
+    }
+
+    @Test
+    fun `END_ONLY かつ HARD のとき、最後の鳴動の出題数が進捗率に応じた数（最後なので3）になること`() {
+        // 7:00〜7:30の10分間隔（全4回、最後はindex 3で進捗率1.0）
+        val schedule = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 7 * 60 + 30,
+            startIntervalMinutes = 10,
+            challengeTiming = ChallengeTiming.END_ONLY,
+            challenge = ChallengeLevel.HARD,
+        )
+        assertEquals(0, challengeQuestionCount(schedule, 0))
+        assertEquals(0, challengeQuestionCount(schedule, 1))
+        assertEquals(0, challengeQuestionCount(schedule, 2))
+        assertEquals(3, challengeQuestionCount(schedule, 3))
+    }
+
+    @Test
+    fun `EVERY_TIME かつ EASY のとき、どの鳴動でも1問になること`() {
+        // 7:00〜7:30の10分間隔（全4回）
+        val schedule = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 7 * 60 + 30,
+            startIntervalMinutes = 10,
+            challengeTiming = ChallengeTiming.EVERY_TIME,
+            challenge = ChallengeLevel.EASY,
+        )
+        assertEquals(1, challengeQuestionCount(schedule, 0))
+        assertEquals(1, challengeQuestionCount(schedule, 1))
+        assertEquals(1, challengeQuestionCount(schedule, 2))
+        assertEquals(1, challengeQuestionCount(schedule, 3))
+    }
+
+    @Test
+    fun `EVERY_TIME かつ HARD のとき、進捗率に応じて1〜3問になること`() {
+        // 7:00〜7:30の10分間隔（全4回）
+        // index 0: 経過0分 / 30分 = 0.0 -> 1問
+        // index 1: 経過10分 / 30分 = 1/3 (0.333...) -> 2問
+        // index 2: 経過20分 / 30分 = 2/3 (0.666...) -> 3問
+        // index 3: 経過30分 / 30分 = 1.0 -> 3問
+        val schedule = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 7 * 60 + 30,
+            startIntervalMinutes = 10,
+            challengeTiming = ChallengeTiming.EVERY_TIME,
+            challenge = ChallengeLevel.HARD,
+        )
+        assertEquals(1, challengeQuestionCount(schedule, 0))
+        assertEquals(2, challengeQuestionCount(schedule, 1))
+        assertEquals(3, challengeQuestionCount(schedule, 2))
+        assertEquals(3, challengeQuestionCount(schedule, 3))
     }
 
     // --- 範囲終了後の起床確認 ---

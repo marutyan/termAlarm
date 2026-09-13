@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "33bf8e31a4d1c377e311e9281c4ba756",
+    "identityHash": "8f8c7e8f0b97ffc9fc79841d18d30ad8",
     "entities": [
       {
         "tableName": "alarm_schedule",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `startMinutes` INTEGER NOT NULL, `endMinutes` INTEGER NOT NULL, `startIntervalMinutes` INTEGER NOT NULL, `endIntervalMinutes` INTEGER NOT NULL, `repeatDays` INTEGER NOT NULL, `label` TEXT NOT NULL, `soundUri` TEXT, `vibrate` INTEGER NOT NULL, `enabled` INTEGER NOT NULL, `skippedSessionStart` INTEGER, `skipRequiresApp` INTEGER NOT NULL, `skipGame` INTEGER NOT NULL, `snoozeMinutes` INTEGER, `challenge` TEXT NOT NULL, `wakeCheckMinutes` INTEGER)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `startMinutes` INTEGER NOT NULL, `endMinutes` INTEGER NOT NULL, `startIntervalMinutes` INTEGER NOT NULL, `endIntervalMinutes` INTEGER NOT NULL, `repeatDays` INTEGER NOT NULL, `label` TEXT NOT NULL, `soundUri` TEXT, `vibrate` INTEGER NOT NULL, `enabled` INTEGER NOT NULL, `skippedSessionStart` INTEGER, `skipRequiresApp` INTEGER NOT NULL, `skipGame` INTEGER NOT NULL, `snoozeMinutes` INTEGER, `challengeTiming` TEXT NOT NULL, `challenge` TEXT NOT NULL, `wakeCheckMinutes` INTEGER)",
         "fields": [
           {
             "fieldPath": "id",
@@ -88,6 +88,12 @@
             "fieldPath": "snoozeMinutes",
             "columnName": "snoozeMinutes",
             "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "challengeTiming",
+            "columnName": "challengeTiming",
+            "affinity": "TEXT",
+            "notNull": true
           },
           {
             "fieldPath": "challenge",
@@ -350,7 +356,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '33bf8e31a4d1c377e311e9281c4ba756')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8f8c7e8f0b97ffc9fc79841d18d30ad8')"
     ]
   }
 }

@@ -4,12 +4,13 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.marutyan.termalarm.domain.AlarmSchedule
 import com.marutyan.termalarm.domain.ChallengeLevel
+import com.marutyan.termalarm.domain.ChallengeTiming
 import java.time.DayOfWeek
 import java.time.LocalDate
 
 /**
  * AlarmSchedule をRoomで永続化するためのテーブル定義。
- * repeatDays(Set<DayOfWeek>)、skippedSessionStart(LocalDate)、challenge(ChallengeLevel)は
+ * repeatDays(Set<DayOfWeek>)、skippedSessionStart(LocalDate)、challengeTiming(ChallengeTiming)、challenge(ChallengeLevel)は
  * Convertersに登録したTypeConverterでDB用のプリミティブ型に変換される。
  * domain.AlarmScheduleとの相互変換はtoDomain()/toEntity()で行い、domain層をRoomに依存させない。
  */
@@ -30,6 +31,7 @@ data class AlarmScheduleEntity(
     val skipRequiresApp: Boolean = true, // 当日終了をアプリからのみ許すか（既定true）
     val skipGame: Boolean = false, // 当日終了の前にゲームを1問挟むか（既定false）
     val snoozeMinutes: Int? = null, // スヌーズの分数。nullなら無効（既定null）
+    val challengeTiming: ChallengeTiming = ChallengeTiming.NEVER,
     val challenge: ChallengeLevel,
     val wakeCheckMinutes: Int?,
 )
@@ -50,6 +52,7 @@ internal fun AlarmScheduleEntity.toDomain() = AlarmSchedule(
     skipRequiresApp = skipRequiresApp,
     skipGame = skipGame,
     snoozeMinutes = snoozeMinutes,
+    challengeTiming = challengeTiming,
     challenge = challenge,
     wakeCheckMinutes = wakeCheckMinutes,
 )
@@ -70,6 +73,7 @@ internal fun AlarmSchedule.toEntity() = AlarmScheduleEntity(
     skipRequiresApp = skipRequiresApp,
     skipGame = skipGame,
     snoozeMinutes = snoozeMinutes,
+    challengeTiming = challengeTiming,
     challenge = challenge,
     wakeCheckMinutes = wakeCheckMinutes,
 )

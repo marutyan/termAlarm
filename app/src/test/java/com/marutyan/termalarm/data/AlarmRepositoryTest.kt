@@ -2,6 +2,7 @@ package com.marutyan.termalarm.data
 
 import com.marutyan.termalarm.domain.AlarmSchedule
 import com.marutyan.termalarm.domain.ChallengeLevel
+import com.marutyan.termalarm.domain.ChallengeTiming
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -85,6 +86,27 @@ class AlarmRepositoryTest {
         val loaded = repository.getById(id)
         assertEquals(ChallengeLevel.HARD, loaded?.challenge)
         assertEquals(15, loaded?.wakeCheckMinutes)
+    }
+
+    /**
+     * 解除チャレンジの出題タイミングが正しく保存され復元されることを検証する。
+     * 出題タイミング設定がDBに永続化され、設定変更後も意図したタイミングで出題されることを保証するために必要。
+     */
+    @Test
+    fun `challengeTimingが保存して読み直しても保たれる`() = runTest {
+        val repository = AlarmRepository(FakeAlarmDao())
+        val original = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 9 * 60,
+        ).copy(
+            challengeTiming = ChallengeTiming.END_ONLY,
+            challenge = ChallengeLevel.HARD,
+        )
+        val id = repository.add(original)
+
+        val loaded = repository.getById(id)
+        assertEquals(ChallengeTiming.END_ONLY, loaded?.challengeTiming)
+        assertEquals(ChallengeLevel.HARD, loaded?.challenge)
     }
 
     /**

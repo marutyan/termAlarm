@@ -232,12 +232,11 @@ fun occurrenceProgress(schedule: AlarmSchedule, occurrenceIndex: Int): Double {
 }
 
 /**
- * 解除チャレンジの強さと進捗率 progress (0.0..1.0) から、その回に出題する問題数を返す。
+ * 解除チャレンジの難易度と進捗率 progress (0.0..1.0) から、出題時の問題数を返す。
  * 朝の二度寝を防ぐため、HARD では進捗に応じて 1〜3 問を出題し、境界値（1/3, 2/3）はその値を含む側が大きい方の問題数となる。
  */
 fun challengeQuestionCount(challenge: ChallengeLevel, progress: Double): Int =
     when (challenge) {
-        ChallengeLevel.NONE -> 0
         ChallengeLevel.EASY -> 1
         ChallengeLevel.HARD -> when {
             progress < 1.0 / 3.0 -> 1
@@ -248,18 +247,37 @@ fun challengeQuestionCount(challenge: ChallengeLevel, progress: Double): Int =
 
 /**
  * スケジュールと進捗率 progress (0.0..1.0) から、その回に出題する解除チャレンジの問題数を返す。
- * アラームごとの難易度設定に応じて問題数を導出する。
+ * 出題タイミング設定と難易度設定に応じて問題数を導出する。
  */
 fun challengeQuestionCount(schedule: AlarmSchedule, progress: Double): Int =
-    challengeQuestionCount(schedule.challenge, progress)
+    when (schedule.challengeTiming) {
+        ChallengeTiming.NEVER -> 0
+        ChallengeTiming.END_ONLY -> if (progress >= 1.0) challengeQuestionCount(schedule.challenge, progress) else 0
+        ChallengeTiming.EVERY_TIME -> challengeQuestionCount(schedule.challenge, progress)
+    }
 
 /**
  * スケジュールと指定した鳴動回（occurrenceIndex: 0始まり）から、その回に出題する解除チャレンジの問題数を返す。
- * 何回目の鳴動かに応じた進捗率から出題数を決定する。
+ * 出題タイミングの設定（NEVER / END_ONLY / EVERY_TIME）とセッション終了判定および難易度設定から出題数を決定する。
  */
 fun challengeQuestionCount(schedule: AlarmSchedule, occurrenceIndex: Int): Int {
-    val p = occurrenceProgress(schedule, occurrenceIndex)
-    return challengeQuestionCount(schedule.challenge, p)
+    val totalCount = occurrenceCount(schedule)
+    val isLast = occurrenceIndex >= totalCount - 1
+    return when (schedule.challengeTiming) {
+        ChallengeTiming.NEVER -> 0
+        ChallengeTiming.END_ONLY -> {
+            if (isLast) {
+                val p = occurrenceProgress(schedule, occurrenceIndex)
+                challengeQuestionCount(schedule.challenge, p)
+            } else {
+                0
+            }
+        }
+        ChallengeTiming.EVERY_TIME -> {
+            val p = occurrenceProgress(schedule, occurrenceIndex)
+            challengeQuestionCount(schedule.challenge, p)
+        }
+    }
 }
 
 /**

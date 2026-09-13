@@ -55,7 +55,7 @@ class WakeRecordTest {
                 RingRecord(
                     scheduledAt = rangeStart.plusMinutes(5),
                     dismissedAt = rangeStart.plusMinutes(6),
-                    dismissMethod = DismissMethod.LONG_PRESS,
+                    dismissMethod = DismissMethod.TAP,
                     occurrenceIndex = 1,
                 ),
                 RingRecord(
@@ -80,9 +80,9 @@ class WakeRecordTest {
     }
 
     @Test
-    fun `長押し緊急停止の割合が正しく求まり鳴動が0件なら0_0になる`() {
+    fun `autoSilencedRatioが正しく求まり鳴動が0件なら0_0になる`() {
         // 鳴動が0件のケース
-        assertEquals(0.0, longPressDismissRatio(emptyList()), 0.0001)
+        assertEquals(0.0, autoSilencedRatio(emptyList()), 0.0001)
 
         val today = LocalDate.of(2026, 9, 13)
         val rangeStart = ZonedDateTime.of(today, java.time.LocalTime.of(7, 0), TOKYO)
@@ -91,7 +91,7 @@ class WakeRecordTest {
             rangeStartAt = rangeStart,
             rings = emptyList(),
         )
-        assertEquals(0.0, longPressDismissRatio(listOf(emptySession)), 0.0001)
+        assertEquals(0.0, autoSilencedRatio(listOf(emptySession)), 0.0001)
 
         // 複数セッションにわたる計算のケース
         val session1 = SessionRecord(
@@ -99,7 +99,7 @@ class WakeRecordTest {
             rangeStartAt = rangeStart,
             rings = listOf(
                 RingRecord(rangeStart, rangeStart.plusMinutes(1), DismissMethod.CHALLENGE, 0),
-                RingRecord(rangeStart.plusMinutes(5), rangeStart.plusMinutes(6), DismissMethod.LONG_PRESS, 1),
+                RingRecord(rangeStart.plusMinutes(5), rangeStart.plusMinutes(6), DismissMethod.TAP, 1),
                 RingRecord(rangeStart.plusMinutes(10), null, DismissMethod.AUTO_SILENCED, 2),
             ),
         )
@@ -107,14 +107,13 @@ class WakeRecordTest {
             sessionStart = today.plusDays(1),
             rangeStartAt = rangeStart.plusDays(1),
             rings = listOf(
-                RingRecord(rangeStart.plusDays(1), rangeStart.plusDays(1).plusMinutes(1), DismissMethod.LONG_PRESS, 0),
+                RingRecord(rangeStart.plusDays(1), null, DismissMethod.AUTO_SILENCED, 0),
                 RingRecord(rangeStart.plusDays(1).plusMinutes(5), rangeStart.plusDays(1).plusMinutes(6), DismissMethod.CHALLENGE, 1),
             ),
         )
 
-        // 全5回の鳴動のうち LONG_PRESS は 2回。手計算: 2 / 5 = 0.4
-        assertEquals(0.4, longPressDismissRatio(listOf(session1, session2)), 0.0001)
-        assertEquals(0.4, longPressRate(listOf(session1, session2)), 0.0001)
+        // 全5回の鳴動のうち AUTO_SILENCED は 2回。手計算: 2 / 5 = 0.4
+        assertEquals(0.4, autoSilencedRatio(listOf(session1, session2)), 0.0001)
     }
 
     @Test
@@ -140,7 +139,7 @@ class WakeRecordTest {
                 RingRecord(rangeStart.plusDays(1), rangeStart.plusDays(1).plusMinutes(1), DismissMethod.CHALLENGE, 0),
                 RingRecord(rangeStart.plusDays(1).plusMinutes(5), rangeStart.plusDays(1).plusMinutes(6), DismissMethod.CHALLENGE, 1),
                 RingRecord(rangeStart.plusDays(1).plusMinutes(10), rangeStart.plusDays(1).plusMinutes(11), DismissMethod.CHALLENGE, 2),
-                RingRecord(rangeStart.plusDays(1).plusMinutes(15), rangeStart.plusDays(1).plusMinutes(20), DismissMethod.LONG_PRESS, 3),
+                RingRecord(rangeStart.plusDays(1).plusMinutes(15), rangeStart.plusDays(1).plusMinutes(20), DismissMethod.TAP, 3),
             ),
         )
 

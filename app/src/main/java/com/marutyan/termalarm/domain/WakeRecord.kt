@@ -6,14 +6,14 @@ import java.time.ZonedDateTime
 
 /**
  * 鳴動の停止方法を表す列挙型。
- * チャレンジ正解、長押し緊急停止、放置による自動消音の別を記録し、起床傾向の分析に用いる。
+ * チャレンジ正解、押して停止、放置による自動消音の別を記録し、起床傾向の分析に用いる。
  */
 enum class DismissMethod {
-    /** チャレンジに正解して止めた */
+    /** 問題に正解して停止した */
     CHALLENGE,
 
-    /** 3秒長押しの緊急停止で止めた */
-    LONG_PRESS,
+    /** 問題を出さない設定で、押して停止した */
+    TAP,
 
     /** 放置され、一定時間後に自動で鳴り止んだ */
     AUTO_SILENCED,
@@ -69,21 +69,15 @@ fun wakeDurationMinutes(session: SessionRecord): Long? {
 }
 
 /**
- * 複数セッションにわたる長押し緊急停止の割合を求める。
- * 全セッションの全鳴動のうち LONG_PRESS が占める割合を 0.0〜1.0 の Double で返す。鳴動が1件も無ければ 0.0 を返す。
+ * 複数セッションにおける自動消音（放置）の割合を求める。
+ * 二度寝の傾向を把握するために用い、全セッションの全鳴動のうち AUTO_SILENCED が占める割合を 0.0〜1.0 の Double で返す。鳴動が1件も無ければ 0.0 を返す。
  */
-fun longPressDismissRatio(sessions: List<SessionRecord>): Double {
+fun autoSilencedRatio(sessions: List<SessionRecord>): Double {
     val allRings = sessions.flatMap { it.rings }
     if (allRings.isEmpty()) return 0.0
-    val longPressCount = allRings.count { it.dismissMethod == DismissMethod.LONG_PRESS }
-    return longPressCount.toDouble() / allRings.size.toDouble()
+    val autoSilencedCount = allRings.count { it.dismissMethod == DismissMethod.AUTO_SILENCED }
+    return autoSilencedCount.toDouble() / allRings.size.toDouble()
 }
-
-/**
- * 複数セッションにわたる長押し緊急停止の割合を求める（longPressDismissRatio のエイリアス）。
- * 呼び出し側での表記ゆれに対応するために提供する。
- */
-fun longPressRate(sessions: List<SessionRecord>): Double = longPressDismissRatio(sessions)
 
 /**
  * 複数セッションについて「起床とみなした回」の平均と「所要分数」の平均を求める。

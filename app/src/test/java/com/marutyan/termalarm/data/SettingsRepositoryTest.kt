@@ -63,12 +63,15 @@ class SettingsRepositoryTest {
     @Test
     fun `配色の設定が保存して読み直しても保たれる`() = runTest {
         val repository = SettingsRepository(FakeAppSettingsDao())
-        val settings = AppSettings(theme = AppTheme.BLACK)
 
-        repository.update(settings)
+        repository.update(AppSettings(theme = AppTheme.BLACK))
+        assertEquals(AppTheme.BLACK, repository.observe().first().theme)
 
-        val loaded = repository.observe().first()
-        assertEquals(AppTheme.BLACK, loaded.theme)
+        repository.update(AppSettings(theme = AppTheme.LIGHT))
+        assertEquals(AppTheme.LIGHT, repository.observe().first().theme)
+
+        repository.update(AppSettings(theme = AppTheme.DYNAMIC))
+        assertEquals(AppTheme.DYNAMIC, repository.observe().first().theme)
     }
 
     @Test

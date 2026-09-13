@@ -27,12 +27,14 @@ enum class WeekStart {
 }
 
 /**
- * アプリの配色テーマ。設定画面で利用者が選択する。
- * 画面全体の配色を切り替えるために使用し、アプリアイコン由来のNAVYと黒基調のBLACKの2種類を持つ。
+ * アプリの配色テーマを表す列挙型。
+ * 画面全体の配色を切り替えるために用い、アプリアイコン由来の紺(NAVY)、明るい配色(LIGHT)、黒基調(BLACK)、壁紙に基づく動的配色(DYNAMIC)を指定する。
  */
 enum class AppTheme {
     NAVY,
+    LIGHT,
     BLACK,
+    DYNAMIC,
 }
 
 /**
