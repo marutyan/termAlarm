@@ -191,6 +191,15 @@ fun TermAlarmNavHost(
                         onAddTerm = { editTarget = EditTarget(alarmId = null) },
                         onEditTerm = { id -> editTarget = EditTarget(alarmId = id) },
                         onEndTodayTerm = { id -> termEndAlarmId = id },
+                        onOpenSettings = {
+                            navController.navigate(NavItem.SETTINGS.route) {
+                                popUpTo(NavItem.TERMS.route) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onOpenPrivacyPolicy = { navController.navigate(ROUTE_PRIVACY) },
+                        onOpenAbout = { navController.navigate(ROUTE_ABOUT) },
                     )
 
                     editTarget?.let { target ->
@@ -230,6 +239,15 @@ fun TermAlarmNavHost(
                         viewModel = viewModel,
                         onAddAlarm = { editTarget = EditTarget(alarmId = null) },
                         onEditAlarm = { id -> editTarget = EditTarget(alarmId = id) },
+                        onOpenSettings = {
+                            navController.navigate(NavItem.SETTINGS.route) {
+                                popUpTo(NavItem.TERMS.route) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onOpenPrivacyPolicy = { navController.navigate(ROUTE_PRIVACY) },
+                        onOpenAbout = { navController.navigate(ROUTE_ABOUT) },
                     )
 
                     editTarget?.let { target ->
@@ -250,7 +268,18 @@ fun TermAlarmNavHost(
                     val viewModel: RecordsViewModel = viewModel(
                         factory = RecordsViewModelFactory(wakeRecordRepository, repository),
                     )
-                    RecordsScreen(viewModel = viewModel)
+                    RecordsScreen(
+                        viewModel = viewModel,
+                        onOpenSettings = {
+                            navController.navigate(NavItem.SETTINGS.route) {
+                                popUpTo(NavItem.TERMS.route) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onOpenPrivacyPolicy = { navController.navigate(ROUTE_PRIVACY) },
+                        onOpenAbout = { navController.navigate(ROUTE_ABOUT) },
+                    )
                 }
 
                 // 4. タイマー（既存画面を流用）

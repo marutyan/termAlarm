@@ -23,8 +23,8 @@ import androidx.compose.ui.unit.dp
 import com.marutyan.termalarm.R
 
 /**
- * 各タブ共通の「⋮」メニュー。純正時計アプリに合わせた構成で「設定」「プライバシー ポリシー」「ライセンス」の3項目とアイコンを表示する。
- * 各タブ画面のTopAppBarのアクション領域に配置され、選択された画面への遷移イベントを親へ通知する。
+ * 画面上部の帯に配置されるオーバーフローメニュー。「設定」「プライバシー」「このアプリについて」の3項目を表示する。
+ * 三点アイコンのタップでドロップダウンを展開し、選択された画面への遷移イベントを親へ通知するために用いる。
  */
 @Composable
 fun TermAlarmOverflowMenu(
@@ -50,7 +50,7 @@ fun TermAlarmOverflowMenu(
                 modifier = Modifier.defaultMinSize(minHeight = 48.dp),
             )
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.menu_privacy_policy)) },
+                text = { Text(stringResource(R.string.menu_privacy)) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_shield), contentDescription = null) },
                 onClick = {
                     expanded = false
@@ -59,7 +59,7 @@ fun TermAlarmOverflowMenu(
                 modifier = Modifier.defaultMinSize(minHeight = 48.dp),
             )
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.menu_license)) },
+                text = { Text(stringResource(R.string.menu_about)) },
                 leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
                 onClick = {
                     expanded = false

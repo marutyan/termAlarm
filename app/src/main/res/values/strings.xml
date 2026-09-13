@@ -242,6 +242,8 @@
 
     <!-- タイマー -->
     <!-- メニュー: プライバシー ポリシーとライセンス -->
+    <string name="menu_privacy">プライバシー</string>
+    <string name="menu_about">このアプリについて</string>
     <string name="menu_privacy_policy">プライバシー ポリシー</string>
     <string name="menu_license">ライセンス</string>
     <string name="privacy_policy_title">プライバシー ポリシー</string>

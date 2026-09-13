@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.marutyan.termalarm.R
+import com.marutyan.termalarm.ui.common.TermAlarmTopBar
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
 import com.marutyan.termalarm.ui.theme.customColors
 import java.util.Locale
@@ -56,6 +57,9 @@ import kotlin.math.roundToInt
 fun RecordsScreen(
     viewModel: RecordsViewModel,
     modifier: Modifier = Modifier,
+    onOpenSettings: () -> Unit = {},
+    onOpenPrivacyPolicy: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -65,13 +69,20 @@ fun RecordsScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(
-                top = statusBarTop + 74.dp,
+                top = statusBarTop + 12.dp,
                 start = 18.dp,
                 end = 18.dp,
                 bottom = 32.dp,
             ),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
+        // 画面上部の帯: アプリ名と三点メニュー
+        TermAlarmTopBar(
+            onOpenSettings = onOpenSettings,
+            onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+            onOpenAbout = onOpenAbout,
+        )
+
         // 1. 見出し「記録」
         Text(
             text = stringResource(R.string.records_title),

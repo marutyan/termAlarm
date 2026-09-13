@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.AlarmSchedule
+import com.marutyan.termalarm.ui.common.TermAlarmTopBar
 import com.marutyan.termalarm.ui.common.clockTimePattern
 import com.marutyan.termalarm.ui.common.formatClockMinutes
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
@@ -113,19 +114,31 @@ fun AlarmsScreen(
     onAddAlarm: () -> Unit,
     onEditAlarm: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenSettings: () -> Unit = {},
+    onOpenPrivacyPolicy: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
 ) {
     val alarms by viewModel.alarms.collectAsStateWithLifecycle()
     val timePattern = remember { clockTimePattern(false) }
 
-    // ステータスバーの下端から74dp空けるため、WindowInsets.statusBarsの高さを足す
+    // ステータスバーの下端に余白を空けるため、WindowInsets.statusBarsの高さを足す
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(top = statusBarTop + 74.dp, start = 18.dp, end = 18.dp, bottom = 26.dp),
+            .padding(top = statusBarTop + 12.dp, start = 18.dp, end = 18.dp, bottom = 26.dp),
     ) {
+        // 画面上部の帯: アプリ名と三点メニュー
+        TermAlarmTopBar(
+            onOpenSettings = onOpenSettings,
+            onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+            onOpenAbout = onOpenAbout,
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         // 1. 見出し「アラーム」。28sp、太さ300
         Text(
             text = stringResource(R.string.alarms_title),

@@ -79,12 +79,6 @@ fun TermAlarmNavRail(
         }
 
         Spacer(modifier = Modifier.weight(1f))
-
-        NavRailItemButton(
-            item = NavItem.SETTINGS,
-            isSelected = NavItem.SETTINGS == selectedItem,
-            onClick = { onSelectItem(NavItem.SETTINGS) },
-        )
     }
 }
 

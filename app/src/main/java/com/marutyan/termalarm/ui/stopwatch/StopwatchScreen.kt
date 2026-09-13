@@ -52,7 +52,7 @@ import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.StopwatchLap
 import com.marutyan.termalarm.domain.StopwatchRunState
 import com.marutyan.termalarm.domain.elapsedMillis
-import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
+import com.marutyan.termalarm.ui.common.TermAlarmTopBar
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
 import com.marutyan.termalarm.ui.theme.customColors
 import com.marutyan.termalarm.ui.theme.pressScaleEffect
@@ -91,31 +91,29 @@ fun StopwatchScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(top = statusBarTop + 74.dp, start = 18.dp, end = 18.dp, bottom = 26.dp),
+            .padding(top = statusBarTop + 12.dp, start = 18.dp, end = 18.dp, bottom = 26.dp),
     ) {
-        // 1. 見出し「ストップウォッチ」 (28sp、太さ300) と オーバーフローメニュー
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.tab_stopwatch),
-                style = TextStyle(
-                    fontFamily = FontFamily.Default,
-                    fontWeight = FontWeight.W300,
-                    fontSize = 28.sp,
-                    lineHeight = 36.sp,
-                    letterSpacing = (-0.01).em,
-                ),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            TermAlarmOverflowMenu(
-                onOpenSettings = onOpenSettings,
-                onOpenPrivacyPolicy = onOpenPrivacyPolicy,
-                onOpenAbout = onOpenAbout,
-            )
-        }
+        // 画面上部の帯: アプリ名と三点メニュー
+        TermAlarmTopBar(
+            onOpenSettings = onOpenSettings,
+            onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+            onOpenAbout = onOpenAbout,
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 1. 見出し「ストップウォッチ」 (28sp、太さ300)
+        Text(
+            text = stringResource(R.string.tab_stopwatch),
+            style = TextStyle(
+                fontFamily = FontFamily.Default,
+                fontWeight = FontWeight.W300,
+                fontSize = 28.sp,
+                lineHeight = 36.sp,
+                letterSpacing = (-0.01).em,
+            ),
+            color = MaterialTheme.colorScheme.onSurface,
+        )
 
         Spacer(modifier = Modifier.height(18.dp))
 

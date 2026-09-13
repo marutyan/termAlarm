@@ -62,6 +62,7 @@ import com.marutyan.termalarm.domain.occurrenceCount
 import com.marutyan.termalarm.domain.remainingOccurrenceCount
 import com.marutyan.termalarm.domain.scheduleSummary
 import com.marutyan.termalarm.domain.sessionStartDate
+import com.marutyan.termalarm.ui.common.TermAlarmTopBar
 import com.marutyan.termalarm.ui.common.clockTimePattern
 import com.marutyan.termalarm.ui.common.formatClockMinutes
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
@@ -116,6 +117,9 @@ fun HomeScreen(
     onAddTerm: () -> Unit = {},
     onEditTerm: (Long) -> Unit = {},
     onEndTodayTerm: (Long) -> Unit = {},
+    onOpenSettings: () -> Unit = {},
+    onOpenPrivacyPolicy: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
 ) {
     val terms by viewModel.terms.collectAsStateWithLifecycle()
     val now = rememberCurrentSecond()
@@ -129,15 +133,24 @@ fun HomeScreen(
     }
     val nextTriggerTime = activeSchedule?.let { nextTrigger(it, now) }
 
-    // ステータスバーの下端から74dp空けるため、WindowInsets.statusBarsの高さを足す
+    // ステータスバーの下端に余白を空けるため、WindowInsets.statusBarsの高さを足す
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(top = statusBarTop + 74.dp, start = 18.dp, end = 18.dp, bottom = 26.dp),
+            .padding(top = statusBarTop + 12.dp, start = 18.dp, end = 18.dp, bottom = 26.dp),
     ) {
+        // 画面上部の帯: アプリ名と三点メニュー
+        TermAlarmTopBar(
+            onOpenSettings = onOpenSettings,
+            onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+            onOpenAbout = onOpenAbout,
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         // 1. 現在時刻。78sp、太さ200、等幅数字。秒を33spで右へ添える
         val timePattern = remember { clockTimePattern(false) }
         val currentTimeString = remember(now, timePattern) {

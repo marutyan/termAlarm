@@ -66,7 +66,7 @@ import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
 import com.marutyan.termalarm.domain.millisUntilNextSecondBoundary
 import com.marutyan.termalarm.domain.remainingMillis
-import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
+import com.marutyan.termalarm.ui.common.TermAlarmTopBar
 import com.marutyan.termalarm.ui.theme.customColors
 import com.marutyan.termalarm.ui.theme.pressScaleEffect
 import com.marutyan.termalarm.ui.theme.timerAddFadeSpec
@@ -154,31 +154,29 @@ fun TimerScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(top = statusBarTop + 74.dp, start = 18.dp, end = 18.dp),
+                        .padding(top = statusBarTop + 12.dp, start = 18.dp, end = 18.dp),
                 ) {
-                    // 見出し「タイマー」 (28sp、太さ300) と オーバーフローメニュー
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.tab_timer),
-                            style = TextStyle(
-                                fontFamily = FontFamily.Default,
-                                fontWeight = FontWeight.W300,
-                                fontSize = 28.sp,
-                                lineHeight = 36.sp,
-                                letterSpacing = (-0.01).em,
-                            ),
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        TermAlarmOverflowMenu(
-                            onOpenSettings = onOpenSettings,
-                            onOpenPrivacyPolicy = onOpenPrivacyPolicy,
-                            onOpenAbout = onOpenAbout,
-                        )
-                    }
+                    // 画面上部の帯: アプリ名と三点メニュー
+                    TermAlarmTopBar(
+                        onOpenSettings = onOpenSettings,
+                        onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                        onOpenAbout = onOpenAbout,
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 見出し「タイマー」 (28sp、太さ300)
+                    Text(
+                        text = stringResource(R.string.tab_timer),
+                        style = TextStyle(
+                            fontFamily = FontFamily.Default,
+                            fontWeight = FontWeight.W300,
+                            fontSize = 28.sp,
+                            lineHeight = 36.sp,
+                            letterSpacing = (-0.01).em,
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
