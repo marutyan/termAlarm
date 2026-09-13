@@ -67,16 +67,17 @@ import com.marutyan.termalarm.ui.timer.TimerScreen
 import com.marutyan.termalarm.ui.timer.TimerViewModel
 import com.marutyan.termalarm.ui.timer.TimerViewModelFactory
 
-private const val ROUTE_EDIT = "edit"
 private const val ROUTE_END_TODAY_GAME = "endTodayGame"
 private const val ROUTE_GAME_LIST = "gameList"
 private const val ROUTE_ABOUT = "about"
 private const val ROUTE_PRIVACY = "privacy"
 private const val ARG_ALARM_ID = "alarmId"
-private const val ARG_IS_SINGLE = "isSingle"
+
+// タームまたは通常アラームの編集シート対象。alarmIdがnullなら新規作成、値があれば該当IDの編集
+private data class EditTarget(val alarmId: Long?)
 
 // SET_ALARM等の外部インテントを受けたAlarmIntentActivity(ui.intent)がMainActivity起動時に付ける拡張。
-// 値が-1なら新規作成画面、0以上ならそのidの編集画面へ直接遷移する。他パッケージから参照するためpublic。
+// 値が-1なら新規作成、0以上ならそのidの編集シートをホーム画面上で開く。他パッケージから参照するためpublic。
 const val EXTRA_DEEPLINK_ALARM_ID = "com.marutyan.termalarm.ui.EXTRA_DEEPLINK_ALARM_ID"
 
 // どの画面を開いた状態で始めるかを指定する拡張。タイマーの通知から開いたときにタイマー画面が出るようにするために使う。
@@ -97,14 +98,12 @@ fun TermAlarmNavHost(
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    // 起動時のディープリンクIntentを処理し、指定された画面や編集画面へ直接遷移する
+    // 起動時のディープリンクIntentを処理し、指定されたタブ画面へ遷移する
     LaunchedEffect(Unit) {
         val launchIntent = (context as? Activity)?.intent
-        if (launchIntent?.hasExtra(EXTRA_DEEPLINK_ALARM_ID) == true) {
-            val id = launchIntent.getLongExtra(EXTRA_DEEPLINK_ALARM_ID, -1L)
-            navController.navigate(if (id >= 0) "$ROUTE_EDIT?$ARG_ALARM_ID=$id" else ROUTE_EDIT)
-        }
         launchIntent?.getStringExtra(EXTRA_DEEPLINK_TAB)?.let { name ->
+            // EXTRA_DEEPLINK_ALARM_IDが指定されている場合はホーム画面にシートを重ねるためタブ移動を行わない
+            if (launchIntent.hasExtra(EXTRA_DEEPLINK_ALARM_ID)) return@let
             val targetItem = when (name) {
                 "TIMER" -> NavItem.TIMER
                 "STOPWATCH" -> NavItem.STOPWATCH
@@ -174,12 +173,36 @@ fun TermAlarmNavHost(
                     }
                     var termEndAlarmId by remember { mutableStateOf<Long?>(initialTermEndId) }
 
+                    // ディープリンクまたは画面操作によるターム編集シートの表示対象
+                    val initialEditTarget = remember {
+                        if (activity?.intent?.hasExtra(EXTRA_DEEPLINK_ALARM_ID) == true) {
+                            val id = activity.intent.getLongExtra(EXTRA_DEEPLINK_ALARM_ID, -1L)
+                            activity.intent.removeExtra(EXTRA_DEEPLINK_ALARM_ID)
+                            val alarmId = if (id >= 0L) id else null
+                            EditTarget(alarmId = alarmId)
+                        } else {
+                            null
+                        }
+                    }
+                    var editTarget by remember { mutableStateOf(initialEditTarget) }
+
                     HomeScreen(
                         viewModel = viewModel,
-                        onAddTerm = { navController.navigate(ROUTE_EDIT) },
-                        onEditTerm = { id -> navController.navigate("$ROUTE_EDIT?$ARG_ALARM_ID=$id") },
+                        onAddTerm = { editTarget = EditTarget(alarmId = null) },
+                        onEditTerm = { id -> editTarget = EditTarget(alarmId = id) },
                         onEndTodayTerm = { id -> termEndAlarmId = id },
                     )
+
+                    editTarget?.let { target ->
+                        val editViewModel: AlarmEditViewModel = viewModel(
+                            key = "term_edit_${target.alarmId ?: "new"}",
+                            factory = AlarmEditViewModelFactory(repository, context, target.alarmId, isSingleAlarm = false),
+                        )
+                        AlarmEditScreen(
+                            viewModel = editViewModel,
+                            onClose = { editTarget = null },
+                        )
+                    }
 
                     termEndAlarmId?.let { alarmId ->
                         val targetSchedule = terms.find { it.id == alarmId }
@@ -201,11 +224,24 @@ fun TermAlarmNavHost(
                 // 2. 通常アラーム画面
                 composable(NavItem.STANDARD_ALARM.route) {
                     val viewModel: AlarmsViewModel = viewModel(factory = AlarmsViewModelFactory(repository))
+                    var editTarget by remember { mutableStateOf<EditTarget?>(null) }
+
                     AlarmsScreen(
                         viewModel = viewModel,
-                        onAddAlarm = { navController.navigate("$ROUTE_EDIT?$ARG_IS_SINGLE=true") },
-                        onEditAlarm = { id -> navController.navigate("$ROUTE_EDIT?$ARG_ALARM_ID=$id&$ARG_IS_SINGLE=true") },
+                        onAddAlarm = { editTarget = EditTarget(alarmId = null) },
+                        onEditAlarm = { id -> editTarget = EditTarget(alarmId = id) },
                     )
+
+                    editTarget?.let { target ->
+                        val editViewModel: AlarmEditViewModel = viewModel(
+                            key = "alarm_edit_${target.alarmId ?: "new"}",
+                            factory = AlarmEditViewModelFactory(repository, context, target.alarmId, isSingleAlarm = true),
+                        )
+                        AlarmEditScreen(
+                            viewModel = editViewModel,
+                            onClose = { editTarget = null },
+                        )
+                    }
                 }
 
                 // 3. 記録
@@ -293,27 +329,6 @@ fun TermAlarmNavHost(
                         hasShakeSensor = hasShakeSensor,
                         onBack = { navController.popBackStack() },
                     )
-                }
-
-                // ターム編集画面
-                composable(
-                    route = "$ROUTE_EDIT?$ARG_ALARM_ID={$ARG_ALARM_ID}&$ARG_IS_SINGLE={$ARG_IS_SINGLE}",
-                    arguments = listOf(
-                        navArgument(ARG_ALARM_ID) { type = NavType.LongType; defaultValue = -1L },
-                        navArgument(ARG_IS_SINGLE) { type = NavType.BoolType; defaultValue = false },
-                    ),
-                    enterTransition = { screenOpenEnter(slidePx) },
-                    exitTransition = { screenOpenExit(slidePx) },
-                    popEnterTransition = { screenCloseEnter(slidePx) },
-                    popExitTransition = { screenCloseExit(slidePx) },
-                ) { backStackEntry ->
-                    val rawId = backStackEntry.arguments?.getLong(ARG_ALARM_ID) ?: -1L
-                    val isSingle = backStackEntry.arguments?.getBoolean(ARG_IS_SINGLE) ?: false
-                    val alarmId = rawId.takeIf { it >= 0 }
-                    val viewModel: AlarmEditViewModel = viewModel(
-                        factory = AlarmEditViewModelFactory(repository, context, alarmId, isSingle),
-                    )
-                    AlarmEditScreen(viewModel = viewModel, onClose = { navController.popBackStack() })
                 }
 
                 // 当日終了のゲーム画面

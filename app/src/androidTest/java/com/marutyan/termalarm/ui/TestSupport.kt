@@ -100,47 +100,45 @@ internal fun defaultTestSchedule(
     wakeCheck = wakeCheck,
 )
 
-// テスト内で「一覧」⇔「追加・編集」を行き来するための最小限の画面切り替え。
-// 本物のNavHost(TermAlarmNavHost)はComposeNavigationのルーティングを担うが、
-// テストではその配線自体を検証したいわけではないため、実際の画面(AlarmListScreen/AlarmEditScreen)と
-// 本物のViewModelをそのまま使いつつ、画面切り替えだけをローカルなStateで代替する。
-private sealed interface ListEditScreen {
-    data object List : ListEditScreen
-    data class Edit(val id: Long?) : ListEditScreen
-}
-
+// テスト内でホーム画面とその上に重なるターム編集シートを行き来するためのホストComposable。
+// 本物のTermAlarmNavHostと同様に、HomeScreenの上にAlarmEditScreen（ModalBottomSheet）を重ねる。
 @Composable
 internal fun ListEditHost(repository: AlarmRepository) {
     val context = testAppContext()
-    var screen by remember { mutableStateOf<ListEditScreen>(ListEditScreen.List) }
+    var editingAlarmId by remember { mutableStateOf<Long?>(null) }
+    var isAddingTerm by remember { mutableStateOf(false) }
     var termEndAlarmId by remember { mutableStateOf<Long?>(null) }
 
-    when (val current = screen) {
-        ListEditScreen.List -> {
-            val homeViewModel = remember { HomeViewModel(repository) }
-            val terms by homeViewModel.terms.collectAsState(initial = emptyList())
-            HomeScreen(
-                viewModel = homeViewModel,
-                onAddTerm = { screen = ListEditScreen.Edit(null) },
-                onEditTerm = { id -> screen = ListEditScreen.Edit(id) },
-                onEndTodayTerm = { id -> termEndAlarmId = id },
-            )
-            termEndAlarmId?.let { id ->
-                val targetSchedule = terms.find { it.id == id }
-                if (targetSchedule != null) {
-                    com.marutyan.termalarm.ui.termend.TermEndDialog(
-                        schedule = targetSchedule,
-                        repository = repository,
-                        now = java.time.ZonedDateTime.now(),
-                        onDismiss = { termEndAlarmId = null },
-                    )
-                }
-            }
-        }
-        is ListEditScreen.Edit -> AlarmEditScreen(
-            viewModel = remember(current.id) { AlarmEditViewModel(repository, context, current.id) },
-            onClose = { screen = ListEditScreen.List },
+    val homeViewModel = remember { HomeViewModel(repository) }
+    val terms by homeViewModel.terms.collectAsState(initial = emptyList())
+    HomeScreen(
+        viewModel = homeViewModel,
+        onAddTerm = { isAddingTerm = true },
+        onEditTerm = { id -> editingAlarmId = id },
+        onEndTodayTerm = { id -> termEndAlarmId = id },
+    )
+
+    if (isAddingTerm || editingAlarmId != null) {
+        val targetId = if (isAddingTerm) null else editingAlarmId
+        AlarmEditScreen(
+            viewModel = remember(targetId) { AlarmEditViewModel(repository, context, targetId) },
+            onClose = {
+                isAddingTerm = false
+                editingAlarmId = null
+            },
         )
+    }
+
+    termEndAlarmId?.let { id ->
+        val targetSchedule = terms.find { it.id == id }
+        if (targetSchedule != null) {
+            com.marutyan.termalarm.ui.termend.TermEndDialog(
+                schedule = targetSchedule,
+                repository = repository,
+                now = java.time.ZonedDateTime.now(),
+                onDismiss = { termEndAlarmId = null },
+            )
+        }
     }
 }
 

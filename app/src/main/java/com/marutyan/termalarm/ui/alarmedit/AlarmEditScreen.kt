@@ -1,6 +1,5 @@
 package com.marutyan.termalarm.ui.alarmedit
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,28 +9,25 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ripple
@@ -46,10 +42,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,9 +57,6 @@ import com.marutyan.termalarm.ui.common.formatClockMinutes
 import com.marutyan.termalarm.ui.theme.customColors
 import com.marutyan.termalarm.ui.theme.ibmPlexMonoFontFamily
 import java.time.DayOfWeek
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 // 月曜から日曜の順序リスト
 private val DAYS_OF_WEEK_ORDER = listOf(
@@ -79,9 +71,9 @@ private val DAYS_OF_WEEK_ORDER = listOf(
 
 /**
  * ターム編集画面の最上位Composable。design/TermEdit.dc.htmlを再現する。
- * 下から持ち上がるシート形式で構成し、時刻範囲、曜日、設定行、二度寝チェック、保存・削除ボタンを提供する。
+ * 下から持ち上がるModalBottomSheet形式で構成し、時刻範囲、曜日、設定行、二度寝チェック、保存・削除ボタンを提供する。
  */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AlarmEditScreen(
     viewModel: AlarmEditViewModel,
@@ -95,9 +87,6 @@ fun AlarmEditScreen(
         if (uiState.isSaved || uiState.isDeleted) onClose()
     }
 
-    // 端末の戻る操作で閉じる
-    BackHandler(onBack = onClose)
-
     var showStartPicker by rememberSaveable { mutableStateOf(false) }
     var showEndPicker by rememberSaveable { mutableStateOf(false) }
     var showSinglePicker by rememberSaveable { mutableStateOf(false) }
@@ -106,106 +95,26 @@ fun AlarmEditScreen(
     var showChallengePicker by rememberSaveable { mutableStateOf(false) }
     var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
 
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color(0xFF060C1C)),
+    ModalBottomSheet(
+        onDismissRequest = onClose,
+        modifier = modifier,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
     ) {
-        val screenHeight = maxHeight
+        val screenHeight = LocalConfiguration.current.screenHeightDp.dp
         // ターム編集シートの高さを画面の6割前後に設定する（デザイン TermEdit.dc.html に合わせる）
         val sheetMinHeight = screenHeight * 0.60f
-        // 背景時計エリアの上の余白もステータスバーの下端から74dp空ける
-        val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
-        // 背景の薄いホーム時計表示（上部エリア・タップで閉じるScrim）
-        val now = remember { ZonedDateTime.now() }
-        val currentTimeString = remember(now) { now.format(DateTimeFormatter.ofPattern("H:mm", Locale.getDefault())) }
-        val currentSecondString = remember(now) { now.format(DateTimeFormatter.ofPattern("ss", Locale.getDefault())) }
-        val currentDateString = remember(now) { now.format(DateTimeFormatter.ofPattern("MM.dd E", Locale.JAPANESE)) }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onClose,
-                ),
-        ) {
-            // 背景の時計（opacity 0.2）
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, top = statusBarTop + 74.dp, end = 20.dp),
-            ) {
-                Row(
-                    verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.spacedBy(7.dp),
-                    modifier = Modifier.padding(bottom = 7.dp),
-                ) {
-                    Text(
-                        text = currentTimeString,
-                        style = TextStyle(
-                            fontFamily = ibmPlexMonoFontFamily(200),
-                            fontSize = 78.sp,
-                            lineHeight = 70.sp,
-                            letterSpacing = (-0.05).em,
-                            fontFeatureSettings = "tnum",
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
-                    )
-                    Text(
-                        text = currentSecondString,
-                        style = TextStyle(
-                            fontFamily = ibmPlexMonoFontFamily(200),
-                            fontSize = 33.sp,
-                            fontFeatureSettings = "tnum",
-                        ),
-                        color = MaterialTheme.customColors.subtleText.copy(alpha = 0.2f),
-                        modifier = Modifier.padding(bottom = 6.dp),
-                    )
-                }
-                Text(
-                    text = currentDateString,
-                    style = TextStyle(
-                        fontFamily = ibmPlexMonoFontFamily(400),
-                        fontSize = 14.5.sp,
-                    ),
-                    color = MaterialTheme.customColors.subtleText.copy(alpha = 0.2f),
-                    modifier = Modifier.padding(start = 9.dp),
-                )
-            }
-
-            // 下部シート領域（デザイン: background #0B1530, border-radius 24dp 24dp 0 0、画面の6割前後を確保）
+        Box(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = sheetMinHeight)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}, // シート内部のタップは背後に伝播させない
-                    )
-                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                    .background(MaterialTheme.colorScheme.surface)
                     .verticalScroll(rememberScrollState())
-                    .padding(start = 20.dp, top = 10.dp, end = 20.dp, bottom = 24.dp),
+                    .padding(start = 20.dp, top = 8.dp, end = 20.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
-                // 上部中央ドラッグ目印（38dp×4dp）
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(width = 38.dp, height = 4.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.outline),
-                    )
-                }
-
                 // 1. 時刻の範囲と有効・無効切り替え
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -605,6 +514,38 @@ fun AlarmEditScreen(
                     }
                 }
             }
+
+            // 間隔設定シート（下から重なるシート）
+            if (showIntervalSheet) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { showIntervalSheet = false },
+                        ),
+                    contentAlignment = Alignment.BottomCenter,
+                ) {
+                    IntervalEditSheet(
+                        startMinutes = uiState.startMinutes,
+                        endMinutes = uiState.endMinutes,
+                        initialIsVariable = uiState.isVariableInterval,
+                        initialStartInterval = uiState.startIntervalMinutes,
+                        initialEndInterval = uiState.endIntervalMinutes,
+                        onConfirm = { isVariable, startInt, endInt ->
+                            viewModel.setInterval(isVariable, startInt, endInt)
+                            showIntervalSheet = false
+                        },
+                        modifier = Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {}, // シート内タップは伝播させない
+                        ),
+                    )
+                }
+            }
         }
 
         // --- サブ画面・ダイアログ ---
@@ -668,38 +609,6 @@ fun AlarmEditScreen(
                     showChallengePicker = false
                 },
             )
-        }
-
-        // 間隔設定シート（下から重なるシート）
-        if (showIntervalSheet) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = { showIntervalSheet = false },
-                    ),
-                contentAlignment = Alignment.BottomCenter,
-            ) {
-                IntervalEditSheet(
-                    startMinutes = uiState.startMinutes,
-                    endMinutes = uiState.endMinutes,
-                    initialIsVariable = uiState.isVariableInterval,
-                    initialStartInterval = uiState.startIntervalMinutes,
-                    initialEndInterval = uiState.endIntervalMinutes,
-                    onConfirm = { isVariable, startInt, endInt ->
-                        viewModel.setInterval(isVariable, startInt, endInt)
-                        showIntervalSheet = false
-                    },
-                    modifier = Modifier.clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}, // シート内タップは伝播させない
-                    ),
-                )
-            }
         }
 
         // 削除確認ダイアログ
