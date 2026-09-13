@@ -146,5 +146,20 @@ class HomeScreenTest {
         assertTrue("ホームの時刻の上余白($topOffset dp)が74dp以上であること", topOffset >= 74f)
     }
 
+    // 開始と終了が同じ通常アラームはホーム一覧に出ないことを保証する
+    @Test
+    fun 通常アラームはホーム画面に表示されない() {
+        val singleAlarm = defaultTestSchedule().copy(
+            id = 0L,
+            startMinutes = 8 * 60,
+            endMinutes = 8 * 60,
+            label = "通常アラームラベル",
+        )
+        runBlocking { repository.add(singleAlarm) }
+
+        composeTestRule.setContent { ListEditHost(repository) }
+        composeTestRule.onNodeWithText("通常アラームラベル").assertDoesNotExist()
+    }
+
     private fun context() = composeTestRule.activity
 }

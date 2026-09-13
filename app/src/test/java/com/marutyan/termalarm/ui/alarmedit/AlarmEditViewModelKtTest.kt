@@ -95,4 +95,20 @@ class AlarmEditViewModelKtTest {
         assertTrue(preview.contains("\u2026 8:00"))
         assertEquals(2, preview.lines().size)
     }
+
+    @Test
+    fun `isSingleAlarmがtrueのとき開始と終了が同値でAlarmScheduleに変換される`() {
+        val state = AlarmEditUiState(
+            id = 1L,
+            startMinutes = 12 * 60 + 30,
+            endMinutes = 12 * 60 + 30,
+            isSingleAlarm = true,
+            label = "昼寝",
+            enabled = true,
+        )
+        val schedule = state.toSchedule(existingSkippedSessionStart = null)
+        assertEquals(schedule.startMinutes, schedule.endMinutes)
+        assertEquals(12 * 60 + 30, schedule.startMinutes)
+        assertTrue(state.isSingleAlarm)
+    }
 }

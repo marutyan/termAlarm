@@ -7,6 +7,7 @@ import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -18,8 +19,9 @@ class HomeViewModel(
     private val repository: AlarmRepository,
 ) : ViewModel() {
 
-    /** 登録されている全タームの最新一覧を提供するStateFlow。 */
+    /** 登録されているタームの最新一覧を提供するStateFlow。通常アラーム（開始と終了が同じもの）は除外する。 */
     val terms: StateFlow<List<AlarmSchedule>> = repository.observeAll()
+        .map { list -> list.filter { it.startMinutes != it.endMinutes } }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000L),

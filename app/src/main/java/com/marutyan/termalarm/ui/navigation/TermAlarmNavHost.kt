@@ -35,6 +35,9 @@ import com.marutyan.termalarm.ui.about.AboutScreen
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditScreen
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditViewModel
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditViewModelFactory
+import com.marutyan.termalarm.ui.alarms.AlarmsScreen
+import com.marutyan.termalarm.ui.alarms.AlarmsViewModel
+import com.marutyan.termalarm.ui.alarms.AlarmsViewModelFactory
 import com.marutyan.termalarm.ui.common.PlaceholderScreen
 import com.marutyan.termalarm.ui.home.HomeScreen
 import com.marutyan.termalarm.ui.home.HomeViewModel
@@ -70,6 +73,7 @@ private const val ROUTE_GAME_LIST = "gameList"
 private const val ROUTE_ABOUT = "about"
 private const val ROUTE_PRIVACY = "privacy"
 private const val ARG_ALARM_ID = "alarmId"
+private const val ARG_IS_SINGLE = "isSingle"
 
 // SET_ALARM等の外部インテントを受けたAlarmIntentActivity(ui.intent)がMainActivity起動時に付ける拡張。
 // 値が-1なら新規作成画面、0以上ならそのidの編集画面へ直接遷移する。他パッケージから参照するためpublic。
@@ -194,9 +198,14 @@ fun TermAlarmNavHost(
                     }
                 }
 
-                // 2. 通常アラーム（準備中プレースホルダ）
+                // 2. 通常アラーム画面
                 composable(NavItem.STANDARD_ALARM.route) {
-                    PlaceholderScreen()
+                    val viewModel: AlarmsViewModel = viewModel(factory = AlarmsViewModelFactory(repository))
+                    AlarmsScreen(
+                        viewModel = viewModel,
+                        onAddAlarm = { navController.navigate("$ROUTE_EDIT?$ARG_IS_SINGLE=true") },
+                        onEditAlarm = { id -> navController.navigate("$ROUTE_EDIT?$ARG_ALARM_ID=$id&$ARG_IS_SINGLE=true") },
+                    )
                 }
 
                 // 3. 記録
@@ -290,16 +299,22 @@ fun TermAlarmNavHost(
 
                 // ターム編集画面
                 composable(
-                    route = "$ROUTE_EDIT?$ARG_ALARM_ID={$ARG_ALARM_ID}",
-                    arguments = listOf(navArgument(ARG_ALARM_ID) { type = NavType.LongType; defaultValue = -1L }),
+                    route = "$ROUTE_EDIT?$ARG_ALARM_ID={$ARG_ALARM_ID}&$ARG_IS_SINGLE={$ARG_IS_SINGLE}",
+                    arguments = listOf(
+                        navArgument(ARG_ALARM_ID) { type = NavType.LongType; defaultValue = -1L },
+                        navArgument(ARG_IS_SINGLE) { type = NavType.BoolType; defaultValue = false },
+                    ),
                     enterTransition = { screenOpenEnter(slidePx) },
                     exitTransition = { screenOpenExit(slidePx) },
                     popEnterTransition = { screenCloseEnter(slidePx) },
                     popExitTransition = { screenCloseExit(slidePx) },
                 ) { backStackEntry ->
                     val rawId = backStackEntry.arguments?.getLong(ARG_ALARM_ID) ?: -1L
+                    val isSingle = backStackEntry.arguments?.getBoolean(ARG_IS_SINGLE) ?: false
                     val alarmId = rawId.takeIf { it >= 0 }
-                    val viewModel: AlarmEditViewModel = viewModel(factory = AlarmEditViewModelFactory(repository, context, alarmId))
+                    val viewModel: AlarmEditViewModel = viewModel(
+                        factory = AlarmEditViewModelFactory(repository, context, alarmId, isSingle),
+                    )
                     AlarmEditScreen(viewModel = viewModel, onClose = { navController.popBackStack() })
                 }
 

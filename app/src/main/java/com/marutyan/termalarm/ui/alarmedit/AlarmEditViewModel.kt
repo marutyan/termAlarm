@@ -44,6 +44,7 @@ data class AlarmEditUiState(
     val id: Long? = null,
     val startMinutes: Int = 7 * 60,
     val endMinutes: Int = 9 * 60,
+    val isSingleAlarm: Boolean = false,
     val isVariableInterval: Boolean = false,
     val startIntervalMinutes: Int = 5,
     val endIntervalMinutes: Int = 5,
@@ -77,10 +78,12 @@ data class AlarmEditUiState(
         validationError: AlarmEditValidationError? = null,
         isSaved: Boolean = false,
         isDeleted: Boolean = false,
+        isSingleAlarm: Boolean = false,
     ) : this(
         id = id,
         startMinutes = startMinutes,
         endMinutes = endMinutes,
+        isSingleAlarm = isSingleAlarm,
         isVariableInterval = false,
         startIntervalMinutes = intervalMinutes,
         endIntervalMinutes = intervalMinutes,
@@ -124,11 +127,19 @@ class AlarmEditViewModel(
     private val repository: AlarmRepository,
     context: Context,
     alarmId: Long?,
+    isSingleAlarm: Boolean = false,
 ) : ViewModel() {
 
     private val appContext: Context = context.applicationContext
 
-    var uiState by mutableStateOf(AlarmEditUiState(id = alarmId, isLoading = alarmId != null))
+    var uiState by mutableStateOf(
+        AlarmEditUiState(
+            id = alarmId,
+            isLoading = alarmId != null,
+            isSingleAlarm = isSingleAlarm,
+            endMinutes = if (isSingleAlarm && alarmId == null) 7 * 60 else 9 * 60,
+        ),
+    )
         private set
 
     private var loadedSkippedSessionStart: LocalDate? = null
@@ -143,10 +154,12 @@ class AlarmEditViewModel(
                 uiState = if (schedule != null) {
                     loadedSkippedSessionStart = schedule.skippedSessionStart
                     val isVariable = schedule.startIntervalMinutes != schedule.endIntervalMinutes
+                    val single = isSingleAlarm || (schedule.startMinutes == schedule.endMinutes)
                     AlarmEditUiState(
                         id = schedule.id,
                         startMinutes = schedule.startMinutes,
-                        endMinutes = schedule.endMinutes,
+                        endMinutes = if (single) schedule.startMinutes else schedule.endMinutes,
+                        isSingleAlarm = single,
                         isVariableInterval = isVariable,
                         startIntervalMinutes = schedule.startIntervalMinutes,
                         endIntervalMinutes = schedule.endIntervalMinutes,
@@ -163,6 +176,14 @@ class AlarmEditViewModel(
                 }
             }
         }
+    }
+
+    /**
+     * 通常アラーム用の単一時刻(0..1439分)を設定する。
+     * 開始時刻と終了時刻に同じ値を設定し、1回のみ鳴動するアラームとして整合性を保つために用いる。
+     */
+    fun setSingleMinutes(minutes: Int) {
+        uiState = revalidate(uiState.copy(startMinutes = minutes, endMinutes = minutes))
     }
 
     /** 開始時刻(0..1439分)を設定する。 */
@@ -305,13 +326,14 @@ class AlarmEditViewModel(
     }
 }
 
-/** 依存注入を用いずにViewModelを生成するファクトリクラス。 */
+/** 依存注入を用いずにViewModelを生成するファクトリクラス。通常アラームとしての起動フラグを保持する。 */
 class AlarmEditViewModelFactory(
     private val repository: AlarmRepository,
     private val context: Context,
     private val alarmId: Long?,
+    private val isSingleAlarm: Boolean = false,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        AlarmEditViewModel(repository, context, alarmId) as T
+        AlarmEditViewModel(repository, context, alarmId, isSingleAlarm) as T
 }

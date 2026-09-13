@@ -100,6 +100,7 @@ fun AlarmEditScreen(
 
     var showStartPicker by rememberSaveable { mutableStateOf(false) }
     var showEndPicker by rememberSaveable { mutableStateOf(false) }
+    var showSinglePicker by rememberSaveable { mutableStateOf(false) }
     var showLabelDialog by rememberSaveable { mutableStateOf(false) }
     var showIntervalSheet by rememberSaveable { mutableStateOf(false) }
     var showChallengePicker by rememberSaveable { mutableStateOf(false) }
@@ -211,12 +212,9 @@ fun AlarmEditScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(9.dp),
-                    ) {
-                        val timePattern = remember { com.marutyan.termalarm.ui.common.clockTimePattern(false) }
-                        // 開始時刻（押すと選べる）
+                    val timePattern = remember { com.marutyan.termalarm.ui.common.clockTimePattern(false) }
+                    if (uiState.isSingleAlarm) {
+                        // 通常アラーム: 時刻を1つだけ選ばせる（開始と終了へ同じ時刻を入れる）
                         Text(
                             text = formatClockMinutes(uiState.startMinutes, timePattern),
                             style = TextStyle(
@@ -232,35 +230,61 @@ fun AlarmEditScreen(
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = ripple(),
-                                    onClick = { showStartPicker = true },
+                                    onClick = { showSinglePicker = true },
                                 )
                                 .padding(horizontal = 4.dp, vertical = 2.dp),
                         )
-                        Text(
-                            text = "\u2013",
-                            fontSize = 20.sp,
-                            color = MaterialTheme.customColors.subtleText,
-                        )
-                        // 終了時刻（押すと選べる）
-                        Text(
-                            text = formatClockMinutes(uiState.endMinutes, timePattern),
-                            style = TextStyle(
-                                fontFamily = ibmPlexMonoFontFamily(200),
-                                fontSize = 40.sp,
-                                lineHeight = 40.sp,
-                                letterSpacing = (-0.04).em,
-                                fontFeatureSettings = "tnum",
-                            ),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = ripple(),
-                                    onClick = { showEndPicker = true },
-                                )
-                                .padding(horizontal = 4.dp, vertical = 2.dp),
-                        )
+                    } else {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(9.dp),
+                        ) {
+                            // 開始時刻（押すと選べる）
+                            Text(
+                                text = formatClockMinutes(uiState.startMinutes, timePattern),
+                                style = TextStyle(
+                                    fontFamily = ibmPlexMonoFontFamily(200),
+                                    fontSize = 40.sp,
+                                    lineHeight = 40.sp,
+                                    letterSpacing = (-0.04).em,
+                                    fontFeatureSettings = "tnum",
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = ripple(),
+                                        onClick = { showStartPicker = true },
+                                    )
+                                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                            )
+                            Text(
+                                text = "\u2013",
+                                fontSize = 20.sp,
+                                color = MaterialTheme.customColors.subtleText,
+                            )
+                            // 終了時刻（押すと選べる）
+                            Text(
+                                text = formatClockMinutes(uiState.endMinutes, timePattern),
+                                style = TextStyle(
+                                    fontFamily = ibmPlexMonoFontFamily(200),
+                                    fontSize = 40.sp,
+                                    lineHeight = 40.sp,
+                                    letterSpacing = (-0.04).em,
+                                    fontFeatureSettings = "tnum",
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = ripple(),
+                                        onClick = { showEndPicker = true },
+                                    )
+                                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                            )
+                        }
                     }
 
                     // タームの有効・無効スイッチ
@@ -382,55 +406,57 @@ fun AlarmEditScreen(
                                 .background(MaterialTheme.colorScheme.surface),
                         )
 
-                        // 行2: 間隔
-                        val intervalSummary = if (uiState.isVariableInterval) {
-                            stringResource(
-                                R.string.term_edit_interval_accelerate_summary,
-                                uiState.startIntervalMinutes,
-                                uiState.endIntervalMinutes,
-                            )
-                        } else {
-                            stringResource(
-                                R.string.term_edit_interval_constant_summary,
-                                uiState.startIntervalMinutes,
-                            )
-                        }
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 58.dp)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = ripple(),
-                                    onClick = { showIntervalSheet = true },
+                        // 行2: 間隔（通常アラーム時は表示しない）
+                        if (!uiState.isSingleAlarm) {
+                            val intervalSummary = if (uiState.isVariableInterval) {
+                                stringResource(
+                                    R.string.term_edit_interval_accelerate_summary,
+                                    uiState.startIntervalMinutes,
+                                    uiState.endIntervalMinutes,
                                 )
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(14.dp),
-                        ) {
-                            TermIntervalBarsIcon(color = MaterialTheme.customColors.subtleText)
-                            Text(
-                                text = stringResource(R.string.term_edit_interval_label),
-                                fontSize = 15.sp,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Text(
-                                text = intervalSummary,
-                                fontSize = 14.sp,
-                                fontFamily = ibmPlexMonoFontFamily(400),
-                                color = MaterialTheme.customColors.subtleText,
-                            )
-                            TermChevronRightIcon(color = MaterialTheme.customColors.subtleText)
-                        }
+                            } else {
+                                stringResource(
+                                    R.string.term_edit_interval_constant_summary,
+                                    uiState.startIntervalMinutes,
+                                )
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 58.dp)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = ripple(),
+                                        onClick = { showIntervalSheet = true },
+                                    )
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            ) {
+                                TermIntervalBarsIcon(color = MaterialTheme.customColors.subtleText)
+                                Text(
+                                    text = stringResource(R.string.term_edit_interval_label),
+                                    fontSize = 15.sp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Text(
+                                    text = intervalSummary,
+                                    fontSize = 14.sp,
+                                    fontFamily = ibmPlexMonoFontFamily(400),
+                                    color = MaterialTheme.customColors.subtleText,
+                                )
+                                TermChevronRightIcon(color = MaterialTheme.customColors.subtleText)
+                            }
 
-                        // 区切り線
-                        Spacer(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(1.dp)
-                                .background(MaterialTheme.colorScheme.surface),
-                        )
+                            // 区切り線
+                            Spacer(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(MaterialTheme.colorScheme.surface),
+                            )
+                        }
 
                         // 行3: 問題
                         val challengeSummary = when (uiState.challengeTiming) {
@@ -582,6 +608,18 @@ fun AlarmEditScreen(
         }
 
         // --- サブ画面・ダイアログ ---
+
+        // 単一時刻選択ダイアログ（通常アラーム用）
+        if (showSinglePicker) {
+            TimePickerDialogBox(
+                initialMinutes = uiState.startMinutes,
+                onDismiss = { showSinglePicker = false },
+                onConfirm = { minutes ->
+                    viewModel.setSingleMinutes(minutes)
+                    showSinglePicker = false
+                },
+            )
+        }
 
         // 開始時刻選択ダイアログ
         if (showStartPicker) {

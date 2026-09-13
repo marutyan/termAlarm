@@ -70,4 +70,34 @@ class HomeViewModelTest {
         val updated = repository.observeAll().first { list -> list.any { it.id == id && !it.enabled } }
         assertFalse(updated.first { it.id == id }.enabled)
     }
+
+    @Test
+    fun `通常アラームはターム一覧から除外される`() = runTest {
+        val termSchedule = AlarmSchedule(
+            id = 1L,
+            startMinutes = 7 * 60,
+            endMinutes = 9 * 60,
+            startIntervalMinutes = 5,
+            endIntervalMinutes = 5,
+            repeatDays = setOf(DayOfWeek.MONDAY),
+            label = "ターム",
+            enabled = true,
+        )
+        val singleAlarmSchedule = AlarmSchedule(
+            id = 2L,
+            startMinutes = 8 * 60,
+            endMinutes = 8 * 60,
+            startIntervalMinutes = 5,
+            endIntervalMinutes = 5,
+            repeatDays = emptySet(),
+            label = "通常アラーム",
+            enabled = true,
+        )
+        repository.add(termSchedule)
+        repository.add(singleAlarmSchedule)
+
+        val terms = viewModel.terms.first { it.isNotEmpty() }
+        assertEquals(1, terms.size)
+        assertEquals(termSchedule.id, terms[0].id)
+    }
 }
