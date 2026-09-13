@@ -358,10 +358,10 @@ private fun ChallengeBottomBar(
  */
 @Composable
 private fun CheckMarkIcon(
-    modifier: Modifier = Modifier.size(18.dp),
+    modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.primary,
 ) {
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(18.dp)) {
         val scale = size.width / 24f
         val strokeWidth = 1.8f * scale
         // M5 13l4 4L19 7

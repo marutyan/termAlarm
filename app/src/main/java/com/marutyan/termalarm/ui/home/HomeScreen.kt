@@ -112,10 +112,10 @@ private fun Modifier.dashedBorder(
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
+    modifier: Modifier = Modifier,
     onAddTerm: () -> Unit = {},
     onEditTerm: (Long) -> Unit = {},
     onEndTodayTerm: (Long) -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     val terms by viewModel.terms.collectAsStateWithLifecycle()
     val now = rememberCurrentSecond()

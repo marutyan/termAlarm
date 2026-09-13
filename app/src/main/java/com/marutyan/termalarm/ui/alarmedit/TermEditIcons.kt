@@ -23,13 +23,13 @@ import com.marutyan.termalarm.ui.theme.customColors
  */
 @Composable
 fun TermTagIcon(
-    modifier: Modifier = Modifier.size(20.dp),
+    modifier: Modifier = Modifier,
     color: Color = MaterialTheme.customColors.subtleText,
 ) {
     val path = remember {
         PathParser().parsePathString("M20.6 13.4l-7.2 7.2a2 2 0 01-2.8 0l-7.2-7.2A2 2 0 013 12V5a2 2 0 012-2h7a2 2 0 011.4.6l7.2 7.2a2 2 0 010 2.6z").toPath()
     }
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(20.dp)) {
         val scale = size.width / 24f
         drawPath(
             path = path,
@@ -50,13 +50,13 @@ fun TermTagIcon(
  */
 @Composable
 fun TermIntervalBarsIcon(
-    modifier: Modifier = Modifier.size(20.dp),
+    modifier: Modifier = Modifier,
     color: Color = MaterialTheme.customColors.subtleText,
 ) {
     val path = remember {
         PathParser().parsePathString("M4 6v12M10 6v12M15 6v12M19 6v12").toPath()
     }
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(20.dp)) {
         val scale = size.width / 24f
         drawPath(
             path = path,
@@ -72,13 +72,13 @@ fun TermIntervalBarsIcon(
  */
 @Composable
 fun TermQuestionCircleIcon(
-    modifier: Modifier = Modifier.size(20.dp),
+    modifier: Modifier = Modifier,
     color: Color = MaterialTheme.customColors.subtleText,
 ) {
     val questionPath = remember {
         PathParser().parsePathString("M9.2 8.8a3 3 0 015.6 1.5c0 1.8-2.8 2.2-2.8 4.2").toPath()
     }
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(20.dp)) {
         val scale = size.width / 24f
         drawCircle(
             color = color,
@@ -105,13 +105,13 @@ fun TermQuestionCircleIcon(
  */
 @Composable
 fun TermWakeCheckIcon(
-    modifier: Modifier = Modifier.size(20.dp),
+    modifier: Modifier = Modifier,
     color: Color = MaterialTheme.customColors.subtleText,
 ) {
     val path1 = remember { PathParser().parsePathString("M3.2 11a9 9 0 113 7.5").toPath() }
     val path2 = remember { PathParser().parsePathString("M3 5v5h5").toPath() }
     val path3 = remember { PathParser().parsePathString("M12 8.5V12l2.6 1.8").toPath() }
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(20.dp)) {
         val scale = size.width / 24f
         val stroke = Stroke(width = 1.6f * scale, cap = StrokeCap.Round, join = StrokeJoin.Round)
         drawPath(path1, color, style = stroke)
@@ -126,11 +126,11 @@ fun TermWakeCheckIcon(
  */
 @Composable
 fun TermChevronRightIcon(
-    modifier: Modifier = Modifier.size(17.dp),
+    modifier: Modifier = Modifier,
     color: Color = MaterialTheme.customColors.subtleText,
 ) {
     val path = remember { PathParser().parsePathString("M9 5l7 7-7 7").toPath() }
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(17.dp)) {
         val scale = size.width / 24f
         drawPath(
             path = path,
@@ -146,11 +146,11 @@ fun TermChevronRightIcon(
  */
 @Composable
 fun TermArrowRightIcon(
-    modifier: Modifier = Modifier.size(20.dp),
+    modifier: Modifier = Modifier,
     color: Color = MaterialTheme.customColors.subtleText,
 ) {
     val path = remember { PathParser().parsePathString("M4 12h15M14 7l5 5-5 5").toPath() }
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(20.dp)) {
         val scale = size.width / 24f
         drawPath(
             path = path,
@@ -166,11 +166,11 @@ fun TermArrowRightIcon(
  */
 @Composable
 fun TermEndIcon(
-    modifier: Modifier = Modifier.size(21.dp),
+    modifier: Modifier = Modifier,
     color: Color = MaterialTheme.customColors.subtleText,
 ) {
     val linePath = remember { PathParser().parsePathString("M8.5 8.5l7 7").toPath() }
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(21.dp)) {
         val scale = size.width / 24f
         drawCircle(
             color = color,

@@ -131,10 +131,10 @@ internal fun OccurrenceScaleBar(
  */
 @Composable
 private fun RingingStopIcon(
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.onPrimary,
 ) {
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         val scale = size.width / 24f
         val strokeWidth = 2.2f * scale
         // 左側の縦線 (M9 5v14)

@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.marutyan.termalarm.ui.theme.customColors
 
@@ -72,7 +73,7 @@ fun TermEditSwitch(
         ) {
             Box(
                 modifier = Modifier
-                    .offset(x = thumbOffset)
+                    .offset { IntOffset(thumbOffset.roundToPx(), 0) }
                     .size(20.dp)
                     .clip(CircleShape)
                     .background(thumbColor),

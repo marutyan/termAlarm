@@ -19,7 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import com.marutyan.termalarm.R
 
 /**
@@ -58,9 +58,9 @@ fun AboutScreen(onBack: () -> Unit) {
 // 本文をコードへ写すと、フォントを差し替えたときに古い表示が残るため、資源を唯一の出どころにする。
 @Composable
 private fun rememberFontLicenseText(): String {
-    val context = LocalContext.current
-    return remember {
-        context.resources.openRawResource(R.raw.font_license)
+    val resources = LocalResources.current
+    return remember(resources) {
+        resources.openRawResource(R.raw.font_license)
             .bufferedReader()
             .use { it.readText() }
     }

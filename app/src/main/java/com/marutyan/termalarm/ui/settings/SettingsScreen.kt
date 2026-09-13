@@ -86,11 +86,11 @@ private enum class SettingsPickerType {
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
+    modifier: Modifier = Modifier,
     onOpenGameList: () -> Unit = {},
     onOpenPrivacyPolicy: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
     onBack: () -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -378,9 +378,9 @@ private fun SettingsRow(
     title: String,
     value: String?,
     isLast: Boolean,
-    isMonospaceValue: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    isMonospaceValue: Boolean = false,
 ) {
     val dividerColor = MaterialTheme.colorScheme.background
     val subtleTextColor = MaterialTheme.customColors.subtleText

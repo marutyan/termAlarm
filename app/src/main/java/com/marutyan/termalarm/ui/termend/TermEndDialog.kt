@@ -50,8 +50,8 @@ fun TermEndDialog(
     repository: AlarmRepository,
     now: ZonedDateTime,
     onDismiss: () -> Unit,
-    onStartChallenge: (Long) -> Unit = {},
     modifier: Modifier = Modifier,
+    onStartChallenge: (Long) -> Unit = {},
 ) {
     val coroutineScope = rememberCoroutineScope()
     val remainingCount = remember(schedule, now) {
