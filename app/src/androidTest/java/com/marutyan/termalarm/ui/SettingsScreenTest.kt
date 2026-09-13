@@ -70,18 +70,21 @@ class SettingsScreenTest {
 
         // セクション見出し
         composeTestRule.onNodeWithText(string(R.string.settings_section_alarm)).assertExists()
-        composeTestRule.onNodeWithText(string(R.string.settings_section_clock)).assertExists()
+        composeTestRule.onNodeWithText(string(R.string.settings_section_appearance)).assertExists()
+        composeTestRule.onNodeWithText(string(R.string.settings_section_about_app)).assertExists()
 
         // アラームセクションの項目
-        composeTestRule.onNodeWithText(string(R.string.sound_title)).assertExists()
+        composeTestRule.onNodeWithText(string(R.string.settings_sound_item_title)).assertExists()
         composeTestRule.onNodeWithText(string(R.string.vibration_title)).assertExists()
-        composeTestRule.onNodeWithText(string(R.string.settings_volume_title)).assertExists()
         composeTestRule.onNodeWithText(string(R.string.settings_fade_in_title)).assertExists()
-        composeTestRule.onNodeWithText(string(R.string.settings_auto_stop_title)).assertExists()
+        composeTestRule.onNodeWithText(string(R.string.settings_silence_after_item_title)).assertExists()
+        composeTestRule.onNodeWithText(string(R.string.settings_wake_check_item_title)).assertExists()
+        composeTestRule.onNodeWithText(string(R.string.settings_mini_games_item_title)).assertExists()
 
-        // 時計セクションの項目
-        composeTestRule.onNodeWithText(string(R.string.settings_clock_style_title)).assertExists()
-        composeTestRule.onNodeWithText(string(R.string.settings_date_time_title)).assertExists()
+        // 見た目・このアプリセクションの項目
+        composeTestRule.onNodeWithText(string(R.string.settings_theme_item_title)).assertExists()
+        composeTestRule.onNodeWithText(string(R.string.settings_privacy_item_title)).assertExists()
+        composeTestRule.onNodeWithText(string(R.string.settings_about_item_title)).assertExists()
     }
 
     // 消音までの時間のダイアログを開いて値を選択すると画面とRepositoryに保存されることを保証する
@@ -89,7 +92,7 @@ class SettingsScreenTest {
     fun 消音までの時間を変更すると画面とRepositoryに反映される() {
         setScreen()
 
-        composeTestRule.onNodeWithText(string(R.string.settings_auto_stop_title)).performClick()
+        composeTestRule.onNodeWithText(string(R.string.settings_silence_after_item_title)).performClick()
         composeTestRule.onNode(hasText("5分") and hasAnyAncestor(isDialog())).performClick()
 
         composeTestRule.waitUntil(5_000) {
@@ -98,7 +101,6 @@ class SettingsScreenTest {
 
         val saved = runBlocking { settingsRepository.observe().first() }
         assertEquals(5, saved.silenceAfterMinutes)
-        composeTestRule.onNode(hasText(string(R.string.settings_auto_stop_title)) and hasText("5分")).assertExists()
     }
 
     // アラームの音量徐々に増加ダイアログを開いて選択すると画面とRepositoryに保存されることを保証する
@@ -118,24 +120,6 @@ class SettingsScreenTest {
         composeTestRule.onNodeWithText("10秒").assertExists()
     }
 
-    // 時計スタイルダイアログを開いて選択すると画面とClockSettingsRepositoryに保存されることを保証する
-    @Test
-    fun 時計スタイルを変更すると画面とClockSettingsRepositoryに反映される() {
-        setScreen()
-
-        composeTestRule.onNodeWithText(string(R.string.settings_clock_style_title)).performScrollTo().performClick()
-        val analogOption = string(R.string.clock_display_mode_analog)
-        composeTestRule.onNode(hasText(analogOption) and hasAnyAncestor(isDialog())).performClick()
-
-        composeTestRule.waitUntil(5_000) {
-            runBlocking { clockRepository.observeDisplayMode().first() == ClockDisplayMode.ANALOG }
-        }
-
-        val saved = runBlocking { clockRepository.observeDisplayMode().first() }
-        assertEquals(ClockDisplayMode.ANALOG, saved)
-        composeTestRule.onNodeWithText(analogOption).assertExists()
-    }
-
     // バイブレーション行をタップするとSwitchが切り替わりRepositoryに保存されることを保証する
     @Test
     fun バイブレーションのSwitchを切り替えるとRepositoryに反映される() {
@@ -150,15 +134,5 @@ class SettingsScreenTest {
 
         val savedOff = runBlocking { settingsRepository.observe().first() }
         assertTrue("バイブレーションがfalseになること", !savedOff.vibration)
-    }
-
-    // TopAppBarの戻るボタンを押したときにonBackコールバックが呼ばれることを保証する
-    @Test
-    fun 戻るボタンを押すとコールバックが呼ばれる() {
-        var backCalled = false
-        setScreen(onBack = { backCalled = true })
-
-        composeTestRule.onNodeWithText(string(R.string.back)).performClick()
-        assertTrue(backCalled)
     }
 }

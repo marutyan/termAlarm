@@ -39,6 +39,37 @@ class SettingsViewModel(
     fun setSilenceAfterMinutes(minutes: Int?) = update { it.copy(silenceAfterMinutes = minutes) }
     fun setWakeCheckMinutes(minutes: Int) = update { it.copy(wakeCheckMinutes = minutes) }
 
+    /**
+     * アプリ全体の配色テーマを更新する。
+     * NAVY / LIGHT / BLACK / DYNAMICの指定値をDBに保存するために用いる。
+     */
+    fun setTheme(theme: com.marutyan.termalarm.domain.AppTheme) = update { it.copy(theme = theme) }
+
+    /**
+     * 出題を有効にするミニゲームの集合を更新する。
+     * 1つ以上のゲームが選択されている場合のみ保存を反映する。
+     */
+    fun setEnabledGames(games: Set<com.marutyan.termalarm.domain.GameType>) {
+        if (games.isNotEmpty()) {
+            update { it.copy(enabledGames = games) }
+        }
+    }
+
+    /**
+     * 指定されたミニゲームの有効/無効を切り替える。
+     * 選択数が1つの状態で最後の1つを解除しようとした場合は変更を拒否し、常に1つ以上が選ばれた状態を維持する。
+     */
+    fun toggleGame(game: com.marutyan.termalarm.domain.GameType) {
+        val current = settings.value.enabledGames
+        if (game in current) {
+            if (current.size > 1) {
+                update { it.copy(enabledGames = current - game) }
+            }
+        } else {
+            update { it.copy(enabledGames = current + game) }
+        }
+    }
+
     fun setClockDisplayMode(mode: ClockDisplayMode) {
         viewModelScope.launch { clockRepository.setDisplayMode(mode) }
     }

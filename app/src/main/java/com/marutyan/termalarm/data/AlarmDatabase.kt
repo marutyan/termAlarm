@@ -26,6 +26,7 @@ import androidx.room.TypeConverters
         StopwatchLapEntity::class,
         ClockSettingsEntity::class,
         AppSettingsEntity::class,
+        RingRecordEntity::class,
     ],
     version = 1,
     exportSchema = true,
@@ -37,6 +38,7 @@ abstract class AlarmDatabase : RoomDatabase() {
     abstract fun stopwatchDao(): StopwatchDao
     abstract fun clockSettingsDao(): ClockSettingsDao
     abstract fun appSettingsDao(): AppSettingsDao
+    abstract fun ringRecordDao(): RingRecordDao
 
     companion object {
         @Volatile

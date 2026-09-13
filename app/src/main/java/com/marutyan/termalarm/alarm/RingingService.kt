@@ -61,8 +61,18 @@ class RingingService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_STOP, ACTION_SNOOZE -> stopRinging { id -> AlarmScheduler.onStopped(this, id) }
-            ACTION_SKIP -> stopRinging { id -> AlarmScheduler.onSessionEnded(this, id, occurrenceAt()) }
+            ACTION_STOP, ACTION_SNOOZE -> {
+                val method = intent.getStringExtra(EXTRA_STOP_METHOD)
+                stopRinging(isTimeout = false, explicitStopMethod = method) { id ->
+                    AlarmScheduler.onStopped(this, id)
+                }
+            }
+            ACTION_SKIP -> {
+                val method = intent.getStringExtra(EXTRA_STOP_METHOD)
+                stopRinging(isTimeout = false, explicitStopMethod = method) { id ->
+                    AlarmScheduler.onSessionEnded(this, id, occurrenceAt())
+                }
+            }
             else -> startRinging(intent)
         }
         return START_NOT_STICKY
@@ -101,12 +111,19 @@ class RingingService : Service() {
     private fun scheduleAutoStop(silenceMinutes: Int) {
         timeoutJob = scope.launch {
             delay(silenceMinutes * 60_000L)
-            stopRinging { id -> AlarmScheduler.onStopped(this@RingingService, id) }
+            stopRinging(isTimeout = true, explicitStopMethod = com.marutyan.termalarm.domain.StopMethod.AUTO_SILENCED.name) { id ->
+                AlarmScheduler.onStopped(this@RingingService, id)
+            }
         }
     }
 
-    private fun stopRinging(reschedule: suspend (Long) -> Unit) {
+    private fun stopRinging(
+        isTimeout: Boolean = false,
+        explicitStopMethod: String? = null,
+        reschedule: suspend (Long) -> Unit,
+    ) {
         val id = currentAlarmId
+        val triggerMillis = currentTriggerAtMillis
         timeoutJob?.cancel()
         mediaPlayer?.let { player -> runCatching { player.stop() }; player.release() }
         mediaPlayer = null
@@ -117,10 +134,48 @@ class RingingService : Service() {
         sendBroadcast(Intent(ACTION_RINGING_FINISHED).setPackage(packageName))
 
         scope.launch {
-            if (id != -1L) reschedule(id)
+            if (id != -1L) {
+                recordRingSession(id, triggerMillis, isTimeout, explicitStopMethod)
+                reschedule(id)
+            }
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
+    }
+
+    /**
+     * 鳴動停止時の実績を1件保存する。
+     * 停止方法、予定時刻、実停止時刻、セッション開始日、回数をDBに記録するために用いる。
+     */
+    private suspend fun recordRingSession(
+        alarmId: Long,
+        triggerMillis: Long,
+        isTimeout: Boolean,
+        explicitStopMethod: String?,
+    ) {
+        val schedule = repository().getById(alarmId) ?: return
+        val occurrenceAt = occurrenceAt()
+        val sessionStart = com.marutyan.termalarm.domain.sessionStartDate(schedule, occurrenceAt)
+        val totalCount = com.marutyan.termalarm.domain.occurrenceCount(schedule)
+        val remainingCount = com.marutyan.termalarm.domain.remainingOccurrenceCount(schedule, occurrenceAt)
+        val occurrenceIndex = (totalCount - remainingCount - 1).coerceAtLeast(0)
+
+        val stopMethod = explicitStopMethod ?: if (isTimeout) {
+            com.marutyan.termalarm.domain.StopMethod.AUTO_SILENCED.name
+        } else {
+            val hasChallenge = com.marutyan.termalarm.domain.challengeQuestionCount(schedule, occurrenceIndex) > 0
+            if (hasChallenge) com.marutyan.termalarm.domain.StopMethod.CHALLENGE.name else com.marutyan.termalarm.domain.StopMethod.TAP.name
+        }
+        val stoppedAt = if (isTimeout) null else System.currentTimeMillis()
+
+        Repositories.wakeRecord(this@RingingService).record(
+            alarmId = alarmId,
+            sessionStart = sessionStart.toEpochDay(),
+            scheduledAt = triggerMillis,
+            stoppedAt = stoppedAt,
+            stopMethod = stopMethod,
+            occurrenceIndex = occurrenceIndex,
+        )
     }
 
     private fun playSound(soundUri: String?, fadeInSeconds: Int) {
@@ -221,9 +276,19 @@ class RingingService : Service() {
         const val ACTION_STOP = "com.marutyan.termalarm.alarm.action.STOP"
         const val ACTION_SNOOZE = "com.marutyan.termalarm.alarm.action.SNOOZE"
         const val ACTION_SKIP = "com.marutyan.termalarm.alarm.action.SKIP"
+        const val EXTRA_STOP_METHOD = "com.marutyan.termalarm.alarm.extra.STOP_METHOD"
 
-        fun stopIntent(context: Context): Intent =
-            Intent(context, RingingService::class.java).setAction(ACTION_STOP)
+        /**
+         * 鳴動停止用のIntentを生成する。
+         * 停止方法(CHALLENGE / TAP / AUTO_SILENCED)を指定してサービスへ渡すために用いる。
+         */
+        fun stopIntent(context: Context, stopMethod: com.marutyan.termalarm.domain.StopMethod? = null): Intent =
+            Intent(context, RingingService::class.java).apply {
+                action = ACTION_STOP
+                if (stopMethod != null) {
+                    putExtra(EXTRA_STOP_METHOD, stopMethod.name)
+                }
+            }
 
         fun skipIntent(context: Context): Intent =
             Intent(context, RingingService::class.java).setAction(ACTION_SKIP)

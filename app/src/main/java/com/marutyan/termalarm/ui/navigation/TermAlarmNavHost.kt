@@ -40,6 +40,10 @@ import com.marutyan.termalarm.ui.home.HomeScreen
 import com.marutyan.termalarm.ui.home.HomeViewModel
 import com.marutyan.termalarm.ui.home.HomeViewModelFactory
 import com.marutyan.termalarm.ui.privacy.PrivacyScreen
+import com.marutyan.termalarm.ui.records.RecordsScreen
+import com.marutyan.termalarm.ui.records.RecordsViewModel
+import com.marutyan.termalarm.ui.records.RecordsViewModelFactory
+import com.marutyan.termalarm.ui.settings.GameListScreen
 import com.marutyan.termalarm.ui.settings.SettingsScreen
 import com.marutyan.termalarm.ui.settings.SettingsViewModel
 import com.marutyan.termalarm.ui.settings.SettingsViewModelFactory
@@ -62,6 +66,7 @@ import com.marutyan.termalarm.ui.timer.TimerViewModelFactory
 
 private const val ROUTE_EDIT = "edit"
 private const val ROUTE_END_TODAY_GAME = "endTodayGame"
+private const val ROUTE_GAME_LIST = "gameList"
 private const val ROUTE_ABOUT = "about"
 private const val ROUTE_PRIVACY = "privacy"
 private const val ARG_ALARM_ID = "alarmId"
@@ -194,9 +199,13 @@ fun TermAlarmNavHost(
                     PlaceholderScreen()
                 }
 
-                // 3. 記録（準備中プレースホルダ）
+                // 3. 記録
                 composable(NavItem.RECORD.route) {
-                    PlaceholderScreen()
+                    val wakeRecordRepository = remember { Repositories.wakeRecord(context) }
+                    val viewModel: RecordsViewModel = viewModel(
+                        factory = RecordsViewModelFactory(wakeRecordRepository, repository),
+                    )
+                    RecordsScreen(viewModel = viewModel)
                 }
 
                 // 4. タイマー（既存画面を流用）
@@ -237,7 +246,7 @@ fun TermAlarmNavHost(
                     )
                 }
 
-                // 6. 設定（既存画面を流用）
+                // 6. 設定
                 composable(NavItem.SETTINGS.route) {
                     val settingsRepository = remember { Repositories.settings(context) }
                     val clockRepository = remember { Repositories.clockSettings(context) }
@@ -246,6 +255,9 @@ fun TermAlarmNavHost(
                     )
                     SettingsScreen(
                         viewModel = viewModel,
+                        onOpenGameList = { navController.navigate(ROUTE_GAME_LIST) },
+                        onOpenPrivacyPolicy = { navController.navigate(ROUTE_PRIVACY) },
+                        onOpenAbout = { navController.navigate(ROUTE_ABOUT) },
                         onBack = {
                             if (!navController.popBackStack()) {
                                 navController.navigate(NavItem.TERMS.route) {
@@ -253,6 +265,26 @@ fun TermAlarmNavHost(
                                 }
                             }
                         },
+                    )
+                }
+
+                // ミニゲーム選択画面
+                composable(
+                    ROUTE_GAME_LIST,
+                    enterTransition = { screenOpenEnter(slidePx) },
+                    exitTransition = { screenOpenExit(slidePx) },
+                    popEnterTransition = { screenCloseEnter(slidePx) },
+                    popExitTransition = { screenCloseExit(slidePx) },
+                ) {
+                    val settingsRepository = remember { Repositories.settings(context) }
+                    val clockRepository = remember { Repositories.clockSettings(context) }
+                    val viewModel: SettingsViewModel = viewModel(
+                        factory = SettingsViewModelFactory(settingsRepository, clockRepository),
+                    )
+                    GameListScreen(
+                        viewModel = viewModel,
+                        hasShakeSensor = hasShakeSensor,
+                        onBack = { navController.popBackStack() },
                     )
                 }
 

@@ -237,7 +237,7 @@ private fun RingingScreen(
         SkipGameScreen(
             viewModel = gameViewModel,
             onClose = {
-                context.startService(RingingService.stopIntent(context))
+                context.startService(RingingService.stopIntent(context, com.marutyan.termalarm.domain.StopMethod.CHALLENGE))
                 onFinish()
             },
         )
@@ -253,13 +253,13 @@ private fun RingingScreen(
                 if (hasChallenge) {
                     showGame = true
                 } else {
-                    context.startService(RingingService.stopIntent(context))
+                    context.startService(RingingService.stopIntent(context, com.marutyan.termalarm.domain.StopMethod.TAP))
                     onFinish()
                 }
             },
             onEndTerm = {
                 // 鳴動音を停止して次回を予約
-                context.startService(RingingService.stopIntent(context))
+                context.startService(RingingService.stopIntent(context, com.marutyan.termalarm.domain.StopMethod.TAP))
                 // アプリを開いて確認画面（TermEndDialog）を出す
                 val mainIntent = Intent(context, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
