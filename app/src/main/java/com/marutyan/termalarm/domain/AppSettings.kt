@@ -22,5 +22,6 @@ data class AppSettings(
     val silenceAfterMinutes: Int? = null, // 放置したとき自動で止まるまでの分数。null なら止めない。既定 null
     val wakeCheckMinutes: Int = 5, // ターム終了後、二度寝チェックまでの分数。既定5
     val theme: AppTheme = AppTheme.NAVY, // 既定 NAVY
+    val enabledGames: Set<GameType> = GameType.entries.toSet() - GameType.WALK, // 出題を有効にするミニゲームの集合。WALKは起床負荷が高いため既定では除外する
 )
 

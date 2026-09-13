@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "d4de2cbaa3456d869d08c5a20fd4459f",
+    "identityHash": "f925914cfe4a00bb020d7a5c6601ddc1",
     "entities": [
       {
         "tableName": "alarm_schedule",
@@ -245,7 +245,7 @@
       },
       {
         "tableName": "app_settings",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `alarmSoundUri` TEXT, `vibration` INTEGER NOT NULL, `fadeInSeconds` INTEGER NOT NULL, `silenceAfterMinutes` INTEGER, `wakeCheckMinutes` INTEGER NOT NULL, `theme` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `alarmSoundUri` TEXT, `vibration` INTEGER NOT NULL, `fadeInSeconds` INTEGER NOT NULL, `silenceAfterMinutes` INTEGER, `wakeCheckMinutes` INTEGER NOT NULL, `theme` TEXT NOT NULL, `enabledGames` TEXT NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -286,6 +286,12 @@
             "columnName": "theme",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "enabledGames",
+            "columnName": "enabledGames",
+            "affinity": "TEXT",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -298,7 +304,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd4de2cbaa3456d869d08c5a20fd4459f')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f925914cfe4a00bb020d7a5c6601ddc1')"
     ]
   }
 }

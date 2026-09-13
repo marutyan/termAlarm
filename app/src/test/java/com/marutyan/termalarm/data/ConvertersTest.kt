@@ -2,6 +2,7 @@ package com.marutyan.termalarm.data
 
 import com.marutyan.termalarm.domain.ChallengeLevel
 import com.marutyan.termalarm.domain.ChallengeTiming
+import com.marutyan.termalarm.domain.GameType
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -33,5 +34,23 @@ class ConvertersTest {
         assertEquals(ChallengeLevel.EASY, converters.toChallengeLevel("EASY"))
         assertEquals(ChallengeLevel.HARD, converters.toChallengeLevel("HARD"))
         assertEquals(ChallengeLevel.EASY, converters.toChallengeLevel("UNKNOWN"))
+    }
+
+    @Test
+    fun `GameTypeの集合が文字列と正しく相互変換され未知の値は除外される`() {
+        val games = setOf(GameType.MIRROR_TEXT, GameType.WALK, GameType.SEQUENCE_RECALL)
+        val serialized = converters.fromGameTypeSet(games)
+        assertEquals("MIRROR_TEXT,WALK,SEQUENCE_RECALL", serialized)
+
+        val deserialized = converters.toGameTypeSet(serialized)
+        assertEquals(games, deserialized)
+
+        // 未知の値が含まれていても無視されること
+        val withUnknown = converters.toGameTypeSet("MIRROR_TEXT,UNKNOWN_GAME,WALK")
+        assertEquals(setOf(GameType.MIRROR_TEXT, GameType.WALK), withUnknown)
+
+        // 空文字列の場合は空セットになること
+        assertEquals(emptySet<GameType>(), converters.toGameTypeSet(""))
+        assertEquals("", converters.fromGameTypeSet(emptySet()))
     }
 }

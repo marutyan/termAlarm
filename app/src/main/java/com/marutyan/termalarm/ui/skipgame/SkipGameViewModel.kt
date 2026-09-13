@@ -53,7 +53,12 @@ class SkipGameViewModel(
         private set
 
     // センサーが無い端末では「端末を振る」を出題候補から除外する(docs/SPEC.md「ゲームの実装方針」)
-    private val excludedTypes: Set<GameType> = if (hasShakeSensor) emptySet() else setOf(GameType.SHAKE_DEVICE)
+    // 新規4種類の画面実装は後続タスクで行うため、UIが対応している種類のみを出題対象とする
+    private val allowedTypes: Set<GameType> = (if (hasShakeSensor) {
+        GameType.entries.toSet()
+    } else {
+        GameType.entries.toSet() - GameType.SHAKE_DEVICE
+    }) - setOf(GameType.MIRROR_TEXT, GameType.SEQUENCE_RECALL, GameType.MEMORY_PAIRS, GameType.WALK)
 
     init {
         viewModelScope.launch {
@@ -64,7 +69,7 @@ class SkipGameViewModel(
                 startMinutes = schedule?.startMinutes ?: 0,
                 endMinutes = schedule?.endMinutes ?: 0,
                 totalOccurrences = schedule?.let { occurrenceCount(it) } ?: 0,
-                question = generateGameQuestion(random, excludedTypes),
+                question = generateGameQuestion(random, allowedTypes),
             )
         }
     }
@@ -83,7 +88,7 @@ class SkipGameViewModel(
                 uiState = uiState.copy(isSuccess = true)
             }
         } else {
-            uiState = uiState.copy(question = generateGameQuestion(random, excludedTypes), justFailed = true)
+            uiState = uiState.copy(question = generateGameQuestion(random, allowedTypes), justFailed = true)
         }
     }
 

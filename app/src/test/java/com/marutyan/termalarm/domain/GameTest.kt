@@ -9,9 +9,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 // 指定した1種類だけを許可してgenerateGameQuestionを呼ぶテスト用ヘルパー。
-// excludedTypesに他の全種類を渡すことで、狙った種類の出題ロジックと除外フィルタを同時に検証する
 private fun onlyType(type: GameType, random: Random): GameQuestion =
-    generateGameQuestion(random, excludedTypes = GameType.entries.toSet() - type)
+    generateGameQuestion(random, allowedTypes = setOf(type))
 
 class GameTest {
 
@@ -78,18 +77,84 @@ class GameTest {
     }
 
     @Test
-    fun `excludedTypesに含めた種類は何度generateしても出題されない`() {
-        val random = Random(42)
-        repeat(200) {
-            val q = generateGameQuestion(random, excludedTypes = setOf(GameType.SHAKE_DEVICE))
-            assertNotEquals(GameType.SHAKE_DEVICE, q.type)
+    fun `鏡文字は英数字8文字であり表示した文字列と同じ入力で正解になる`() {
+        val q = onlyType(GameType.MIRROR_TEXT, Random(10)) as GameQuestion.MirrorText
+        assertEquals(8, q.text.length)
+        assertEquals(q.text, q.correctAnswer)
+
+        assertTrue(judgeGameAnswer(q, q.text))
+        assertFalse(judgeGameAnswer(q, q.text.lowercase()))
+        assertFalse(judgeGameAnswer(q, "DIFFERENT"))
+    }
+
+    @Test
+    fun `光った順を再現は1から9から重複なしで5つを選んでいる`() {
+        val q = onlyType(GameType.SEQUENCE_RECALL, Random(20)) as GameQuestion.SequenceRecall
+        assertEquals(5, q.sequence.size)
+        assertEquals(5, q.sequence.toSet().size)
+        assertTrue(q.sequence.all { it in 1..9 })
+    }
+
+    @Test
+    fun `光った順を再現は同じ並びをカンマ区切りで渡すと正解になり順を入れ替えると不正解になる`() {
+        val q = onlyType(GameType.SEQUENCE_RECALL, Random(20)) as GameQuestion.SequenceRecall
+        val correct = q.sequence.joinToString(",")
+        val swapped = q.sequence.reversed().joinToString(",")
+
+        assertTrue(judgeGameAnswer(q, correct))
+        assertFalse(judgeGameAnswer(q, swapped))
+
+        // 固定の具体値による直接検証
+        val manual = GameQuestion.SequenceRecall(listOf(1, 3, 5, 7, 9), "1,3,5,7,9")
+        assertTrue(judgeGameAnswer(manual, "1,3,5,7,9"))
+        assertFalse(judgeGameAnswer(manual, "9,7,5,3,1"))
+    }
+
+    @Test
+    fun `神経衰弱は12枚で6種類の絵柄が2枚ずつ入っている`() {
+        val q = onlyType(GameType.MEMORY_PAIRS, Random(30)) as GameQuestion.MemoryPairs
+        assertEquals(12, q.cards.size)
+        val distinctKinds = q.cards.toSet()
+        assertEquals(setOf(0, 1, 2, 3, 4, 5), distinctKinds)
+        for (kind in 0..5) {
+            assertEquals(2, q.cards.count { it == kind })
         }
     }
 
     @Test
-    fun `全種類を除外すると出題できず例外になる`() {
+    fun `神経衰弱は6で正解になる`() {
+        val q = onlyType(GameType.MEMORY_PAIRS, Random(30)) as GameQuestion.MemoryPairs
+        assertEquals("6", q.correctAnswer)
+
+        assertTrue(judgeGameAnswer(q, "6"))
+        assertFalse(judgeGameAnswer(q, "5"))
+        assertFalse(judgeGameAnswer(q, "0"))
+    }
+
+    @Test
+    fun `歩くは必要な歩数と同じ数を渡すと正解になる`() {
+        val q = onlyType(GameType.WALK, Random(40)) as GameQuestion.Walk
+        assertEquals(30, q.requiredSteps)
+        assertEquals("30", q.correctAnswer)
+
+        assertTrue(judgeGameAnswer(q, "30"))
+        assertFalse(judgeGameAnswer(q, "29"))
+        assertFalse(judgeGameAnswer(q, "31"))
+    }
+
+    @Test
+    fun `allowedTypesに1種類だけ渡すと必ずその種類が出る`() {
+        val random = Random(42)
+        repeat(50) {
+            val q = generateGameQuestion(random, allowedTypes = setOf(GameType.WALK))
+            assertEquals(GameType.WALK, q.type)
+        }
+    }
+
+    @Test
+    fun `allowedTypesが空のとき例外になる`() {
         assertThrows(IllegalArgumentException::class.java) {
-            generateGameQuestion(Random(7), excludedTypes = GameType.entries.toSet())
+            generateGameQuestion(Random(7), allowedTypes = emptySet())
         }
     }
 

@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.marutyan.termalarm.domain.AppSettings
 import com.marutyan.termalarm.domain.AppTheme
+import com.marutyan.termalarm.domain.GameType
 
 /**
  * アプリ全体の設定を保存する単一行のテーブル。ClockSettingsEntityと同じ理由で、idは常に0固定にして
@@ -19,6 +20,7 @@ data class AppSettingsEntity(
     val silenceAfterMinutes: Int?,
     val wakeCheckMinutes: Int,
     val theme: String,
+    val enabledGames: Set<GameType>,
 ) {
     companion object {
         const val SINGLE_ROW_ID = 0
@@ -33,6 +35,7 @@ internal fun AppSettingsEntity.toDomain(): AppSettings = AppSettings(
     silenceAfterMinutes = silenceAfterMinutes,
     wakeCheckMinutes = wakeCheckMinutes,
     theme = runCatching { AppTheme.valueOf(theme) }.getOrDefault(AppTheme.NAVY),
+    enabledGames = enabledGames,
 )
 
 internal fun AppSettings.toEntity(): AppSettingsEntity = AppSettingsEntity(
@@ -42,5 +45,6 @@ internal fun AppSettings.toEntity(): AppSettingsEntity = AppSettingsEntity(
     silenceAfterMinutes = silenceAfterMinutes,
     wakeCheckMinutes = wakeCheckMinutes,
     theme = theme.name,
+    enabledGames = enabledGames,
 )
 

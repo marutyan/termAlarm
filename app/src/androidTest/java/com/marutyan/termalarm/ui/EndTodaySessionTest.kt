@@ -182,6 +182,10 @@ class EndTodaySessionTest {
             is GameQuestion.SequentialTap -> (1..12).forEach { n -> composeTestRule.onNodeWithText(n.toString()).performClick() }
             is GameQuestion.ColorWord -> composeTestRule.onNodeWithText(question.correctAnswer).performClick()
             is GameQuestion.ShakeDevice -> error("hasShakeSensor=falseのためSHAKE_DEVICEは出題されないはず")
+            is GameQuestion.MirrorText,
+            is GameQuestion.SequenceRecall,
+            is GameQuestion.MemoryPairs,
+            is GameQuestion.Walk -> error("新ゲームはUIが未実装のため出題されないはず: $question")
         }
     }
 
@@ -204,6 +208,10 @@ class EndTodaySessionTest {
                 composeTestRule.onNodeWithText(wrongChoice).performClick()
             }
             is GameQuestion.ShakeDevice -> error("hasShakeSensor=falseのためSHAKE_DEVICEは出題されないはず")
+            is GameQuestion.MirrorText,
+            is GameQuestion.SequenceRecall,
+            is GameQuestion.MemoryPairs,
+            is GameQuestion.Walk -> error("新ゲームはUIが未実装のため出題されないはず: $question")
         }
     }
 

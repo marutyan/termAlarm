@@ -138,7 +138,7 @@ private fun SkipGameInfoBanner(startMinutes: Int, endMinutes: Int, totalOccurren
     }
 }
 
-// 問題の種類に応じて対応する画面を出し分ける
+// 問題の種類に応じて対応する画面を出し分ける（新ゲーム画面は後続タスクで実装するまでの暫定追従）
 @Composable
 private fun GameContent(question: GameQuestion, onSubmit: (String) -> Unit, onCancel: () -> Unit) {
     when (question) {
@@ -148,6 +148,10 @@ private fun GameContent(question: GameQuestion, onSubmit: (String) -> Unit, onCa
         is GameQuestion.SequentialTap -> SequentialTapGame(question, onSubmit, onCancel)
         is GameQuestion.ShakeDevice -> ShakeDeviceGame(question, onSubmit, onCancel)
         is GameQuestion.ColorWord -> ColorWordGame(question, onSubmit, onCancel)
+        is GameQuestion.MirrorText,
+        is GameQuestion.SequenceRecall,
+        is GameQuestion.MemoryPairs,
+        is GameQuestion.Walk -> Unit
     }
 }
 
