@@ -12,7 +12,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmDatabase
-import com.marutyan.termalarm.data.ClockSettingsRepository
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.ClockDisplayMode
 import com.marutyan.termalarm.ui.settings.SettingsScreen
@@ -33,14 +32,12 @@ class SettingsScreenTest {
 
     private lateinit var db: AlarmDatabase
     private lateinit var settingsRepository: SettingsRepository
-    private lateinit var clockRepository: ClockSettingsRepository
 
     @Before
     fun setUp() {
-        val (database, settings, clock) = createTestSettingsRepositories()
+        val (database, settings) = createTestSettingsRepository()
         db = database
         settingsRepository = settings
-        clockRepository = clock
     }
 
     @After
@@ -57,7 +54,7 @@ class SettingsScreenTest {
     private fun setScreen(onBack: () -> Unit = {}) {
         composeTestRule.setContent {
             SettingsScreen(
-                viewModel = remember { SettingsViewModel(settingsRepository, clockRepository) },
+                viewModel = remember { SettingsViewModel(settingsRepository) },
                 onBack = onBack,
             )
         }

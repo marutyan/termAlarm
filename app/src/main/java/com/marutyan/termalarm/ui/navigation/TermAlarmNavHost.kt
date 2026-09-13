@@ -258,9 +258,8 @@ fun TermAlarmNavHost(
                 // 6. 設定
                 composable(NavItem.SETTINGS.route) {
                     val settingsRepository = remember { Repositories.settings(context) }
-                    val clockRepository = remember { Repositories.clockSettings(context) }
                     val viewModel: SettingsViewModel = viewModel(
-                        factory = SettingsViewModelFactory(settingsRepository, clockRepository),
+                        factory = SettingsViewModelFactory(settingsRepository),
                     )
                     SettingsScreen(
                         viewModel = viewModel,
@@ -286,9 +285,8 @@ fun TermAlarmNavHost(
                     popExitTransition = { screenCloseExit(slidePx) },
                 ) {
                     val settingsRepository = remember { Repositories.settings(context) }
-                    val clockRepository = remember { Repositories.clockSettings(context) }
                     val viewModel: SettingsViewModel = viewModel(
-                        factory = SettingsViewModelFactory(settingsRepository, clockRepository),
+                        factory = SettingsViewModelFactory(settingsRepository),
                     )
                     GameListScreen(
                         viewModel = viewModel,

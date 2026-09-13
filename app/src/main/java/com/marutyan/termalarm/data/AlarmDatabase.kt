@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
 /**
- * アプリ唯一のRoomデータベース。アラーム、タイマー、ストップウォッチ、時計タブの表示設定、アプリ全体の設定の状態を持つ。
+ * アプリ唯一のRoomデータベース。アラーム、タイマー、ストップウォッチ、アプリ全体の設定の状態を持つ。
  *
  * 未公開のため、既存データを引き継ぐ移行処理は書かず、version 1から作り直している。
  * 既存の開発端末に古いversionのデータベースが残っていてもversion不整合でクラッシュしないよう、
@@ -24,7 +24,6 @@ import androidx.room.TypeConverters
         TimerEntity::class,
         StopwatchStateEntity::class,
         StopwatchLapEntity::class,
-        ClockSettingsEntity::class,
         AppSettingsEntity::class,
         RingRecordEntity::class,
     ],
@@ -36,7 +35,6 @@ abstract class AlarmDatabase : RoomDatabase() {
     abstract fun alarmDao(): AlarmDao
     abstract fun timerDao(): TimerDao
     abstract fun stopwatchDao(): StopwatchDao
-    abstract fun clockSettingsDao(): ClockSettingsDao
     abstract fun appSettingsDao(): AppSettingsDao
     abstract fun ringRecordDao(): RingRecordDao
 

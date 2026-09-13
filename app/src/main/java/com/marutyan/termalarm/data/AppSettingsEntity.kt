@@ -7,7 +7,7 @@ import com.marutyan.termalarm.domain.AppTheme
 import com.marutyan.termalarm.domain.GameType
 
 /**
- * アプリ全体の設定を保存する単一行のテーブル。ClockSettingsEntityと同じ理由で、idは常に0固定にして
+ * アプリ全体の設定を保存する単一行のテーブル。idは常に0固定にして
  * 1行しか存在しないことを保証し、Insert(REPLACE)でupsertする(AppSettingsDao参照)。
  */
 @Entity(tableName = "app_settings")

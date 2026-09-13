@@ -25,9 +25,6 @@ object Repositories {
     fun settings(context: Context): SettingsRepository =
         SettingsRepository(db(context).appSettingsDao())
 
-    fun clockSettings(context: Context): ClockSettingsRepository =
-        ClockSettingsRepository(db(context).clockSettingsDao())
-
     fun wakeRecord(context: Context): WakeRecordRepository =
         WakeRecordRepository(db(context).ringRecordDao(), db(context).alarmDao())
 

@@ -10,7 +10,6 @@ import androidx.compose.ui.test.performClick
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
-import com.marutyan.termalarm.data.ClockSettingsRepository
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.data.StopwatchRepository
 import com.marutyan.termalarm.data.TimerRepository

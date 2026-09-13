@@ -18,7 +18,6 @@ import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
-import com.marutyan.termalarm.data.ClockSettingsRepository
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.data.StopwatchRepository
 import com.marutyan.termalarm.data.TimerRepository
@@ -163,25 +162,13 @@ internal fun ComposeTestRule.switchNear(label: String): SemanticsNodeInteraction
 }
 
 /**
- * 時計タブUIテスト専用のインメモリRoomDB+ClockSettingsRepositoryを作る。
+ * 設定画面UIテスト専用のインメモリRoomDBとSettingsRepositoryを作る。
  * テストごとに新しいインメモリDBを作るため他機能のテストとは独立する。
  */
-internal fun createTestClockRepository(): Pair<AlarmDatabase, ClockSettingsRepository> {
+internal fun createTestSettingsRepository(): Pair<AlarmDatabase, SettingsRepository> {
     val context = InstrumentationRegistry.getInstrumentation().targetContext
     val db = Room.inMemoryDatabaseBuilder(context, AlarmDatabase::class.java)
         .fallbackToDestructiveMigration(true)
         .build()
-    return db to ClockSettingsRepository(db.clockSettingsDao())
-}
-
-/**
- * 設定画面UIテスト専用のインメモリRoomDBとSettingsRepository、ClockSettingsRepositoryを作る。
- * 設定画面が参照する2つのリポジトリを同一のインメモリDBに紐づけて独立したテスト環境を提供する。
- */
-internal fun createTestSettingsRepositories(): Triple<AlarmDatabase, SettingsRepository, ClockSettingsRepository> {
-    val context = InstrumentationRegistry.getInstrumentation().targetContext
-    val db = Room.inMemoryDatabaseBuilder(context, AlarmDatabase::class.java)
-        .fallbackToDestructiveMigration(true)
-        .build()
-    return Triple(db, SettingsRepository(db.appSettingsDao()), ClockSettingsRepository(db.clockSettingsDao()))
+    return db to SettingsRepository(db.appSettingsDao())
 }

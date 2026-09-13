@@ -227,8 +227,8 @@
     <string name="timer_pause">一時停止</string>
     <string name="timer_resume">再開</string>
     <string name="timer_reset">リセット</string>
-    <string name="timer_extend_one_minute">+1分</string>
-    <string name="timer_extend_one_minute_button">+1:00</string>
+    <string name="timer_extend_one_minute">＋1分</string>
+    <string name="timer_extend_one_minute_button">＋1分</string>
     <string name="timer_delete">削除</string>
     <!-- タイマー画面: 完了(鳴動中)のタイマーを止めるボタン。停止するとそのタイマー自体を削除する -->
     <string name="timer_stop">停止</string>
