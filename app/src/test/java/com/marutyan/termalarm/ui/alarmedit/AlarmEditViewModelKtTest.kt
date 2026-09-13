@@ -85,15 +85,14 @@ class AlarmEditViewModelKtTest {
     }
 
     @Test
-    fun `鳴動時刻のプレビュー文字列が2行以内で省略される`() {
+    fun `鳴動時刻のプレビュー文字列が1行で省略される`() {
         val times = listOf(
             "7:00", "7:10", "7:19", "7:27", "7:34",
             "7:40", "7:45", "7:50", "7:54", "7:58", "8:00",
         )
         val preview = formatOccurrenceTimesPreview(times)
-        assertTrue(preview.contains("\n"))
-        assertTrue(preview.contains("\u2026 8:00"))
-        assertEquals(2, preview.lines().size)
+        assertEquals("7:00, 7:10, 7:19, 7:27 … 8:00", preview)
+        assertEquals(1, preview.lines().size)
     }
 
     @Test

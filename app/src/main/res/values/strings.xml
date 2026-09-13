@@ -105,7 +105,7 @@
     <string name="term_edit_custom_interval_title">間隔を入力</string>
 
     <!-- ミッション選択ダイアログ -->
-    <string name="challenge_timing_never">出さない</string>
+    <string name="challenge_timing_never">なし</string>
     <string name="challenge_timing_never_desc">押すだけで停止します</string>
     <string name="challenge_timing_end_only">ターム終了時だけ</string>
     <string name="challenge_timing_end_only_desc">最後の1回だけミッションを出します。途中は押すだけで停止します</string>

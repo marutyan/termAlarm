@@ -154,7 +154,7 @@ fun TimerScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(top = statusBarTop + 12.dp, start = 18.dp, end = 18.dp),
+                        .padding(top = statusBarTop + 12.dp, start = 18.dp, end = 18.dp, bottom = 26.dp),
                 ) {
                     // 画面上部の帯: アプリ名と三点メニュー
                     TermAlarmTopBar(

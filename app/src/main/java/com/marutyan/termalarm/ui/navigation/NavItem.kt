@@ -20,7 +20,7 @@ enum class NavItem(
     TERMS(
         route = "terms",
         icon = AlarmClockIcon,
-        iconSize = 18.dp,
+        iconSize = 24.dp,
         labelRes = R.string.nav_terms,
     ),
 
@@ -28,7 +28,7 @@ enum class NavItem(
     STANDARD_ALARM(
         route = "standard_alarm",
         icon = BellIcon,
-        iconSize = 19.dp,
+        iconSize = 24.dp,
         labelRes = R.string.nav_standard_alarm,
     ),
 
@@ -36,7 +36,7 @@ enum class NavItem(
     RECORD(
         route = "record",
         icon = ChartLineIcon,
-        iconSize = 19.dp,
+        iconSize = 24.dp,
         labelRes = R.string.nav_record,
     ),
 
@@ -44,7 +44,7 @@ enum class NavItem(
     TIMER(
         route = "timer",
         icon = HourglassIcon,
-        iconSize = 19.dp,
+        iconSize = 24.dp,
         labelRes = R.string.nav_timer,
     ),
 
@@ -52,7 +52,7 @@ enum class NavItem(
     STOPWATCH(
         route = "stopwatch",
         icon = StopwatchNavIcon,
-        iconSize = 19.dp,
+        iconSize = 24.dp,
         labelRes = R.string.nav_stopwatch,
     ),
 
@@ -60,7 +60,7 @@ enum class NavItem(
     SETTINGS(
         route = "settings",
         icon = SettingsGearIcon,
-        iconSize = 19.dp,
+        iconSize = 24.dp,
         labelRes = R.string.nav_settings,
     ),
 }

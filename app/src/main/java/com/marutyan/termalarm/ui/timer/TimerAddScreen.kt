@@ -9,12 +9,15 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -95,11 +98,13 @@ fun TimerAddScreen(
     // 純正もテンキーを出している間、下部ナビは見えたままになっている。
     // 縦が足りない端末や分割画面でも押せるよう、縦へはみ出したらスクロールできるようにする。
     // 純正ではテンキー1行目の上端が画面の高さの36%の位置にあり、テンキー全体が画面中央付近に配置される。
+    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp),
+            .padding(top = statusBarTop + 76.dp, start = 12.dp, end = 12.dp, bottom = 26.dp),
         contentAlignment = Alignment.TopCenter,
     ) {
         val isCompact = maxHeight < COMPACT_SCREEN_HEIGHT_THRESHOLD
@@ -421,10 +426,10 @@ private fun TimerActionRow(
                 shape = CircleShape,
                 interactionSource = startInteractionSource,
                 colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    disabledContentColor = MaterialTheme.colorScheme.outline,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
                 modifier = Modifier
                     .size(START_BUTTON_SIZE)

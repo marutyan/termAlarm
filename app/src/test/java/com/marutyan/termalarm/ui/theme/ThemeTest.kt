@@ -200,4 +200,53 @@ class ThemeTest {
         assertTrue(AppTypography.labelLarge.fontSize.value >= 11f)
         assertTrue(AppTypography.bodySmall.fontSize.value >= 11f)
     }
+
+    @Test
+    fun allThemes_buttonContrastRatioIsAtLeast4_5() {
+        val themes = listOf(
+            AppTheme.NAVY,
+            AppTheme.LIGHT,
+            AppTheme.BLACK,
+        )
+
+        for (theme in themes) {
+            val scheme = resolveColorScheme(theme)
+            val custom = resolveCustomColors(theme, scheme)
+
+            // 1. 主役の色で塗ったボタン: 主役の地(primary)と主役の上の文字(onPrimary)
+            val primaryButtonRatio = contrastRatio(scheme.onPrimary, scheme.primary)
+            assertTrue(
+                "${theme.name}: 主役ボタンの文字コントラスト比($primaryButtonRatio)は4.5以上であること",
+                primaryButtonRatio >= 4.5,
+            )
+
+            // 2. 枠線だけのボタン: カード地(surfaceContainer)や画面地(surface)上の副次文字(onSurfaceVariant)
+            val outlinedButtonRatioOnContainer = contrastRatio(scheme.onSurfaceVariant, scheme.surfaceContainer)
+            assertTrue(
+                "${theme.name}: カード上の枠線ボタンの副次文字コントラスト比($outlinedButtonRatioOnContainer)は4.5以上であること",
+                outlinedButtonRatioOnContainer >= 4.5,
+            )
+
+            val outlinedButtonRatioOnSurface = contrastRatio(scheme.onSurfaceVariant, scheme.surface)
+            assertTrue(
+                "${theme.name}: 画面上の枠線ボタンの副次文字コントラスト比($outlinedButtonRatioOnSurface)は4.5以上であること",
+                outlinedButtonRatioOnSurface >= 4.5,
+            )
+
+            // 選択肢カード地(scaleUpcoming)上の副次文字
+            val optionCardRatio = contrastRatio(scheme.onSurfaceVariant, custom.scaleUpcoming)
+            assertTrue(
+                "${theme.name}: 選択肢カード上の副次文字コントラスト比($optionCardRatio)は4.5以上であること",
+                optionCardRatio >= 4.5,
+            )
+
+            // 3. 押せない状態のボタン: カード地(surfaceContainer)上の無効文字(onSurfaceVariant)
+            val disabledButtonRatio = contrastRatio(scheme.onSurfaceVariant, scheme.surfaceContainer)
+            assertTrue(
+                "${theme.name}: 押せないボタンの文字コントラスト比($disabledButtonRatio)は4.5以上であること",
+                disabledButtonRatio >= 4.5,
+            )
+        }
+    }
 }
+

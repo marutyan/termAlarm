@@ -259,7 +259,7 @@ fun AlarmEditScreen(
                                     Text(
                                         text = dayLabel,
                                         fontSize = 14.sp,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.customColors.subtleText,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
@@ -515,36 +515,20 @@ fun AlarmEditScreen(
                 }
             }
 
-            // 間隔設定シート（下から重なるシート）
+            // 間隔設定ポップアップ
             if (showIntervalSheet) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = { showIntervalSheet = false },
-                        ),
-                    contentAlignment = Alignment.BottomCenter,
-                ) {
-                    IntervalEditSheet(
-                        startMinutes = uiState.startMinutes,
-                        endMinutes = uiState.endMinutes,
-                        initialIsVariable = uiState.isVariableInterval,
-                        initialStartInterval = uiState.startIntervalMinutes,
-                        initialEndInterval = uiState.endIntervalMinutes,
-                        onConfirm = { isVariable, startInt, endInt ->
-                            viewModel.setInterval(isVariable, startInt, endInt)
-                            showIntervalSheet = false
-                        },
-                        modifier = Modifier.clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {}, // シート内タップは伝播させない
-                        ),
-                    )
-                }
+                IntervalEditDialog(
+                    startMinutes = uiState.startMinutes,
+                    endMinutes = uiState.endMinutes,
+                    initialIsVariable = uiState.isVariableInterval,
+                    initialStartInterval = uiState.startIntervalMinutes,
+                    initialEndInterval = uiState.endIntervalMinutes,
+                    onDismiss = { showIntervalSheet = false },
+                    onConfirm = { isVariable, startInt, endInt ->
+                        viewModel.setInterval(isVariable, startInt, endInt)
+                        showIntervalSheet = false
+                    },
+                )
             }
         }
 

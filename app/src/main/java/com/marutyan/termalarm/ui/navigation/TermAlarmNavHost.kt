@@ -88,7 +88,7 @@ const val EXTRA_DEEPLINK_END_TERM_ID = "com.marutyan.termalarm.ui.EXTRA_DEEPLINK
 
 /**
  * アプリ全体の画面遷移を管理するNavHost。
- * 左側に幅54dpの縦ナビ(TermAlarmNavRail)を配し、右側に主要画面または個別機能画面を横並びで表示する。
+ * 左側に幅64dpの縦ナビ(TermAlarmNavRail)を配し、右側に主要画面または個別機能画面を横並びで表示する。
  */
 @Composable
 fun TermAlarmNavHost(

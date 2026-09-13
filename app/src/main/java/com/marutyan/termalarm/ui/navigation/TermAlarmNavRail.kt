@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.marutyan.termalarm.ui.theme.customColors
 
 /**
- * 画面左端に配置される幅54dpの縦ナビゲーションバー。
+ * 画面左端に配置される幅64dpの縦ナビゲーションバー。
  * 各機能画面への迅速な切り替えを提供し、現在の選択項目を強調するために用いる。
  */
 @Composable
@@ -44,7 +44,7 @@ fun TermAlarmNavRail(
 
     Column(
         modifier = modifier
-            .width(54.dp)
+            .width(64.dp)
             .fillMaxHeight()
             .drawBehind {
                 val strokeWidth = 1.dp.toPx()
@@ -68,7 +68,7 @@ fun TermAlarmNavRail(
 
         topItems.forEachIndexed { index, item ->
             if (index > 0) {
-                // 48dpのタップ枠同士の間隔を8dpとすることで、内部の34dp視覚要素の間隔を22dpに維持する
+                // 48dpのタップ枠同士の間隔を8dpとする
                 Spacer(modifier = Modifier.height(8.dp))
             }
             NavRailItemButton(
@@ -84,7 +84,7 @@ fun TermAlarmNavRail(
 
 /**
  * 縦ナビゲーションバーに配置される個別項目の操作ボタン。
- * 48dp角以上のタップ判定を確保しつつ34dp角のアイコン意匠を描画するために用いる。
+ * 48dp角以上のタップ判定を確保しつつ40dp角のアイコン意匠を描画するために用いる。
  */
 @Composable
 private fun NavRailItemButton(
@@ -106,10 +106,10 @@ private fun NavRailItemButton(
         if (isSelected) {
             Box(
                 modifier = Modifier
-                    .size(34.dp)
+                    .size(40.dp)
                     .background(
                         color = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(3.dp),
+                        shape = RoundedCornerShape(4.dp),
                     ),
                 contentAlignment = Alignment.Center,
             ) {
@@ -117,12 +117,12 @@ private fun NavRailItemButton(
                     imageVector = item.icon,
                     contentDescription = stringResource(item.labelRes),
                     modifier = Modifier.size(item.iconSize),
-                    tint = MaterialTheme.colorScheme.surface,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }
         } else {
             Box(
-                modifier = Modifier.size(34.dp),
+                modifier = Modifier.size(40.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

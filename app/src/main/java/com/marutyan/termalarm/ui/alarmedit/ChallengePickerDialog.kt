@@ -45,7 +45,7 @@ import com.marutyan.termalarm.ui.theme.customColors
 
 /**
  * 解除チャレンジの出題タイミングと難易度を設定するポップアップComposable。
- * 「出さない」「ターム終了時だけ」「毎回」のラジオボタン選択と、「Easy」「Hard」の難易度指定を提供する。
+ * 「なし」「ターム終了時だけ」「毎回」のラジオボタン選択と、「Easy」「Hard」の難易度指定を提供する。
  */
 @Composable
 fun ChallengePickerDialog(
@@ -113,7 +113,7 @@ fun ChallengePickerDialog(
                         )
                     }
 
-                    // 選択肢（出さない、ターム終了時だけ、毎回）
+                    // 選択肢（なし、ターム終了時だけ、毎回）
                     options.forEach { (optionTiming, label, note) ->
                         val isSelected = timing == optionTiming
                         Row(
@@ -157,7 +157,7 @@ fun ChallengePickerDialog(
                                     text = note,
                                     fontSize = 11.5.sp,
                                     lineHeight = 16.sp,
-                                    color = MaterialTheme.customColors.subtleText,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -249,7 +249,7 @@ fun ChallengePickerDialog(
                     Text(
                         text = stringResource(R.string.challenge_hard_note),
                         fontSize = 11.5.sp,
-                        color = MaterialTheme.customColors.subtleText,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 9.dp),
                     )
 
