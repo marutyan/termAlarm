@@ -24,16 +24,11 @@ data class AlarmScheduleEntity(
     val endIntervalMinutes: Int,
     val repeatDays: Set<DayOfWeek>,
     val label: String,
-    val soundUri: String?,
-    val vibrate: Boolean,
     val enabled: Boolean,
-    val skippedSessionStart: LocalDate?,
-    val skipRequiresApp: Boolean = true, // 当日終了をアプリからのみ許すか（既定true）
-    val skipGame: Boolean = false, // 当日終了の前にゲームを1問挟むか（既定false）
-    val snoozeMinutes: Int? = null, // スヌーズの分数。nullなら無効（既定null）
     val challengeTiming: ChallengeTiming = ChallengeTiming.NEVER,
     val challenge: ChallengeLevel,
-    val wakeCheckMinutes: Int?,
+    val wakeCheck: Boolean = false,
+    val skippedSessionStart: LocalDate?,
 )
 
 // data層のEntityからdomain層のAlarmScheduleへ変換する
@@ -45,16 +40,11 @@ internal fun AlarmScheduleEntity.toDomain() = AlarmSchedule(
     endIntervalMinutes = endIntervalMinutes,
     repeatDays = repeatDays,
     label = label,
-    soundUri = soundUri,
-    vibrate = vibrate,
     enabled = enabled,
-    skippedSessionStart = skippedSessionStart,
-    skipRequiresApp = skipRequiresApp,
-    skipGame = skipGame,
-    snoozeMinutes = snoozeMinutes,
     challengeTiming = challengeTiming,
     challenge = challenge,
-    wakeCheckMinutes = wakeCheckMinutes,
+    wakeCheck = wakeCheck,
+    skippedSessionStart = skippedSessionStart,
 )
 
 // domain層のAlarmScheduleをRoomで保存するEntityへ変換する
@@ -66,14 +56,10 @@ internal fun AlarmSchedule.toEntity() = AlarmScheduleEntity(
     endIntervalMinutes = endIntervalMinutes,
     repeatDays = repeatDays,
     label = label,
-    soundUri = soundUri,
-    vibrate = vibrate,
     enabled = enabled,
-    skippedSessionStart = skippedSessionStart,
-    skipRequiresApp = skipRequiresApp,
-    skipGame = skipGame,
-    snoozeMinutes = snoozeMinutes,
     challengeTiming = challengeTiming,
     challenge = challenge,
-    wakeCheckMinutes = wakeCheckMinutes,
+    wakeCheck = wakeCheck,
+    skippedSessionStart = skippedSessionStart,
 )
+

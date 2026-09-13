@@ -104,15 +104,15 @@ class TimerRingingService : Service() {
     }
 
     private fun startRingingFor(id: Long) {
-        // 設定「タイマーの音」で選んだ音を使う。未設定(null)なら既定のアラーム音にする
-        val uri = settings.timerSoundUri?.let(Uri::parse)
+        // 音とバイブはアラームとタイマーで共通化する
+        val uri = settings.alarmSoundUri?.let(Uri::parse)
             ?: RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM)
             ?: return
-        // 起きている人へ知らせるだけなので、上げきる時間はアラームより短い(既定1.5秒)
-        val player = SoundFadeIn.startRinging(this, scope, uri, settings.timerFadeInSeconds) ?: return
+        val player = SoundFadeIn.startRinging(this, scope, uri, settings.fadeInSeconds) ?: return
         ringingPlayers[id] = player
-        if (settings.timerVibration) startVibrationIfNeeded()
+        if (settings.vibration) startVibrationIfNeeded()
     }
+
 
     // 鳴動中のタイマーが1つも無い状態からバイブを始める。既に鳴動中のタイマーがあれば重ねて始めない
     private fun startVibrationIfNeeded() {

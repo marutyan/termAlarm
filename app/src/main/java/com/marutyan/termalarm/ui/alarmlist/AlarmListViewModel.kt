@@ -10,7 +10,6 @@ import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
 import java.time.DayOfWeek
-import com.marutyan.termalarm.domain.WeekStart
 import java.time.ZonedDateTime
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -32,12 +31,8 @@ class AlarmListViewModel(private val repository: AlarmRepository, context: Conte
     val alarms: StateFlow<List<AlarmSchedule>> = repository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    // 曜日チップの並び順(設定「週の始まり」)。NavHostを変更せずに済むよう、ここでcontextから組み立てる
-    val weekStart: StateFlow<WeekStart> =
-        Repositories.settings(appContext).observe().map { it.weekStart }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeekStart.SUNDAY)
-
     fun setEnabled(id: Long, enabled: Boolean) {
+
         viewModelScope.launch {
             repository.setEnabled(id, enabled)
             AlarmScheduler.reschedule(appContext, id)

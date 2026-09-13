@@ -8,7 +8,7 @@ import java.time.ZonedDateTime
  * 鳴動の停止方法を表す列挙型。
  * チャレンジ正解、押して停止、放置による自動消音の別を記録し、起床傾向の分析に用いる。
  */
-enum class DismissMethod {
+enum class StopMethod {
     /** 問題に正解して停止した */
     CHALLENGE,
 
@@ -24,10 +24,10 @@ enum class DismissMethod {
  * 予定時刻や実際の停止時刻、停止方法、セッション内の回数を保持し、実績の集計に用いる。
  */
 data class RingRecord(
-    val scheduledAt: ZonedDateTime,   // 鳴るはずだった時刻
-    val dismissedAt: ZonedDateTime?,  // 実際に止めた時刻。放置して自動消音されたなら null
-    val dismissMethod: DismissMethod, // 止め方
-    val occurrenceIndex: Int,         // そのセッションの何回目か。0始まり
+    val scheduledAt: ZonedDateTime, // 鳴るはずだった時刻
+    val stoppedAt: ZonedDateTime?, // 実際に止めた時刻。放置して自動消音されたなら null
+    val stopMethod: StopMethod, // 止め方
+    val occurrenceIndex: Int, // そのセッションの何回目か。0始まり
 )
 
 /**
@@ -35,9 +35,9 @@ data class RingRecord(
  * セッション開始日、範囲開始時刻、各鳴動の記録列を保持し、セッション単位の起床実績集計に用いる。
  */
 data class SessionRecord(
-    val sessionStart: LocalDate,      // セッションの開始日
-    val rangeStartAt: ZonedDateTime,  // 範囲の開始時刻
-    val rings: List<RingRecord>,      // そのセッションの鳴動の記録。occurrenceIndex の昇順
+    val sessionStart: LocalDate, // セッションの開始日
+    val rangeStartAt: ZonedDateTime, // 範囲の開始時刻
+    val rings: List<RingRecord>, // そのセッションの鳴動の記録。occurrenceIndex の昇順
 )
 
 /**
@@ -51,21 +51,21 @@ data class WakeAverages(
 
 /**
  * そのセッションで「起床とみなした回」が何回目か（1始まり）を求める。
- * 最後に dismissedAt が入っている記録の occurrenceIndex に 1 を足した値を返す。1度も止めていない（全部 AUTO_SILENCED）なら null を返す。
+ * 最後に stoppedAt が入っている記録の occurrenceIndex に 1 を足した値を返す。1度も止めていない（全部 AUTO_SILENCED）なら null を返す。
  */
 fun wakeOccurrence(session: SessionRecord): Int? {
-    val lastDismissed = session.rings.lastOrNull { it.dismissedAt != null } ?: return null
+    val lastDismissed = session.rings.lastOrNull { it.stoppedAt != null } ?: return null
     return lastDismissed.occurrenceIndex + 1
 }
 
 /**
  * 範囲の開始から起床までの所要分数（分単位）を求める。
- * rangeStartAt から「起床とみなした回」の dismissedAt までの分数を計算する。起床とみなした回が無ければ null を返す。
+ * rangeStartAt から「起床とみなした回」の stoppedAt までの分数を計算する。起床とみなした回が無ければ null を返す。
  */
 fun wakeDurationMinutes(session: SessionRecord): Long? {
-    val lastDismissed = session.rings.lastOrNull { it.dismissedAt != null } ?: return null
-    val dismissedAt = lastDismissed.dismissedAt ?: return null
-    return Duration.between(session.rangeStartAt, dismissedAt).toMinutes()
+    val lastDismissed = session.rings.lastOrNull { it.stoppedAt != null } ?: return null
+    val stoppedAt = lastDismissed.stoppedAt ?: return null
+    return Duration.between(session.rangeStartAt, stoppedAt).toMinutes()
 }
 
 /**
@@ -75,7 +75,7 @@ fun wakeDurationMinutes(session: SessionRecord): Long? {
 fun autoSilencedRatio(sessions: List<SessionRecord>): Double {
     val allRings = sessions.flatMap { it.rings }
     if (allRings.isEmpty()) return 0.0
-    val autoSilencedCount = allRings.count { it.dismissMethod == DismissMethod.AUTO_SILENCED }
+    val autoSilencedCount = allRings.count { it.stopMethod == StopMethod.AUTO_SILENCED }
     return autoSilencedCount.toDouble() / allRings.size.toDouble()
 }
 
@@ -120,3 +120,4 @@ fun averageWakeDurationMinutes(sessions: List<SessionRecord>): Double? {
     if (durations.isEmpty()) return null
     return durations.average()
 }
+

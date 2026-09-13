@@ -39,9 +39,8 @@ class AlarmIntentActivity : ComponentActivity() {
                 finish()
             }
             AlarmClock.ACTION_SNOOZE_ALARM -> {
-                // 分数を指定しないことで、鳴動中のアラームに設定されたsnoozeMinutesをRingingService側で解決させる
-                // (nullの場合の扱いはRingingService.snoozeOrStopに一本化: docs/SPEC.md「スヌーズ（既定オフ）」)
-                startService(Intent(this, RingingService::class.java).setAction(RingingService.ACTION_SNOOZE))
+                // スヌーズは作らないため、その回を止めるだけにする(docs/SPEC.md「スヌーズ」)
+                startService(RingingService.stopIntent(this))
                 finish()
             }
             else -> finish()
@@ -67,11 +66,13 @@ class AlarmIntentActivity : ComponentActivity() {
             endIntervalMinutes = DEGENERATE_INTERVAL_MINUTES,
             repeatDays = daysExtraToDayOfWeekSet(intent),
             label = intent.getStringExtra(AlarmClock.EXTRA_MESSAGE) ?: "",
-            soundUri = null,
-            vibrate = intent.getBooleanExtra(AlarmClock.EXTRA_VIBRATE, true),
             enabled = true,
+            challengeTiming = com.marutyan.termalarm.domain.ChallengeTiming.NEVER,
+            challenge = com.marutyan.termalarm.domain.ChallengeLevel.EASY,
+            wakeCheck = false,
             skippedSessionStart = null,
         )
+
         val skipUi = intent.getBooleanExtra(AlarmClock.EXTRA_SKIP_UI, false)
         lifecycleScope.launch {
             val repository = Repositories.alarm(applicationContext)

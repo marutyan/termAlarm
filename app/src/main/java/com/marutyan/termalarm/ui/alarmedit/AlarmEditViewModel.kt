@@ -8,18 +8,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.marutyan.termalarm.alarm.AlarmScheduler
-import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.AlarmRepository
-import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
-import com.marutyan.termalarm.domain.WeekStart
+import com.marutyan.termalarm.domain.ChallengeTiming
+import com.marutyan.termalarm.domain.ChallengeLevel
 import com.marutyan.termalarm.domain.occurrenceCount
 import java.time.DayOfWeek
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 // 間隔選択チップに並べる既定値。これ以外の値は「その他」を選んだ扱いにする。
@@ -33,20 +27,10 @@ const val CUSTOM_INTERVAL_MIN = 1
 const val CUSTOM_INTERVAL_MAX = 120
 
 /** 保存を妨げる入力エラーの種類。文言はComposable側でstringResourceへ変換する(ViewModelに文字列を持たせない)。 */
-enum class AlarmEditValidationError { INTERVAL_NOT_POSITIVE, INTERVAL_TOO_LARGE, CUSTOM_INTERVAL_INVALID, SNOOZE_OUT_OF_RANGE }
-
-// スヌーズ分数として許す範囲(1分〜60分)。0や負値、極端に長い値を保存できないようにする
-const val SNOOZE_MINUTES_MIN = 1
-const val SNOOZE_MINUTES_MAX = 60
-
-// スヌーズを有効にしたときの初期値を決める。既存アラームに保存済みの値があればそれを使い、
-// 新規作成(null)なら設定画面「スヌーズの長さ」の既定値を使う
-internal fun resolveSnoozeMinutes(scheduleSnoozeMinutes: Int?, defaultSnoozeMinutes: Int): Int =
-    scheduleSnoozeMinutes ?: defaultSnoozeMinutes
+enum class AlarmEditValidationError { INTERVAL_NOT_POSITIVE, INTERVAL_TOO_LARGE, CUSTOM_INTERVAL_INVALID }
 
 /**
  * アラーム編集画面の入力状態。新規作成(id=null)と既存編集(id!=null)の両方をこの1つの形で表す。
- * skipRequiresApp/skipGame/snoozeMinutesはdocs/SPEC.md「誤操作の防止と当日終了」で追加された3設定。
  */
 data class AlarmEditUiState(
     val id: Long? = null,
@@ -57,13 +41,10 @@ data class AlarmEditUiState(
     val customIntervalText: String = "5",
     val repeatDays: Set<DayOfWeek> = emptySet(),
     val label: String = "",
-    val soundUri: String? = null,
-    val vibrate: Boolean = true,
     val enabled: Boolean = true,
-    val skipRequiresApp: Boolean = true,
-    val skipGame: Boolean = false,
-    val snoozeEnabled: Boolean = false,
-    val snoozeMinutes: Int = 10,
+    val challengeTiming: ChallengeTiming = ChallengeTiming.NEVER,
+    val challenge: ChallengeLevel = ChallengeLevel.EASY,
+    val wakeCheck: Boolean = false,
     val isLoading: Boolean = false,
     val validationError: AlarmEditValidationError? = null,
     val isSaved: Boolean = false,
@@ -78,13 +59,11 @@ data class AlarmEditUiState(
         endIntervalMinutes = intervalMinutes,
         repeatDays = repeatDays,
         label = label,
-        soundUri = soundUri,
-        vibrate = vibrate,
         enabled = enabled,
         skippedSessionStart = existingSkippedSessionStart,
-        skipRequiresApp = skipRequiresApp,
-        skipGame = skipRequiresApp && skipGame, // skipRequiresAppがfalseならskipGameは無視する(SPEC)
-        snoozeMinutes = if (snoozeEnabled) snoozeMinutes else null,
+        challengeTiming = challengeTiming,
+        challenge = challenge,
+        wakeCheck = wakeCheck,
     )
 }
 
@@ -101,29 +80,21 @@ class AlarmEditViewModel(
     // PendingIntent発行やRoomアクセスにはApplication Contextで十分なため、生成時点で切り替えて保持する
     private val appContext: Context = context.applicationContext
 
-    // 全体設定の読み出し用。新規アラームのスヌーズ初期値(defaultSnoozeMinutes)と
-    // 曜日チップの並び順(weekStart)に使う。NavHostを変更せずに済むよう、ここでcontextから組み立てる
-    private val settingsRepository = Repositories.settings(appContext)
 
     var uiState by mutableStateOf(AlarmEditUiState(id = alarmId, isLoading = alarmId != null))
         private set
-
-    // 曜日チップの並び順に使う。この画面はアラームごとに作り直されるため、都度DBを見に行かず1回読みで足りる
-    val weekStart: StateFlow<WeekStart> = settingsRepository.observe().map { it.weekStart }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeekStart.SUNDAY)
 
     // 保存時にskippedSessionStartを保つため、読み込んだ既存スケジュールを保持しておく
     private var loadedSkippedSessionStart: java.time.LocalDate? = null
 
     init {
         val id = alarmId
-        viewModelScope.launch {
-            // スヌーズの初期値は新規・既存どちらの読み込みにも使うため、先にまとめて読んでおく
-            val defaultSnoozeMinutes = settingsRepository.observe().first().defaultSnoozeMinutes
-            val schedule = id?.let { repository.getById(it) }
-            uiState = when {
-                id == null -> uiState.copy(snoozeMinutes = defaultSnoozeMinutes)
-                schedule != null -> {
+        if (id == null) {
+            uiState = uiState.copy(isLoading = false)
+        } else {
+            viewModelScope.launch {
+                val schedule = repository.getById(id)
+                uiState = if (schedule != null) {
                     loadedSkippedSessionStart = schedule.skippedSessionStart
                     AlarmEditUiState(
                         id = schedule.id,
@@ -134,17 +105,15 @@ class AlarmEditViewModel(
                         customIntervalText = schedule.startIntervalMinutes.toString(),
                         repeatDays = schedule.repeatDays,
                         label = schedule.label,
-                        soundUri = schedule.soundUri,
-                        vibrate = schedule.vibrate,
                         enabled = schedule.enabled,
-                        skipRequiresApp = schedule.skipRequiresApp,
-                        skipGame = schedule.skipGame,
-                        snoozeEnabled = schedule.snoozeMinutes != null,
-                        snoozeMinutes = resolveSnoozeMinutes(schedule.snoozeMinutes, defaultSnoozeMinutes),
+                        challengeTiming = schedule.challengeTiming,
+                        challenge = schedule.challenge,
+                        wakeCheck = schedule.wakeCheck,
                         isLoading = false,
                     )
+                } else {
+                    uiState.copy(isLoading = false)
                 }
-                else -> uiState.copy(isLoading = false)
             }
         }
     }
@@ -173,17 +142,9 @@ class AlarmEditViewModel(
     }
 
     fun setLabel(label: String) { uiState = uiState.copy(label = label) }
-    fun setSoundUri(uri: String?) { uiState = uiState.copy(soundUri = uri) }
-    fun setVibrate(vibrate: Boolean) { uiState = uiState.copy(vibrate = vibrate) }
-
-    fun setSkipRequiresApp(value: Boolean) {
-        // オフにするとskipGameは選べなくなるため、あわせてfalseへ戻す(SPEC「skipRequiresAppがオフのときはskipGameを選べない」)
-        uiState = uiState.copy(skipRequiresApp = value, skipGame = if (value) uiState.skipGame else false)
-    }
-
-    fun setSkipGame(value: Boolean) { uiState = uiState.copy(skipGame = value) }
-    fun setSnoozeEnabled(value: Boolean) { uiState = revalidate(uiState.copy(snoozeEnabled = value)) }
-    fun setSnoozeMinutes(minutes: Int) { uiState = revalidate(uiState.copy(snoozeMinutes = minutes)) }
+    fun setChallengeTiming(timing: ChallengeTiming) { uiState = uiState.copy(challengeTiming = timing) }
+    fun setChallenge(level: ChallengeLevel) { uiState = uiState.copy(challenge = level) }
+    fun setWakeCheck(wakeCheck: Boolean) { uiState = uiState.copy(wakeCheck = wakeCheck) }
 
     // 保存前の入力検証。UI側で計算式を再実装しないよう、判定にはdomain.occurrenceCountを使う(SPEC「要約はdomainの関数を使う」の精神を検証にも適用)
     private fun revalidate(state: AlarmEditUiState): AlarmEditUiState {
@@ -191,8 +152,6 @@ class AlarmEditViewModel(
             state.intervalMinutes <= 0 -> AlarmEditValidationError.INTERVAL_NOT_POSITIVE
             state.startMinutes != state.endMinutes && occurrenceCount(state.toSchedule(null)) <= 1 ->
                 AlarmEditValidationError.INTERVAL_TOO_LARGE
-            state.snoozeEnabled && state.snoozeMinutes !in SNOOZE_MINUTES_MIN..SNOOZE_MINUTES_MAX ->
-                AlarmEditValidationError.SNOOZE_OUT_OF_RANGE
             else -> null
         }
         return state.copy(validationError = error)

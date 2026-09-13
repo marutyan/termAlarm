@@ -282,21 +282,21 @@ fun challengeQuestionCount(schedule: AlarmSchedule, occurrenceIndex: Int): Int {
 
 /**
  * 範囲の最後の鳴動を停止した後に、本当に起きたかを確認する起床確認の時刻を求める。
- * wakeCheckMinutes が null の場合は確認を行わないため null を返す。
+ * wakeCheck が false の場合は確認を行わないため null を返す。
  * 有効な場合は、実際に停止した時刻 lastDismissedAt に wakeCheckMinutes 分を足した時刻を返す。
  */
-fun wakeCheckTime(schedule: AlarmSchedule, lastDismissedAt: ZonedDateTime): ZonedDateTime? {
-    val minutes = schedule.wakeCheckMinutes ?: return null
-    return lastDismissedAt.plusMinutes(minutes.toLong())
+fun wakeCheckTime(schedule: AlarmSchedule, lastDismissedAt: ZonedDateTime, wakeCheckMinutes: Int): ZonedDateTime? {
+    if (!schedule.wakeCheck) return null
+    return lastDismissedAt.plusMinutes(wakeCheckMinutes.toLong())
 }
 
 /**
  * そのセッションにおいて起床確認を行うべきかを判定する。
- * wakeCheckMinutes が null の場合、または「今日はもう止める」が実行され
+ * wakeCheck が false の場合、または「タームを終了」が実行され
  * skippedSessionStart がセッション開始日と一致する場合は確認を行わないため false を返す。
  */
 fun shouldPerformWakeCheck(schedule: AlarmSchedule, sessionStart: LocalDate): Boolean {
-    if (schedule.wakeCheckMinutes == null) return false
+    if (!schedule.wakeCheck) return false
     if (schedule.skippedSessionStart == sessionStart) return false
     return true
 }
@@ -307,4 +307,5 @@ fun shouldPerformWakeCheck(schedule: AlarmSchedule, sessionStart: LocalDate): Bo
  */
 fun shouldPerformWakeCheck(schedule: AlarmSchedule, at: ZonedDateTime): Boolean =
     shouldPerformWakeCheck(schedule, sessionStartDate(schedule, at))
+
 

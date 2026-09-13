@@ -57,9 +57,9 @@ import com.marutyan.termalarm.domain.RemainingTime
 import com.marutyan.termalarm.domain.occurrenceCount
 import com.marutyan.termalarm.domain.canEndTodaySession
 import java.time.ZonedDateTime
+import com.marutyan.termalarm.domain.ChallengeTiming
 import com.marutyan.termalarm.domain.remainingTimeUntilNextTrigger
 import com.marutyan.termalarm.domain.scheduleSummary
-import com.marutyan.termalarm.domain.WeekStart
 import com.marutyan.termalarm.ui.common.formatClockMinutes
 import com.marutyan.termalarm.ui.common.clockTimePattern
 import java.time.DayOfWeek
@@ -68,12 +68,9 @@ import java.time.DayOfWeek
 // 隙間を残して収まる大きさにしている。56dpなら 56×7 = 392dp で、丸どうしに少しずつ間が空く
 private val DAY_CHIP_SIZE = 56.dp
 
-// 週の始まり(設定「週の始まり」)に合わせて曜日チップの並び順を決める。DayOfWeek.entriesは月曜始まりの
-// 固定順のため、日曜始まりのときだけ日曜を先頭に回転させる。ui/alarmedit/AlarmEditScreen.ktからも使う
-internal fun orderedDaysOfWeek(weekStart: WeekStart): List<DayOfWeek> = when (weekStart) {
-    WeekStart.MONDAY -> DayOfWeek.entries
-    WeekStart.SUNDAY -> listOf(DayOfWeek.SUNDAY) + DayOfWeek.entries.filter { it != DayOfWeek.SUNDAY }
-}
+// 曜日チップの並び順は月曜始まりに固定する。ui/alarmedit/AlarmEditScreen.ktからも使う
+internal fun orderedDaysOfWeek(): List<DayOfWeek> = DayOfWeek.entries
+
 
 /**
  * 1分ごとに更新される現在時刻を返す。
@@ -112,17 +109,16 @@ fun AlarmListScreen(
     onEditAlarm: (Long) -> Unit,
     onOpenAbout: () -> Unit,
     onOpenSettings: () -> Unit,
-    onNavigateToSkipGame: (Long) -> Unit,
+    onNavigateToEndTodayGame: (Long) -> Unit,
     exactAlarmBanner: @Composable () -> Unit,
     notificationPermissionBanner: @Composable () -> Unit,
     bottomBar: @Composable () -> Unit = {},
     onOpenPrivacyPolicy: () -> Unit = {},
 ) {
     val alarms by viewModel.alarms.collectAsStateWithLifecycle()
-    val weekStart by viewModel.weekStart.collectAsStateWithLifecycle()
     // 残り時間と当日終了の可否は時刻で変わるため、1分ごとに更新される現在時刻を使う
     val now = rememberCurrentMinute()
-    // 「今日はもう止める」の確認ダイアログ対象。skipGame=trueのアラームはダイアログを出さずSkipGame画面へ遷移させる
+    // 「今日はもう止める」の確認ダイアログ対象。問題を出題する設定のアラームはダイアログを出さず出題画面へ遷移させる
     var pendingSkipTarget by remember { mutableStateOf<AlarmSchedule?>(null) }
 
     Scaffold(
@@ -139,41 +135,48 @@ fun AlarmListScreen(
             )
         },
         floatingActionButton = {
-            // 純正と同じ明るい色にする。暗い画面ではprimaryが明るい側の色になる
             FloatingActionButton(
                 onClick = onAddAlarm,
+                shape = CircleShape,
+                modifier = Modifier.size(FAB_SIZE),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-                // 純正を実測すると80dp。既定のままでは45dpしかなく、押す場所として小さい
-                modifier = Modifier.size(FAB_SIZE),
             ) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_alarm))
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_alarm), modifier = Modifier.size(32.dp))
             }
         },
         bottomBar = bottomBar,
     ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
-            notificationPermissionBanner()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
             exactAlarmBanner()
+            notificationPermissionBanner()
+
             if (alarms.isEmpty()) {
-                EmptyAlarmList(modifier = Modifier.fillMaxSize())
+                EmptyAlarmList(modifier = Modifier.weight(1f))
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 104.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     items(alarms, key = { it.id }) { schedule ->
                         AlarmCard(
                             schedule = schedule,
                             now = now,
-                            weekStart = weekStart,
                             onToggleEnabled = { enabled -> viewModel.setEnabled(schedule.id, enabled) },
                             onToggleDay = { day -> viewModel.toggleDay(schedule, day) },
                             onClick = { onEditAlarm(schedule.id) },
                             onRequestEndTodaySession = {
-                                // skipGameがtrueならその場でゲーム画面へ遷移し、falseなら確認ダイアログを出す
-                                if (schedule.skipGame) onNavigateToSkipGame(schedule.id) else pendingSkipTarget = schedule
+                                // 出題設定がNEVERでなければその場でゲーム画面へ遷移し、NEVERなら確認ダイアログを出す
+                                if (schedule.challengeTiming != ChallengeTiming.NEVER) {
+                                    onNavigateToEndTodayGame(schedule.id)
+                                } else {
+                                    pendingSkipTarget = schedule
+                                }
                             },
                             // 追加・削除・並び替えのときに、その場で入れ替わらず動いて見えるようにする
                             modifier = Modifier.animateItem(),
@@ -184,7 +187,7 @@ fun AlarmListScreen(
         }
     }
 
-    // skipGame=falseのアラームだけがここに来る(skipGame=trueはクリック時点で直接SkipGame画面へ遷移済み)
+    // 出題なしのアラームだけがここに来る(出題ありはクリック時点で直接ゲーム画面へ遷移済み)
     pendingSkipTarget?.let { target ->
         EndTodaySessionDialog(
             schedule = target,
@@ -217,7 +220,6 @@ private fun EmptyAlarmList(modifier: Modifier = Modifier) {
 private fun AlarmCard(
     schedule: AlarmSchedule,
     now: ZonedDateTime,
-    weekStart: WeekStart,
     onToggleEnabled: (Boolean) -> Unit,
     onToggleDay: (DayOfWeek) -> Unit,
     onClick: () -> Unit,
@@ -305,7 +307,7 @@ private fun AlarmCard(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            orderedDaysOfWeek(weekStart).forEach { day ->
+            orderedDaysOfWeek().forEach { day ->
                 val on = day in schedule.repeatDays
                 Box(
                     modifier = Modifier
@@ -358,8 +360,8 @@ private fun dayLabel(day: DayOfWeek): String = when (day) {
 }
 
 /**
- * 「今日はもう止める」の確認ダイアログ。skipGame=falseのアラーム専用で、
- * skipGame=trueの場合は呼び出し元(AlarmListScreen)がこのダイアログを出さずSkipGame画面へ直接遷移させる。
+ * 「今日はもう止める」の確認ダイアログ。出題設定が NEVER のアラーム専用で、
+ * 出題設定がある場合は呼び出し元(AlarmListScreen)がこのダイアログを出さず出題画面へ直接遷移させる。
  */
 @Composable
 private fun EndTodaySessionDialog(

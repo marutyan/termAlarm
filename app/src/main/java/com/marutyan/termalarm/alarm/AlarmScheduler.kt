@@ -50,27 +50,7 @@ object AlarmScheduler {
     suspend fun onStopped(context: Context, id: Long) = reschedule(context, id)
 
     /**
-     * 鳴動画面の「スヌーズ」。snoozeMinutes分後に再度鳴らすよう登録する。
-     * ただしそのスヌーズ時刻が次回の鳴動予定時刻以降になる場合は、スヌーズを行わず次回予定を優先する
-     * （docs/SPEC.md「スヌーズ」）。戻り値はスヌーズを実際に登録できたかどうか
-     */
-    suspend fun onSnoozed(context: Context, id: Long, snoozeMinutes: Int): Boolean {
-        val schedule = repository(context).getById(id) ?: return false
-        val now = ZonedDateTime.now()
-        val snoozeAt = now.plusMinutes(snoozeMinutes.toLong())
-        val next = nextTrigger(schedule, now)
-        return if (next != null && !snoozeAt.isBefore(next)) {
-            // スヌーズ時刻が次回予定以降になるため、スヌーズはせず次回予定を優先する
-            scheduleNextOccurrence(context, schedule)
-            false
-        } else {
-            registerExact(context, id, snoozeAt)
-            true
-        }
-    }
-
-    /**
-     * 当日のタームを終了する（skipRequiresApp==falseのときだけ現れる、鳴動画面と事前通知の導線から呼ばれる）。
+     * 当日のタームを終了する。
      * occurrenceAt からセッション開始日を求めて skippedSessionStart へ書き込み、次回を予約する。
      */
     suspend fun onSessionEnded(context: Context, id: Long, occurrenceAt: ZonedDateTime) {
@@ -83,6 +63,7 @@ object AlarmScheduler {
 
     private fun scheduleNextOccurrence(context: Context, schedule: AlarmSchedule) {
         val now = ZonedDateTime.now()
+
         val next = nextTrigger(schedule, now)
         if (next == null) {
             cancel(context, schedule.id)

@@ -1,11 +1,5 @@
 package com.marutyan.termalarm.ui.alarmedit
 
-import android.content.Intent
-import android.media.RingtoneManager
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.net.toUri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -53,7 +47,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -61,9 +54,7 @@ import androidx.compose.ui.unit.sp
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.ui.theme.COMPACT_SCREEN_HEIGHT_THRESHOLD
 import com.marutyan.termalarm.ui.theme.alarmCardClock
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.marutyan.termalarm.domain.AlarmSchedule
-import com.marutyan.termalarm.domain.WeekStart
 import com.marutyan.termalarm.domain.occurrenceCount
 import com.marutyan.termalarm.ui.alarmlist.orderedDaysOfWeek
 import com.marutyan.termalarm.ui.common.formatClockMinutes
@@ -83,7 +74,6 @@ fun AlarmEditScreen(
     onClose: () -> Unit,
 ) {
     val uiState = viewModel.uiState
-    val weekStart by viewModel.weekStart.collectAsStateWithLifecycle()
 
     // 保存・削除が完了したら呼び出し側(NavHost)に画面を閉じてもらう
     LaunchedEffect(uiState.isSaved, uiState.isDeleted) {
@@ -94,21 +84,6 @@ fun AlarmEditScreen(
     var showEndPicker by rememberSaveable { mutableStateOf(false) }
     var showLabelDialog by rememberSaveable { mutableStateOf(false) }
     var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
-
-    val context = LocalContext.current
-    // アラーム音選択はAndroid標準のRingtonePickerを呼び出す(新しい依存やUIの自作をしない)
-    val soundPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val uri = result.data?.let { androidx.core.content.IntentCompat.getParcelableExtra(it, RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java) }
-        viewModel.setSoundUri(uri?.toString())
-    }
-    val soundLabel = remember(uiState.soundUri) {
-        val uri = uiState.soundUri?.let(Uri::parse)
-        if (uri == null) {
-            null
-        } else {
-            runCatching { RingtoneManager.getRingtone(context, uri)?.getTitle(context) }.getOrNull()
-        }
-    } ?: stringResource(R.string.sound_default)
 
     Scaffold(
         topBar = {
@@ -179,34 +154,11 @@ fun AlarmEditScreen(
                     )
                 }
 
-                RepeatDaysSection(selectedDays = uiState.repeatDays, weekStart = weekStart, onToggleDay = viewModel::toggleDay)
+                RepeatDaysSection(selectedDays = uiState.repeatDays, onToggleDay = viewModel::toggleDay)
 
                 GeneralSettingsSection(
                     label = uiState.label,
-                    soundLabel = soundLabel,
-                    vibrate = uiState.vibrate,
                     onLabelClick = { showLabelDialog = true },
-                    onSoundClick = {
-                        val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
-                            putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
-                            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
-                            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
-                            uiState.soundUri?.let { putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, it.toUri()) }
-                        }
-                        soundPickerLauncher.launch(intent)
-                    },
-                    onVibrateChange = viewModel::setVibrate,
-                )
-
-                DifficultToStopSection(
-                    skipRequiresApp = uiState.skipRequiresApp,
-                    skipGame = uiState.skipGame,
-                    snoozeEnabled = uiState.snoozeEnabled,
-                    snoozeMinutes = uiState.snoozeMinutes,
-                    onSkipRequiresAppChange = viewModel::setSkipRequiresApp,
-                    onSkipGameChange = viewModel::setSkipGame,
-                    onSnoozeEnabledChange = viewModel::setSnoozeEnabled,
-                    onSnoozeMinutesChange = viewModel::setSnoozeMinutes,
                 )
 
                 if (uiState.id != null) {
@@ -267,7 +219,6 @@ private fun validationMessageRes(error: AlarmEditValidationError): Int = when (e
     AlarmEditValidationError.INTERVAL_NOT_POSITIVE -> R.string.error_interval_not_positive
     AlarmEditValidationError.INTERVAL_TOO_LARGE -> R.string.error_interval_too_large
     AlarmEditValidationError.CUSTOM_INTERVAL_INVALID -> R.string.error_custom_interval_invalid
-    AlarmEditValidationError.SNOOZE_OUT_OF_RANGE -> R.string.error_snooze_out_of_range
 }
 
 // 開始・終了時刻の2枚のカード。狭い画面(isCompact=true)ではカード内の余白と文字を詰める。
@@ -422,7 +373,7 @@ private fun PreviewBanner(startMinutes: Int, endMinutes: Int, intervalMinutes: I
         AlarmSchedule(
             id = 0, startMinutes = startMinutes, endMinutes = endMinutes,
             startIntervalMinutes = intervalMinutes, endIntervalMinutes = intervalMinutes,
-            repeatDays = emptySet(), label = "", soundUri = null, vibrate = false, enabled = true, skippedSessionStart = null,
+            repeatDays = emptySet(), label = "", enabled = true, skippedSessionStart = null,
         )
     }
     val count = occurrenceCount(schedule)
@@ -452,7 +403,7 @@ private fun PreviewBanner(startMinutes: Int, endMinutes: Int, intervalMinutes: I
 
 // 繰り返す曜日の選択。design/AlarmEdit.dc.htmlと同じ真円のチップに合わせるため、ToggleButtonではなく直接描画する
 @Composable
-private fun RepeatDaysSection(selectedDays: Set<DayOfWeek>, weekStart: WeekStart, onToggleDay: (DayOfWeek) -> Unit) {
+private fun RepeatDaysSection(selectedDays: Set<DayOfWeek>, onToggleDay: (DayOfWeek) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(stringResource(R.string.repeat_section_title), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         // 固定間隔で並べると7つが左へ寄って右に余白ができるため、幅いっぱいに均等配置する
@@ -460,7 +411,7 @@ private fun RepeatDaysSection(selectedDays: Set<DayOfWeek>, weekStart: WeekStart
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            orderedDaysOfWeek(weekStart).forEach { day ->
+            orderedDaysOfWeek().forEach { day ->
                 val selected = day in selectedDays
                 Box(
                     modifier = Modifier

@@ -1,8 +1,8 @@
 package com.marutyan.termalarm.data
 
 import com.marutyan.termalarm.domain.AlarmSchedule
-import com.marutyan.termalarm.domain.ChallengeLevel
 import com.marutyan.termalarm.domain.ChallengeTiming
+import com.marutyan.termalarm.domain.ChallengeLevel
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -27,8 +27,6 @@ private fun schedule(
     endIntervalMinutes = 5,
     repeatDays = emptySet(),
     label = "test",
-    soundUri = null,
-    vibrate = true,
     enabled = true,
     skippedSessionStart = skippedSessionStart,
 )
@@ -36,14 +34,14 @@ private fun schedule(
 class AlarmRepositoryTest {
 
     @Test
-    fun `新規追加した3項目の既定値が保存と読み出しで保たれる`() = runTest {
+    fun `新規追加した項目の既定値が保存と読み出しで保たれる`() = runTest {
         val repository = AlarmRepository(FakeAlarmDao())
         val id = repository.add(schedule(startMinutes = 7 * 60, endMinutes = 9 * 60))
 
         val loaded = repository.getById(id)
-        assertEquals(true, loaded?.skipRequiresApp)
-        assertEquals(false, loaded?.skipGame)
-        assertNull(loaded?.snoozeMinutes)
+        assertEquals(false, loaded?.wakeCheck)
+        assertEquals(ChallengeTiming.NEVER, loaded?.challengeTiming)
+        assertEquals(ChallengeLevel.EASY, loaded?.challenge)
     }
 
     /**
@@ -68,24 +66,23 @@ class AlarmRepositoryTest {
     }
 
     /**
-     * チャレンジ強度、起床確認の各設定値が保存・読み出しで正しく保たれることを検証する。
-     * 朝に弱い人向けの新設定がDBに永続化され、既定値で上書きされずに復元されることを保証するために必要。
+     * チャレンジ、二度寝チェックの各設定値が保存・読み出しで正しく保たれることを検証する。
      */
     @Test
-    fun `チャレンジの強さ起床確認の分数が保存して読み直しても保たれる`() = runTest {
+    fun `チャレンジと二度寝チェックが保存して読み直しても保たれる`() = runTest {
         val repository = AlarmRepository(FakeAlarmDao())
         val original = schedule(
             startMinutes = 7 * 60,
             endMinutes = 9 * 60,
         ).copy(
             challenge = ChallengeLevel.HARD,
-            wakeCheckMinutes = 15,
+            wakeCheck = true,
         )
         val id = repository.add(original)
 
         val loaded = repository.getById(id)
         assertEquals(ChallengeLevel.HARD, loaded?.challenge)
-        assertEquals(15, loaded?.wakeCheckMinutes)
+        assertEquals(true, loaded?.wakeCheck)
     }
 
     /**
@@ -109,23 +106,19 @@ class AlarmRepositoryTest {
         assertEquals(ChallengeLevel.HARD, loaded?.challenge)
     }
 
-    /**
-     * 起床確認を行わないアラーム（wakeCheckMinutesがnull）を保存し、読み直してもnullのまま保たれることを検証する。
-     * null許容列であるwakeCheckMinutesが正しく保存・復元されることを保証するために必要。
-     */
     @Test
-    fun `起床確認の分数がnullのまま保たれる`() = runTest {
+    fun `二度寝チェックがfalseのまま保たれる`() = runTest {
         val repository = AlarmRepository(FakeAlarmDao())
         val original = schedule(
             startMinutes = 7 * 60,
             endMinutes = 9 * 60,
         ).copy(
-            wakeCheckMinutes = null,
+            wakeCheck = false,
         )
         val id = repository.add(original)
 
         val loaded = repository.getById(id)
-        assertNull(loaded?.wakeCheckMinutes)
+        assertEquals(false, loaded?.wakeCheck)
     }
 
     @Test

@@ -103,7 +103,7 @@ class OverflowMenuTest {
                 onOpenAbout = {},
                 onOpenPrivacyPolicy = {},
                 onOpenSettings = {},
-                onNavigateToSkipGame = {},
+                onNavigateToEndTodayGame = {},
                 exactAlarmBanner = {},
                 notificationPermissionBanner = {},
             )
@@ -126,7 +126,7 @@ class OverflowMenuTest {
                 onOpenAbout = { openedAbout = true },
                 onOpenPrivacyPolicy = { openedPrivacy = true },
                 onOpenSettings = { openedSettings = true },
-                onNavigateToSkipGame = {},
+                onNavigateToEndTodayGame = {},
                 exactAlarmBanner = {},
                 notificationPermissionBanner = {},
             )

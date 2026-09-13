@@ -55,7 +55,6 @@ import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
 import com.marutyan.termalarm.domain.AppSettings
-import com.marutyan.termalarm.domain.VolumeButtonAction
 import com.marutyan.termalarm.domain.nextTrigger
 import com.marutyan.termalarm.domain.remainingOccurrenceCount
 import com.marutyan.termalarm.ui.common.clockTimePattern
@@ -113,7 +112,7 @@ class RingingActivity : ComponentActivity() {
                     RingingScreen(
                         alarmId = alarmId,
                         triggerAtMillis = triggerAtMillis,
-                        autoStopMinutes = settings.autoStopMinutes,
+                        silenceAfterMinutes = settings.silenceAfterMinutes,
                         onFinish = { finish() },
                     )
                 }
@@ -126,31 +125,10 @@ class RingingActivity : ComponentActivity() {
         unregisterReceiver(ringingFinishedReceiver)
     }
 
-    /**
-     * 鳴動中に音量ボタンを押したときの動作。設定「アラーム時の音量ボタン」に従う。
-     * ADJUST_VOLUME(既定)はここでは何もせず、システム標準の音量調整に任せる
-     * (STREAM_ALARMで再生中のため、素通しするだけでアラーム音量が変わる)。
-     */
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
-            when (settings.volumeButtonAction) {
-                VolumeButtonAction.SNOOZE -> {
-                    // 分数を指定せず送ることで、RingingService側にそのアラームのsnoozeMinutesを解決させる
-                    // (スヌーズ無効なアラームなら停止と同じ扱いになる。RingingService.snoozeOrStop参照)
-                    startService(RingingService.snoozeIntent(this, -1))
-                    finish()
-                    return true
-                }
-                VolumeButtonAction.DISMISS -> {
-                    startService(RingingService.stopIntent(this))
-                    finish()
-                    return true
-                }
-                VolumeButtonAction.ADJUST_VOLUME -> Unit
-            }
-        }
         return super.onKeyDown(keyCode, event)
     }
+
 
     // ロック画面の上に鳴動画面を表示するためのウィンドウ設定。
     // setShowWhenLocked/setTurnScreenOnはAPI27(O_MR1)以降のみ存在するため、
@@ -194,7 +172,7 @@ class RingingActivity : ComponentActivity() {
 }
 
 @Composable
-private fun RingingScreen(alarmId: Long, triggerAtMillis: Long, autoStopMinutes: Int, onFinish: () -> Unit) {
+private fun RingingScreen(alarmId: Long, triggerAtMillis: Long, silenceAfterMinutes: Int?, onFinish: () -> Unit) {
     val context = LocalContext.current
 
     // 鳴動中のoccurrenceの実時刻。予約時に意図していた時刻を使うことで、サービス起動の遅延に影響されない
@@ -218,9 +196,11 @@ private fun RingingScreen(alarmId: Long, triggerAtMillis: Long, autoStopMinutes:
 
     // サービス側の無操作タイムアウト(設定「消音までの時間」)と同じ時間で画面も閉じる
     // （サービス自体の停止・次回予約はサービス側が行う）。設定の読み込み完了で値が変わったら数え直す
-    LaunchedEffect(autoStopMinutes) {
-        delay(autoStopMinutes * 60_000L)
-        onFinish()
+    if (silenceAfterMinutes != null) {
+        LaunchedEffect(silenceAfterMinutes) {
+            delay(silenceAfterMinutes * 60_000L)
+            onFinish()
+        }
     }
 
     val currentSchedule = schedule ?: return
@@ -230,18 +210,8 @@ private fun RingingScreen(alarmId: Long, triggerAtMillis: Long, autoStopMinutes:
         label = currentSchedule.label,
         remainingCount = remainingOccurrenceCount(currentSchedule, occurrenceAt),
         nextTriggerTime = nextTrigger(currentSchedule, occurrenceAt),
-        snoozeMinutes = currentSchedule.snoozeMinutes,
-        skipRequiresApp = currentSchedule.skipRequiresApp,
         onStop = {
             context.startService(RingingService.stopIntent(context))
-            onFinish()
-        },
-        onSnooze = { minutes ->
-            context.startService(RingingService.snoozeIntent(context, minutes))
-            onFinish()
-        },
-        onSkipToday = {
-            context.startService(RingingService.skipIntent(context))
             onFinish()
         },
     )
@@ -253,11 +223,7 @@ private fun RingingContent(
     label: String,
     remainingCount: Int,
     nextTriggerTime: ZonedDateTime?,
-    snoozeMinutes: Int?,
-    skipRequiresApp: Boolean,
     onStop: () -> Unit,
-    onSnooze: (Int) -> Unit,
-    onSkipToday: () -> Unit,
 ) {
     // 端末の「24時間表示」設定に合わせる。純正も同じくシステムに任せている
     val timePattern = clockTimePattern()
@@ -329,23 +295,8 @@ private fun RingingContent(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             StopButton(onClick = onStop)
-            if (snoozeMinutes != null) {
-                SnoozeButton(minutes = snoozeMinutes, onClick = { onSnooze(snoozeMinutes) })
-            }
-            if (!skipRequiresApp) {
-                SkipTodayRow(onClick = onSkipToday)
-            } else {
-                // 寝ぼけたまま押せてしまう事故を防ぐため、当日終了はボタンにせず案内文だけを出す
-                // （docs/SPEC.md「誤操作の防止と当日終了」）
-                Text(
-                    text = stringResource(R.string.ringing_skip_requires_app_notice),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                )
-            }
         }
     }
 }
+
 

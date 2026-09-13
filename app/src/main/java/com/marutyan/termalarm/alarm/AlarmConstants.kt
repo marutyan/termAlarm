@@ -4,7 +4,7 @@ package com.marutyan.termalarm.alarm
  * 鳴動まわりのコンポーネント間（AlarmTriggerReceiver / RingingService / RingingActivity）で
  * 受け渡すIntent extraキー。同じ意味の値を複数箇所に書かないための置き場所。
  *
- * 無操作タイムアウトの時間はAppSettings.autoStopMinutes(設定画面「消音までの時間」)で持つため、
+ * 無操作タイムアウトの時間はAppSettings.silenceAfterMinutes(設定画面「消音までの時間」)で持つため、
  * ここには置かない。RingingService/RingingActivityはそれぞれ鳴動開始時に設定を読んで使う。
  */
 

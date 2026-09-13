@@ -63,7 +63,7 @@ import com.marutyan.termalarm.ui.theme.tabFadeSpec
 
 private const val ROUTE_LIST = "list"
 private const val ROUTE_EDIT = "edit"
-private const val ROUTE_SKIP_GAME = "skipGame"
+private const val ROUTE_END_TODAY_GAME = "endTodayGame"
 private const val ROUTE_ABOUT = "about"
 // プライバシーポリシー画面への遷移ルート。各タブ右上の「⋮」メニューから開く画面を識別するために定義する。
 private const val ROUTE_PRIVACY = "privacy"
@@ -143,7 +143,7 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
                 onOpenAbout = { navController.navigate(ROUTE_ABOUT) },
                 onOpenPrivacyPolicy = { navController.navigate(ROUTE_PRIVACY) },
                 onOpenSettings = { navController.navigate(ROUTE_SETTINGS) },
-                onNavigateToSkipGame = { id -> navController.navigate("$ROUTE_SKIP_GAME/$id") },
+                onNavigateToEndTodayGame = { id -> navController.navigate("$ROUTE_END_TODAY_GAME/$id") },
                 exactAlarmBanner = { ExactAlarmPermissionBanner() },
                 notificationPermissionBanner = { NotificationPermissionBanner() },
                 bottomBar = { TermAlarmBottomBar(selected = TermAlarmTab.ALARM, onSelect = ::goToTab) },
@@ -204,7 +204,7 @@ fun TermAlarmNavHost(repository: AlarmRepository, hasShakeSensor: Boolean) {
             AlarmEditScreen(viewModel = viewModel, onClose = { navController.popBackStack() })
         }
         composable(
-            route = "$ROUTE_SKIP_GAME/{$ARG_ALARM_ID}",
+            route = "$ROUTE_END_TODAY_GAME/{$ARG_ALARM_ID}",
             arguments = listOf(navArgument(ARG_ALARM_ID) { type = NavType.LongType }),
             enterTransition = { screenOpenEnter(slidePx) },
             exitTransition = { screenOpenExit(slidePx) },

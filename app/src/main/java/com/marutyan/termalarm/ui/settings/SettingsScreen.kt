@@ -66,10 +66,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.marutyan.termalarm.ui.theme.COMPACT_SCREEN_HEIGHT_THRESHOLD
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.alarm.SoundFadeIn
-import com.marutyan.termalarm.domain.AlarmDismissMethod
 import com.marutyan.termalarm.domain.ClockDisplayMode
-import com.marutyan.termalarm.domain.VolumeButtonAction
-import com.marutyan.termalarm.domain.WeekStart
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -77,24 +74,19 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import java.util.concurrent.atomic.AtomicBoolean
 
-// 消音までの時間・スヌーズの長さで選べる分数の候補(AlarmEditScreenのスヌーズ入力(1〜60分)より粗い、
-// 設定画面としてよく使う値だけに絞ったプリセット)
+// 消音までの時間で選べる分数の候補
 private val MINUTE_PRESETS = listOf(1, 3, 5, 10, 15, 20, 30)
 
-// アラームのフェードイン秒数の候補。0は「なし」を意味する
-private val ALARM_FADE_IN_PRESETS = listOf(0, 5, 10, 15, 20, 25, 30)
-
-// タイマーのフェードイン秒数の候補。既存の固定値(1.5秒)を含める
-private val TIMER_FADE_IN_PRESETS = listOf(0f, 1.5f, 3f, 5f, 10f)
+// フェードイン秒数の候補。0は「なし」を意味する
+private val FADE_IN_PRESETS = listOf(0, 5, 10, 15, 20, 25, 30)
 
 // 一度に1つしか開かないダイアログの種類。開いていなければnull
 private enum class SettingsDialog {
-    DISMISS_METHOD, AUTO_STOP, SNOOZE_LENGTH, ALARM_FADE_IN, VOLUME_BUTTON, WEEK_START,
-    CLOCK_STYLE, TIMER_FADE_IN,
+    SILENCE_AFTER, FADE_IN, CLOCK_STYLE,
 }
 
 /**
- * 設定画面。design/tabs/Settings.dc.htmlを再現する。アラーム/時計/タイマーの3セクションに分け、
+ * 設定画面。design/tabs/Settings.dc.htmlを再現する。アラーム/時計のセクションに分け、
  * 値を持つ行はタップでダイアログを開き、切り替えの行はSwitchを直接操作する。
  * 時計のスタイル(アナログ/デジタル)はSettingsViewModel経由で既存のclock_settingsテーブルを読み書きする。
  */
@@ -108,15 +100,14 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
     var openDialog by rememberSaveable { mutableStateOf<SettingsDialog?>(null) }
     fun closeDialog() { openDialog = null }
 
-    // システムの音選択(RingtoneManager)。AlarmEditScreenのアラーム音選択と同じ仕組みをタイマー用に持つ
-    // (RingingService/AlarmEditは書き込み範囲外のため、共通化せずここに独立して持つ)
-    val timerSoundPickerLauncher = rememberLauncherForActivityResult(
+    // システムの音選択(RingtoneManager)
+    val soundPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
         val uri = result.data?.let {
             androidx.core.content.IntentCompat.getParcelableExtra(it, RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
         }
-        viewModel.setTimerSoundUri(uri?.toString())
+        viewModel.setAlarmSoundUri(uri?.toString())
     }
 
     Scaffold(
@@ -144,56 +135,45 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
             ) {
                 SettingsSection(title = stringResource(R.string.settings_section_alarm), isCompact = isCompact) {
                     SettingsValueRow(
-                        label = stringResource(R.string.settings_dismiss_method_title),
-                        value = dismissMethodLabel(settings.dismissMethod),
-                        onClick = { openDialog = SettingsDialog.DISMISS_METHOD },
+                        label = stringResource(R.string.sound_title),
+                        value = soundLabel(context, settings.alarmSoundUri),
+                        onClick = {
+                            val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                                putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                                settings.alarmSoundUri?.let { putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, it.toUri()) }
+                            }
+                            soundPickerLauncher.launch(intent)
+                        },
+                        isCompact = isCompact,
+                    )
+                    SettingsToggleRow(
+                        label = stringResource(R.string.vibration_title),
+                        checked = settings.vibration,
+                        onCheckedChange = viewModel::setVibration,
+                        isCompact = isCompact,
+                    )
+                    AlarmVolumeRow(isCompact = isCompact)
+                    SettingsValueRow(
+                        label = stringResource(R.string.settings_fade_in_title),
+                        value = formatSeconds(settings.fadeInSeconds),
+                        onClick = { openDialog = SettingsDialog.FADE_IN },
                         isCompact = isCompact,
                     )
                     SettingsValueRow(
                         label = stringResource(R.string.settings_auto_stop_title),
-                        value = stringResource(R.string.interval_minutes_label, settings.autoStopMinutes),
-                        onClick = { openDialog = SettingsDialog.AUTO_STOP },
-                        isCompact = isCompact,
-                    )
-                    SettingsValueRow(
-                        label = stringResource(R.string.settings_snooze_length_title),
-                        value = stringResource(R.string.interval_minutes_label, settings.defaultSnoozeMinutes),
-                        onClick = { openDialog = SettingsDialog.SNOOZE_LENGTH },
-                        isCompact = isCompact,
-                    )
-                    // 純正はスヌーズの長さの次に音量スライダーを置く
-                    AlarmVolumeRow(isCompact = isCompact)
-                    SettingsValueRow(
-                        label = stringResource(R.string.settings_fade_in_title),
-                        value = formatSeconds(settings.alarmFadeInSeconds),
-                        onClick = { openDialog = SettingsDialog.ALARM_FADE_IN },
-                        isCompact = isCompact,
-                    )
-                    SettingsValueRow(
-                        label = stringResource(R.string.settings_volume_button_title),
-                        value = volumeButtonLabel(settings.volumeButtonAction),
-                        onClick = { openDialog = SettingsDialog.VOLUME_BUTTON },
-                        isCompact = isCompact,
-                    )
-                    SettingsValueRow(
-                        label = stringResource(R.string.settings_week_start_title),
-                        value = weekStartLabel(settings.weekStart),
-                        onClick = { openDialog = SettingsDialog.WEEK_START },
+                        value = settings.silenceAfterMinutes?.let { stringResource(R.string.interval_minutes_label, it) } ?: stringResource(R.string.settings_fade_in_off),
+                        onClick = { openDialog = SettingsDialog.SILENCE_AFTER },
                         isCompact = isCompact,
                     )
                 }
 
-                SettingsSection(title = stringResource(R.string.settings_section_clock), isCompact = isCompact) {
+                SettingsSection(title = stringResource(R.string.settings_section_clock), showDivider = false, isCompact = isCompact) {
                     SettingsValueRow(
                         label = stringResource(R.string.settings_clock_style_title),
                         value = clockStyleLabel(clockDisplayMode),
                         onClick = { openDialog = SettingsDialog.CLOCK_STYLE },
-                        isCompact = isCompact,
-                    )
-                    SettingsToggleRow(
-                        label = stringResource(R.string.settings_show_seconds_title),
-                        checked = settings.showClockSeconds,
-                        onCheckedChange = viewModel::setShowClockSeconds,
                         isCompact = isCompact,
                     )
                     SettingsValueRow(
@@ -203,82 +183,24 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         isCompact = isCompact,
                     )
                 }
-
-                SettingsSection(title = stringResource(R.string.settings_section_timer), showDivider = false, isCompact = isCompact) {
-                    SettingsValueRow(
-                        label = stringResource(R.string.settings_timer_sound_title),
-                        value = timerSoundLabel(context, settings.timerSoundUri),
-                        onClick = {
-                            val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
-                                putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
-                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
-                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
-                                settings.timerSoundUri?.let { putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, it.toUri()) }
-                            }
-                            timerSoundPickerLauncher.launch(intent)
-                        },
-                        isCompact = isCompact,
-                    )
-                    SettingsValueRow(
-                        label = stringResource(R.string.settings_fade_in_title),
-                        value = formatSeconds(settings.timerFadeInSeconds),
-                        onClick = { openDialog = SettingsDialog.TIMER_FADE_IN },
-                        isCompact = isCompact,
-                    )
-                    SettingsToggleRow(
-                        label = stringResource(R.string.settings_timer_vibration_title),
-                        checked = settings.timerVibration,
-                        onCheckedChange = viewModel::setTimerVibration,
-                        isCompact = isCompact,
-                    )
-                }
             }
         }
     }
 
     when (openDialog) {
-        SettingsDialog.DISMISS_METHOD -> ChoiceDialog(
-            title = stringResource(R.string.settings_dismiss_method_title),
-            options = AlarmDismissMethod.entries.map { it to dismissMethodLabel(it) },
-            selected = settings.dismissMethod,
-            onSelect = { viewModel.setDismissMethod(it); closeDialog() },
-            onDismiss = ::closeDialog,
-            // スワイプでの解除(鳴動画面のジェスチャー)は未実装のため、選べないまま表示する
-            disabledOptions = setOf(AlarmDismissMethod.SWIPE),
-        )
-        SettingsDialog.AUTO_STOP -> ChoiceDialog(
+        SettingsDialog.SILENCE_AFTER -> ChoiceDialog(
             title = stringResource(R.string.settings_auto_stop_title),
-            options = MINUTE_PRESETS.map { it to stringResource(R.string.interval_minutes_label, it) },
-            selected = settings.autoStopMinutes,
-            onSelect = { viewModel.setAutoStopMinutes(it); closeDialog() },
+            options = listOf(null to stringResource(R.string.settings_fade_in_off)) +
+                MINUTE_PRESETS.map { it to stringResource(R.string.interval_minutes_label, it) },
+            selected = settings.silenceAfterMinutes,
+            onSelect = { viewModel.setSilenceAfterMinutes(it); closeDialog() },
             onDismiss = ::closeDialog,
         )
-        SettingsDialog.SNOOZE_LENGTH -> ChoiceDialog(
-            title = stringResource(R.string.settings_snooze_length_title),
-            options = MINUTE_PRESETS.map { it to stringResource(R.string.interval_minutes_label, it) },
-            selected = settings.defaultSnoozeMinutes,
-            onSelect = { viewModel.setDefaultSnoozeMinutes(it); closeDialog() },
-            onDismiss = ::closeDialog,
-        )
-        SettingsDialog.ALARM_FADE_IN -> ChoiceDialog(
+        SettingsDialog.FADE_IN -> ChoiceDialog(
             title = stringResource(R.string.settings_fade_in_title),
-            options = ALARM_FADE_IN_PRESETS.map { it to formatSeconds(it) },
-            selected = settings.alarmFadeInSeconds,
-            onSelect = { viewModel.setAlarmFadeInSeconds(it); closeDialog() },
-            onDismiss = ::closeDialog,
-        )
-        SettingsDialog.VOLUME_BUTTON -> ChoiceDialog(
-            title = stringResource(R.string.settings_volume_button_title),
-            options = VolumeButtonAction.entries.map { it to volumeButtonLabel(it) },
-            selected = settings.volumeButtonAction,
-            onSelect = { viewModel.setVolumeButtonAction(it); closeDialog() },
-            onDismiss = ::closeDialog,
-        )
-        SettingsDialog.WEEK_START -> ChoiceDialog(
-            title = stringResource(R.string.settings_week_start_title),
-            options = WeekStart.entries.map { it to weekStartLabel(it) },
-            selected = settings.weekStart,
-            onSelect = { viewModel.setWeekStart(it); closeDialog() },
+            options = FADE_IN_PRESETS.map { it to formatSeconds(it) },
+            selected = settings.fadeInSeconds,
+            onSelect = { viewModel.setFadeInSeconds(it); closeDialog() },
             onDismiss = ::closeDialog,
         )
         SettingsDialog.CLOCK_STYLE -> ChoiceDialog(
@@ -286,13 +208,6 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
             options = ClockDisplayMode.entries.map { it to clockStyleLabel(it) },
             selected = clockDisplayMode,
             onSelect = { viewModel.setClockDisplayMode(it); closeDialog() },
-            onDismiss = ::closeDialog,
-        )
-        SettingsDialog.TIMER_FADE_IN -> ChoiceDialog(
-            title = stringResource(R.string.settings_fade_in_title),
-            options = TIMER_FADE_IN_PRESETS.map { it to formatSeconds(it) },
-            selected = settings.timerFadeInSeconds,
-            onSelect = { viewModel.setTimerFadeInSeconds(it); closeDialog() },
             onDismiss = ::closeDialog,
         )
         null -> Unit

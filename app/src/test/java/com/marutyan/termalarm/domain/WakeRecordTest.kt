@@ -21,14 +21,14 @@ class WakeRecordTest {
             rings = listOf(
                 RingRecord(
                     scheduledAt = rangeStart,
-                    dismissedAt = null,
-                    dismissMethod = DismissMethod.AUTO_SILENCED,
+                    stoppedAt = null,
+                    stopMethod = StopMethod.AUTO_SILENCED,
                     occurrenceIndex = 0,
                 ),
                 RingRecord(
                     scheduledAt = rangeStart.plusMinutes(5),
-                    dismissedAt = null,
-                    dismissMethod = DismissMethod.AUTO_SILENCED,
+                    stoppedAt = null,
+                    stopMethod = StopMethod.AUTO_SILENCED,
                     occurrenceIndex = 1,
                 ),
             ),
@@ -48,26 +48,26 @@ class WakeRecordTest {
             rings = listOf(
                 RingRecord(
                     scheduledAt = rangeStart,
-                    dismissedAt = rangeStart.plusMinutes(1),
-                    dismissMethod = DismissMethod.CHALLENGE,
+                    stoppedAt = rangeStart.plusMinutes(1),
+                    stopMethod = StopMethod.CHALLENGE,
                     occurrenceIndex = 0,
                 ),
                 RingRecord(
                     scheduledAt = rangeStart.plusMinutes(5),
-                    dismissedAt = rangeStart.plusMinutes(6),
-                    dismissMethod = DismissMethod.TAP,
+                    stoppedAt = rangeStart.plusMinutes(6),
+                    stopMethod = StopMethod.TAP,
                     occurrenceIndex = 1,
                 ),
                 RingRecord(
                     scheduledAt = rangeStart.plusMinutes(10),
-                    dismissedAt = null,
-                    dismissMethod = DismissMethod.AUTO_SILENCED,
+                    stoppedAt = null,
+                    stopMethod = StopMethod.AUTO_SILENCED,
                     occurrenceIndex = 2,
                 ),
                 RingRecord(
                     scheduledAt = rangeStart.plusMinutes(15),
-                    dismissedAt = null,
-                    dismissMethod = DismissMethod.AUTO_SILENCED,
+                    stoppedAt = null,
+                    stopMethod = StopMethod.AUTO_SILENCED,
                     occurrenceIndex = 3,
                 ),
             ),
@@ -98,17 +98,17 @@ class WakeRecordTest {
             sessionStart = today,
             rangeStartAt = rangeStart,
             rings = listOf(
-                RingRecord(rangeStart, rangeStart.plusMinutes(1), DismissMethod.CHALLENGE, 0),
-                RingRecord(rangeStart.plusMinutes(5), rangeStart.plusMinutes(6), DismissMethod.TAP, 1),
-                RingRecord(rangeStart.plusMinutes(10), null, DismissMethod.AUTO_SILENCED, 2),
+                RingRecord(rangeStart, rangeStart.plusMinutes(1), StopMethod.CHALLENGE, 0),
+                RingRecord(rangeStart.plusMinutes(5), rangeStart.plusMinutes(6), StopMethod.TAP, 1),
+                RingRecord(rangeStart.plusMinutes(10), null, StopMethod.AUTO_SILENCED, 2),
             ),
         )
         val session2 = SessionRecord(
             sessionStart = today.plusDays(1),
             rangeStartAt = rangeStart.plusDays(1),
             rings = listOf(
-                RingRecord(rangeStart.plusDays(1), null, DismissMethod.AUTO_SILENCED, 0),
-                RingRecord(rangeStart.plusDays(1).plusMinutes(5), rangeStart.plusDays(1).plusMinutes(6), DismissMethod.CHALLENGE, 1),
+                RingRecord(rangeStart.plusDays(1), null, StopMethod.AUTO_SILENCED, 0),
+                RingRecord(rangeStart.plusDays(1).plusMinutes(5), rangeStart.plusDays(1).plusMinutes(6), StopMethod.CHALLENGE, 1),
             ),
         )
 
@@ -126,8 +126,8 @@ class WakeRecordTest {
             sessionStart = today,
             rangeStartAt = rangeStart,
             rings = listOf(
-                RingRecord(rangeStart, rangeStart.plusMinutes(1), DismissMethod.CHALLENGE, 0),
-                RingRecord(rangeStart.plusMinutes(5), rangeStart.plusMinutes(10), DismissMethod.CHALLENGE, 1),
+                RingRecord(rangeStart, rangeStart.plusMinutes(1), StopMethod.CHALLENGE, 0),
+                RingRecord(rangeStart.plusMinutes(5), rangeStart.plusMinutes(10), StopMethod.CHALLENGE, 1),
             ),
         )
 
@@ -136,10 +136,10 @@ class WakeRecordTest {
             sessionStart = today.plusDays(1),
             rangeStartAt = rangeStart.plusDays(1),
             rings = listOf(
-                RingRecord(rangeStart.plusDays(1), rangeStart.plusDays(1).plusMinutes(1), DismissMethod.CHALLENGE, 0),
-                RingRecord(rangeStart.plusDays(1).plusMinutes(5), rangeStart.plusDays(1).plusMinutes(6), DismissMethod.CHALLENGE, 1),
-                RingRecord(rangeStart.plusDays(1).plusMinutes(10), rangeStart.plusDays(1).plusMinutes(11), DismissMethod.CHALLENGE, 2),
-                RingRecord(rangeStart.plusDays(1).plusMinutes(15), rangeStart.plusDays(1).plusMinutes(20), DismissMethod.TAP, 3),
+                RingRecord(rangeStart.plusDays(1), rangeStart.plusDays(1).plusMinutes(1), StopMethod.CHALLENGE, 0),
+                RingRecord(rangeStart.plusDays(1).plusMinutes(5), rangeStart.plusDays(1).plusMinutes(6), StopMethod.CHALLENGE, 1),
+                RingRecord(rangeStart.plusDays(1).plusMinutes(10), rangeStart.plusDays(1).plusMinutes(11), StopMethod.CHALLENGE, 2),
+                RingRecord(rangeStart.plusDays(1).plusMinutes(15), rangeStart.plusDays(1).plusMinutes(20), StopMethod.TAP, 3),
             ),
         )
 
@@ -148,8 +148,8 @@ class WakeRecordTest {
             sessionStart = today.plusDays(2),
             rangeStartAt = rangeStart.plusDays(2),
             rings = listOf(
-                RingRecord(rangeStart.plusDays(2), null, DismissMethod.AUTO_SILENCED, 0),
-                RingRecord(rangeStart.plusDays(2).plusMinutes(5), null, DismissMethod.AUTO_SILENCED, 1),
+                RingRecord(rangeStart.plusDays(2), null, StopMethod.AUTO_SILENCED, 0),
+                RingRecord(rangeStart.plusDays(2).plusMinutes(5), null, StopMethod.AUTO_SILENCED, 1),
             ),
         )
 

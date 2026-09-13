@@ -142,77 +142,18 @@ class AlarmEditScreenTest {
         assertEquals(120, savedSchedule.startIntervalMinutes)
     }
 
-    // 「止めにくさ」の既定値(skipRequiresApp=オン/skipGame=オフ/snooze=オフ)を保証する
     @Test
-    fun 止めにくさの既定値() {
-        composeTestRule.setContent {
-            // rememberで囲まないと、画面を描き直すたびに別のViewModelが作られて状態が飛ぶ
-            AlarmEditScreen(
-                viewModel = remember { AlarmEditViewModel(repository, testAppContext(), null) },
-                onClose = {},
-            )
-        }
-        composeTestRule.switchNear(string(R.string.skip_requires_app_title)).assertIsOn()
-        composeTestRule.switchNear(string(R.string.skip_game_title)).assertIsOff()
-        composeTestRule.switchNear(string(R.string.snooze_title)).assertIsOff()
-    }
-
-    // skipRequiresAppをオフにするとskipGameが選べなくなる(オフのまま操作不能になる)ことを保証する
-    @Test
-    fun skipRequiresAppをオフにするとskipGameを選べなくなる() {
-        composeTestRule.setContent {
-            // rememberで囲まないと、画面を描き直すたびに別のViewModelが作られて状態が飛ぶ
-            AlarmEditScreen(
-                viewModel = remember { AlarmEditViewModel(repository, testAppContext(), null) },
-                onClose = {},
-            )
-        }
-        val skipRequiresAppTitle = string(R.string.skip_requires_app_title)
-        val skipGameTitle = string(R.string.skip_game_title)
-
-        composeTestRule.switchNear(skipRequiresAppTitle).performClick()
-
-        composeTestRule.switchNear(skipRequiresAppTitle).assertIsOff()
-        composeTestRule.switchNear(skipGameTitle).assertIsOff()
-        composeTestRule.switchNear(skipGameTitle).assert(isNotEnabled())
-        composeTestRule.onNodeWithText(string(R.string.skip_game_disabled_reason)).assertExists()
-    }
-
-    // 「止めにくさ」の設定を変えて保存し、再度開いたときに復元されることを保証する。
-    // AndroidComposeTestRuleはsetContentを1テストにつき1回しか呼べないため、
-    // 保存後の「開き直し」は同じsetContent内でreopenIdを切り替えて表現する
-    @Test
-    fun 止めにくさの設定を変えて保存すると復元される() {
+    fun ラベルを設定して保存すると復元される() {
         lateinit var newViewModel: AlarmEditViewModel
-        val reopenId = mutableStateOf<Long?>(null)
         composeTestRule.setContent {
-            val id by reopenId
-            if (id == null) {
-                newViewModel = remember { AlarmEditViewModel(repository, testAppContext(), null) }
-                AlarmEditScreen(viewModel = newViewModel, onClose = {})
-            } else {
-                AlarmEditScreen(viewModel = remember(id) { AlarmEditViewModel(repository, testAppContext(), id) }, onClose = {})
-            }
+            newViewModel = remember { AlarmEditViewModel(repository, testAppContext(), null) }
+            AlarmEditScreen(viewModel = newViewModel, onClose = {})
         }
-        val skipGameTitle = string(R.string.skip_game_title)
-        val snoozeTitle = string(R.string.snooze_title)
-
-        // skipRequiresAppはオンのままskipGameだけをオンにする(オフのままだと選べないため)
-        composeTestRule.switchNear(skipGameTitle).performClick()
-        composeTestRule.switchNear(snoozeTitle).performClick()
-        composeTestRule.onNodeWithText(string(R.string.snooze_minutes_label)).assertExists() // スヌーズをオンにすると分数入力欄が現れる
-
+        newViewModel.setLabel("朝のアラーム")
         composeTestRule.onNodeWithText(string(R.string.save)).performClick()
         composeTestRule.waitUntil(5_000) { newViewModel.uiState.isSaved }
 
         val savedSchedule = runBlocking { repository.observeAll().first().first() }
-        assertEquals(true, savedSchedule.skipGame)
-        // スヌーズの分数は、設定画面の既定値がそのまま入る
-        assertEquals(5, savedSchedule.snoozeMinutes)
-
-        composeTestRule.runOnIdle { reopenId.value = savedSchedule.id }
-        composeTestRule.waitUntilAtLeastOneExists(hasText(string(R.string.edit_title_existing)), 5_000)
-        composeTestRule.switchNear(skipGameTitle).assertIsOn()
-        composeTestRule.switchNear(snoozeTitle).assertIsOn()
+        assertEquals("朝のアラーム", savedSchedule.label)
     }
 }

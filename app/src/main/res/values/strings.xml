@@ -7,11 +7,8 @@
     <string name="ringing_notification_title">アラーム</string>
     <!-- 鳴動画面: 停止ボタン -->
     <string name="ringing_stop">停止</string>
-    <!-- 鳴動画面: スヌーズボタン(snoozeMinutesが設定されているときだけ表示) -->
     <string name="ringing_snooze">スヌーズ</string>
-    <!-- 鳴動画面: 今日はもう止めるボタン(skipRequiresAppがfalseのときだけ表示) -->
     <string name="ringing_skip_today">このタームを終了</string>
-    <!-- 鳴動画面: skipRequiresAppがtrue(既定)のとき、当日終了の導線の代わりに出す1行の案内文 -->
     <string name="ringing_skip_requires_app_notice">このタームを終了するにはアプリを開いてください</string>
     <!-- 鳴動画面: 残り鳴動回数の表示。現在鳴っている回は含めない(docs/SPEC.md「追記」参照) -->
     <string name="ringing_remaining_count">この時間帯であと %1$d 回鳴ります</string>

@@ -120,7 +120,7 @@ fun ClockScreen(
                 MainClock(
                     mode = displayMode,
                     time = now,
-                    showSeconds = appSettings.showClockSeconds,
+                    showSeconds = false,
                     analogClockSize = analogClockSize,
                 )
                 Text(

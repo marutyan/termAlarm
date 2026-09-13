@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "8f8c7e8f0b97ffc9fc79841d18d30ad8",
+    "identityHash": "d4de2cbaa3456d869d08c5a20fd4459f",
     "entities": [
       {
         "tableName": "alarm_schedule",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `startMinutes` INTEGER NOT NULL, `endMinutes` INTEGER NOT NULL, `startIntervalMinutes` INTEGER NOT NULL, `endIntervalMinutes` INTEGER NOT NULL, `repeatDays` INTEGER NOT NULL, `label` TEXT NOT NULL, `soundUri` TEXT, `vibrate` INTEGER NOT NULL, `enabled` INTEGER NOT NULL, `skippedSessionStart` INTEGER, `skipRequiresApp` INTEGER NOT NULL, `skipGame` INTEGER NOT NULL, `snoozeMinutes` INTEGER, `challengeTiming` TEXT NOT NULL, `challenge` TEXT NOT NULL, `wakeCheckMinutes` INTEGER)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `startMinutes` INTEGER NOT NULL, `endMinutes` INTEGER NOT NULL, `startIntervalMinutes` INTEGER NOT NULL, `endIntervalMinutes` INTEGER NOT NULL, `repeatDays` INTEGER NOT NULL, `label` TEXT NOT NULL, `enabled` INTEGER NOT NULL, `challengeTiming` TEXT NOT NULL, `challenge` TEXT NOT NULL, `wakeCheck` INTEGER NOT NULL, `skippedSessionStart` INTEGER)",
         "fields": [
           {
             "fieldPath": "id",
@@ -51,43 +51,10 @@
             "notNull": true
           },
           {
-            "fieldPath": "soundUri",
-            "columnName": "soundUri",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "vibrate",
-            "columnName": "vibrate",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
             "fieldPath": "enabled",
             "columnName": "enabled",
             "affinity": "INTEGER",
             "notNull": true
-          },
-          {
-            "fieldPath": "skippedSessionStart",
-            "columnName": "skippedSessionStart",
-            "affinity": "INTEGER"
-          },
-          {
-            "fieldPath": "skipRequiresApp",
-            "columnName": "skipRequiresApp",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "skipGame",
-            "columnName": "skipGame",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "snoozeMinutes",
-            "columnName": "snoozeMinutes",
-            "affinity": "INTEGER"
           },
           {
             "fieldPath": "challengeTiming",
@@ -102,8 +69,14 @@
             "notNull": true
           },
           {
-            "fieldPath": "wakeCheckMinutes",
-            "columnName": "wakeCheckMinutes",
+            "fieldPath": "wakeCheck",
+            "columnName": "wakeCheck",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "skippedSessionStart",
+            "columnName": "skippedSessionStart",
             "affinity": "INTEGER"
           }
         ],
@@ -272,7 +245,7 @@
       },
       {
         "tableName": "app_settings",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `dismissMethod` TEXT NOT NULL, `autoStopMinutes` INTEGER NOT NULL, `defaultSnoozeMinutes` INTEGER NOT NULL, `alarmFadeInSeconds` INTEGER NOT NULL, `volumeButtonAction` TEXT NOT NULL, `weekStart` TEXT NOT NULL, `showClockSeconds` INTEGER NOT NULL, `timerSoundUri` TEXT, `timerFadeInSeconds` REAL NOT NULL, `timerVibration` INTEGER NOT NULL, `theme` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `alarmSoundUri` TEXT, `vibration` INTEGER NOT NULL, `fadeInSeconds` INTEGER NOT NULL, `silenceAfterMinutes` INTEGER, `wakeCheckMinutes` INTEGER NOT NULL, `theme` TEXT NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -281,61 +254,30 @@
             "notNull": true
           },
           {
-            "fieldPath": "dismissMethod",
-            "columnName": "dismissMethod",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "autoStopMinutes",
-            "columnName": "autoStopMinutes",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "defaultSnoozeMinutes",
-            "columnName": "defaultSnoozeMinutes",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "alarmFadeInSeconds",
-            "columnName": "alarmFadeInSeconds",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "volumeButtonAction",
-            "columnName": "volumeButtonAction",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "weekStart",
-            "columnName": "weekStart",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "showClockSeconds",
-            "columnName": "showClockSeconds",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "timerSoundUri",
-            "columnName": "timerSoundUri",
+            "fieldPath": "alarmSoundUri",
+            "columnName": "alarmSoundUri",
             "affinity": "TEXT"
           },
           {
-            "fieldPath": "timerFadeInSeconds",
-            "columnName": "timerFadeInSeconds",
-            "affinity": "REAL",
+            "fieldPath": "vibration",
+            "columnName": "vibration",
+            "affinity": "INTEGER",
             "notNull": true
           },
           {
-            "fieldPath": "timerVibration",
-            "columnName": "timerVibration",
+            "fieldPath": "fadeInSeconds",
+            "columnName": "fadeInSeconds",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "silenceAfterMinutes",
+            "columnName": "silenceAfterMinutes",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "wakeCheckMinutes",
+            "columnName": "wakeCheckMinutes",
             "affinity": "INTEGER",
             "notNull": true
           },
@@ -356,7 +298,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8f8c7e8f0b97ffc9fc79841d18d30ad8')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd4de2cbaa3456d869d08c5a20fd4459f')"
     ]
   }
 }

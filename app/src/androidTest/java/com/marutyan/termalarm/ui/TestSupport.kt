@@ -22,6 +22,8 @@ import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.data.StopwatchRepository
 import com.marutyan.termalarm.data.TimerRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
+import com.marutyan.termalarm.domain.ChallengeTiming
+import com.marutyan.termalarm.domain.ChallengeLevel
 import java.time.DayOfWeek
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditScreen
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditViewModel
@@ -71,7 +73,7 @@ internal fun createTestStopwatchRepository(): Pair<AlarmDatabase, StopwatchRepos
 }
 
 /**
- * テストで使う既定値のアラーム。docs/SPEC.mdの既定値(7:00〜9:00・5分間隔・skipRequiresApp=true等)と
+ * テストで使う既定値のアラーム。
  * AlarmEditUiStateの既定値に合わせる。個々のテストは変えたいフィールドだけ引数で上書きする。
  */
 internal fun defaultTestSchedule(
@@ -80,9 +82,9 @@ internal fun defaultTestSchedule(
     repeatDays: Set<DayOfWeek> = emptySet(),
     intervalMinutes: Int = 5,
     label: String = "",
-    skipRequiresApp: Boolean = true,
-    skipGame: Boolean = false,
-    snoozeMinutes: Int? = null,
+    challengeTiming: ChallengeTiming = ChallengeTiming.NEVER,
+    challenge: ChallengeLevel = ChallengeLevel.EASY,
+    wakeCheck: Boolean = false,
 ): AlarmSchedule = AlarmSchedule(
     id = 0,
     startMinutes = startMinutes,
@@ -91,13 +93,11 @@ internal fun defaultTestSchedule(
     endIntervalMinutes = intervalMinutes,
     repeatDays = repeatDays,
     label = label,
-    soundUri = null,
-    vibrate = true,
     enabled = true,
     skippedSessionStart = null,
-    skipRequiresApp = skipRequiresApp,
-    skipGame = skipGame,
-    snoozeMinutes = snoozeMinutes,
+    challengeTiming = challengeTiming,
+    challenge = challenge,
+    wakeCheck = wakeCheck,
 )
 
 // テスト内で「一覧」⇔「追加・編集」を行き来するための最小限の画面切り替え。
@@ -121,7 +121,7 @@ internal fun ListEditHost(repository: AlarmRepository) {
             onOpenAbout = {},
             onOpenPrivacyPolicy = {},
             onOpenSettings = {},
-            onNavigateToSkipGame = {},
+            onNavigateToEndTodayGame = {},
             exactAlarmBanner = {},
             notificationPermissionBanner = {},
         )

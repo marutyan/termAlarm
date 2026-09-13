@@ -24,7 +24,7 @@ private fun schedule(
     skippedSessionStart: LocalDate? = null,
     challengeTiming: ChallengeTiming = ChallengeTiming.NEVER,
     challenge: ChallengeLevel = ChallengeLevel.EASY,
-    wakeCheckMinutes: Int? = null,
+    wakeCheck: Boolean = false,
 ) = AlarmSchedule(
     id = 1L,
     startMinutes = startMinutes,
@@ -33,13 +33,11 @@ private fun schedule(
     endIntervalMinutes = endIntervalMinutes,
     repeatDays = repeatDays,
     label = "test",
-    soundUri = null,
-    vibrate = true,
     enabled = enabled,
     skippedSessionStart = skippedSessionStart,
     challengeTiming = challengeTiming,
     challenge = challenge,
-    wakeCheckMinutes = wakeCheckMinutes,
+    wakeCheck = wakeCheck,
 )
 
 class ScheduleCalculatorTest {
@@ -655,30 +653,30 @@ class ScheduleCalculatorTest {
     // --- 範囲終了後の起床確認 ---
 
     @Test
-    fun `起床確認 wakeCheckMinutesがnullなら時刻がnullになる`() {
+    fun `起床確認 wakeCheckがfalseなら時刻がnullになる`() {
         val s = schedule(
             startMinutes = 7 * 60,
             endMinutes = 8 * 60,
             startIntervalMinutes = 10,
-            wakeCheckMinutes = null,
+            wakeCheck = false,
         )
-        val dismissedAt = ZonedDateTime.of(2026, 9, 13, 8, 0, 0, 0, TOKYO)
-        assertNull(wakeCheckTime(s, dismissedAt))
+        val stoppedAt = ZonedDateTime.of(2026, 9, 13, 8, 0, 0, 0, TOKYO)
+        assertNull(wakeCheckTime(s, stoppedAt, 5))
     }
 
     @Test
-    fun `起床確認 停止時刻の15分後になり予定時刻ではなく停止時刻から数えている`() {
+    fun `起床確認 wakeCheckがtrueなら停止時刻に全体設定の分数を足した時刻になる`() {
         val s = schedule(
             startMinutes = 7 * 60,
             endMinutes = 8 * 60,
             startIntervalMinutes = 10,
-            wakeCheckMinutes = 15,
+            wakeCheck = true,
         )
         // 予定時刻は 8:00 だが、実際に止めた時刻は遅れて 8:07
-        // 予定時刻から数えたら 8:15 だが、実際の停止時刻から数えるため 8:22 になる
-        val lastDismissedAt = ZonedDateTime.of(2026, 9, 13, 8, 7, 0, 0, TOKYO)
-        val expectedWakeCheckTime = ZonedDateTime.of(2026, 9, 13, 8, 22, 0, 0, TOKYO)
-        assertEquals(expectedWakeCheckTime, wakeCheckTime(s, lastDismissedAt))
+        // 全体設定の wakeCheckMinutes = 5 分を足すと、手計算で確定した 8:12 となる
+        val lastStoppedAt = ZonedDateTime.of(2026, 9, 13, 8, 7, 0, 0, TOKYO)
+        val expectedWakeCheckTime = ZonedDateTime.of(2026, 9, 13, 8, 12, 0, 0, TOKYO)
+        assertEquals(expectedWakeCheckTime, wakeCheckTime(s, lastStoppedAt, 5))
     }
 
     @Test
@@ -688,7 +686,7 @@ class ScheduleCalculatorTest {
             startMinutes = 7 * 60,
             endMinutes = 8 * 60,
             startIntervalMinutes = 10,
-            wakeCheckMinutes = 15,
+            wakeCheck = true,
             skippedSessionStart = sessionDate,
         )
         assertFalse(shouldPerformWakeCheck(sWithSkip, sessionDate))
@@ -697,7 +695,7 @@ class ScheduleCalculatorTest {
             startMinutes = 7 * 60,
             endMinutes = 8 * 60,
             startIntervalMinutes = 10,
-            wakeCheckMinutes = 15,
+            wakeCheck = true,
             skippedSessionStart = null,
         )
         assertTrue(shouldPerformWakeCheck(sWithoutSkip, sessionDate))
@@ -706,18 +704,18 @@ class ScheduleCalculatorTest {
             startMinutes = 7 * 60,
             endMinutes = 8 * 60,
             startIntervalMinutes = 10,
-            wakeCheckMinutes = 15,
+            wakeCheck = true,
             skippedSessionStart = sessionDate.minusDays(1),
         )
         assertTrue(shouldPerformWakeCheck(sWithDifferentDaySkip, sessionDate))
 
-        val sWithNullMinutes = schedule(
+        val sWithWakeCheckFalse = schedule(
             startMinutes = 7 * 60,
             endMinutes = 8 * 60,
             startIntervalMinutes = 10,
-            wakeCheckMinutes = null,
+            wakeCheck = false,
             skippedSessionStart = null,
         )
-        assertFalse(shouldPerformWakeCheck(sWithNullMinutes, sessionDate))
+        assertFalse(shouldPerformWakeCheck(sWithWakeCheckFalse, sessionDate))
     }
 }
