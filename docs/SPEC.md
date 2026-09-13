@@ -419,6 +419,26 @@ Appleのヒューマンインターフェイスガイドラインが示す数値
 | 押せるもの同士の間隔 | 枠のある要素で12dp以上 | 隣を押してしまうのを防ぐ |
 | 文字の拡大 | 200%まで崩れないこと | 端末の文字サイズ設定に従う |
 
+### 開発中にテーブルを変えたとき
+
+`version 1` を出荷するまでは、テーブルを変えてもマイグレーションを書かず、
+version を 1 のまま作り直す。そのため、**実機に古い version 1 のデータが残っていると
+アプリが起動しなくなる**。
+
+```
+Room cannot verify the data integrity.
+Looks like you've changed schema but forgot to update the version number.
+```
+
+この場合は端末のアプリデータを消してから入れ直す。
+
+```sh
+adb shell pm clear com.marutyan.termalarm
+```
+
+`version 1` を出荷したあとは、これをやってはいけない。利用者のデータが消えるため、
+そのあとは version を1つずつ上げてマイグレーションを書く。
+
 ### 文字の拡大に耐える作り
 
 端末の文字サイズを大きくしたとき、次のようにする。高さを固定した箱に文字を押し込まない。

@@ -373,4 +373,7 @@
     <string name="game_note_color_word">文字の色を回答</string>
     <string name="game_note_shake_device">軽い</string>
     <string name="game_note_walk">30歩</string>
+    <!-- ウィジェット -->
+    <string name="widget_description">時刻と次の鳴動を出す時計</string>
+    <string name="widget_remaining">残り%1$d回</string>
 </resources>
