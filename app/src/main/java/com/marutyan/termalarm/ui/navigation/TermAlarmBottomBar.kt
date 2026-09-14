@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.marutyan.termalarm.ui.theme.customColors
@@ -117,11 +118,13 @@ private fun BottomBarItem(
             Icon(
                 imageVector = item.icon,
                 contentDescription = null,
-                modifier = Modifier.size(23.dp),
+                modifier = Modifier.size(item.iconSize),
                 tint = contentColor,
             )
             Text(
                 text = label,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 style = TextStyle(
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Normal,

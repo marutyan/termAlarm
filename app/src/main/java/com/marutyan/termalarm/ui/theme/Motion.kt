@@ -56,8 +56,8 @@ const val BUTTON_PRESS_SCALE = 0.92f
 // ボタンを押下した際と離した際のアニメーション時間(ミリ秒)。機敏なフィードバックを返すために定義する。
 const val BUTTON_PRESS_DURATION_MS = 100
 
-// タイマーの輪の進捗角度を補間する時間(ミリ秒)。1秒間隔の更新を滑らかな連続移動にするために定義する。
-const val TIMER_PROGRESS_DURATION_MS = 1000
+// タイマーカードの状態切り替え時に色を遷移させる時間(ミリ秒)。急激な明度や色の変化を和らげるために定義する。
+const val TIMER_COLOR_TRANSITION_DURATION_MS = 200
 
 // 時計のアナログ・デジタル表示を切り替えるアニメーション時間(ミリ秒)。自然な拡大縮小フェードにするために定義する。
 const val CLOCK_MODE_TRANSITION_DURATION_MS = 300
@@ -161,12 +161,12 @@ fun buttonPressAnimationSpec(): TweenSpec<Float> = tween(
 )
 
 /**
- * タイマーの円形プログレス角度を補間するAnimationSpecを生成する。
- * 1秒かけて等速(LinearEasing)で次の角度へ直進させ、針が飛ぶ現象を解消する。
+ * タイマーカードの色切り替えを補間するAnimationSpecを生成する。
+ * 200msかけて状態に応じた色へ自然に遷移させる。
  */
-fun timerProgressAnimationSpec(): TweenSpec<Float> = tween(
-    durationMillis = TIMER_PROGRESS_DURATION_MS,
-    easing = LinearEasing,
+fun timerColorAnimationSpec(): TweenSpec<Color> = tween(
+    durationMillis = TIMER_COLOR_TRANSITION_DURATION_MS,
+    easing = FastOutSlowInEasing,
 )
 
 /**

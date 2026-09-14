@@ -291,7 +291,6 @@ fun TermAlarmNavHost(
                         },
                         onOpenPrivacyPolicy = { navController.navigate(ROUTE_PRIVACY) },
                         onOpenAbout = { navController.navigate(ROUTE_ABOUT) },
-                        bottomBar = {},
                     )
                 }
 
@@ -310,7 +309,6 @@ fun TermAlarmNavHost(
                         },
                         onOpenPrivacyPolicy = { navController.navigate(ROUTE_PRIVACY) },
                         onOpenAbout = { navController.navigate(ROUTE_ABOUT) },
-                        bottomBar = {},
                     )
                 }
 

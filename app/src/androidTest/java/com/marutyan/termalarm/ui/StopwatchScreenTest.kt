@@ -63,7 +63,7 @@ class StopwatchScreenTest {
 
     private fun setScreen() {
         composeTestRule.setContent {
-            StopwatchScreen(viewModel = remember { StopwatchViewModel(repository, testAppContext()) }, bottomBar = {})
+            StopwatchScreen(viewModel = remember { StopwatchViewModel(repository, testAppContext()) })
         }
     }
 

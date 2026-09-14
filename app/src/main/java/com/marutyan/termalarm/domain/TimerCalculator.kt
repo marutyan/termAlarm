@@ -63,11 +63,20 @@ fun resetTimer(state: TimerState, nowElapsedRealtime: Long, nowWallClockMillis: 
     )
 
 /**
- * 動作中に1分単位などで延長する（docs/SPEC.md「動作中に1分単位で延長できる」）。
- * 合計時間(totalMillis)と現在の残り時間の両方へ同じだけ加える。FINISHED(鳴動中)は延長の対象外。
+ * 動作中または鳴動中に指定時間(extraMillis)延長する（docs/SPEC.md「動作中に1分単位で延長できる」）。
+ * 動作中・一時停止中は合計時間(totalMillis)と現在の残り時間の両方へ加算する。
+ * 鳴動中(FINISHED)の場合は指定時間でタイマーを再開し、合計時間と残り時間をその時間に合わせてRUNNINGへ戻す。
  */
 fun extendTimer(state: TimerState, extraMillis: Long, nowElapsedRealtime: Long, nowWallClockMillis: Long): TimerState {
-    if (state.runState == TimerRunState.FINISHED) return state
+    if (state.runState == TimerRunState.FINISHED) {
+        return state.copy(
+            totalMillis = extraMillis,
+            remainingMillisAtAnchor = extraMillis,
+            anchorElapsedRealtime = nowElapsedRealtime,
+            anchorWallClockMillis = nowWallClockMillis,
+            runState = TimerRunState.RUNNING,
+        )
+    }
     val currentRemaining = remainingMillis(state, nowElapsedRealtime, nowWallClockMillis)
     return state.copy(
         totalMillis = state.totalMillis + extraMillis,

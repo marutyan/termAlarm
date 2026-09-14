@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.SystemClock
 import android.provider.Settings
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -32,10 +31,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,20 +59,19 @@ import androidx.compose.ui.unit.sp
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
+import com.marutyan.termalarm.domain.overdueMillis
 import com.marutyan.termalarm.domain.remainingMillis
 import com.marutyan.termalarm.timer.formatDuration
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
 import com.marutyan.termalarm.ui.theme.customColors
 import com.marutyan.termalarm.ui.theme.pressScaleEffect
+import com.marutyan.termalarm.ui.theme.timerColorAnimationSpec
 
 /** 円形リングの直径(dp)。設計図 design/Timer.dc.html のサイズを再現するために用いる。 */
 val TIMER_RING_SIZE = 176.dp
 
 /** 円形リングの線の太さ(dp)。設計図の視認性を確保するために用いる。 */
 val TIMER_RING_STROKE_WIDTH = 7.dp
-
-/** 状態切り替え時の色移り変わり時間(ミリ秒)。パッと変わらず短い時間で遷移させるために用いる。 */
-const val TIMER_COLOR_TRANSITION_MS = 200
 
 /**
  * 端末の「アニメーションを減らす」または「アニメーションの無効化」が有効になっているかを判定する。
@@ -93,6 +92,7 @@ fun isReduceMotionEnabled(context: Context): Boolean {
 /**
  * タイマーの円形プログレスの進捗割合(0f..1f)を計算・提供する。
  * 通常時は毎フレームなめらかに減らし、端末の「アニメーションを減らす」設定時は1秒ごとの更新にとどめる。
+ * 呼び出し元全体の再構成を防ぐためStateを返し、Canvasの描画処理内でのみ値を読み出す。
  */
 @Composable
 fun rememberTimerProgress(
@@ -100,31 +100,41 @@ fun rememberTimerProgress(
     nowElapsed: Long,
     nowWall: Long,
     reduceMotion: Boolean,
-): Float {
-    if (timer.totalMillis <= 0L) return 0f
+): State<Float> {
+    if (timer.totalMillis <= 0L) {
+        return rememberUpdatedState(0f)
+    }
     if (timer.runState != TimerRunState.RUNNING || reduceMotion) {
         val remaining = remainingMillis(timer, nowElapsed, nowWall)
-        return (remaining.toFloat() / timer.totalMillis.toFloat()).coerceIn(0f, 1f)
+        val progress = (remaining.toFloat() / timer.totalMillis.toFloat()).coerceIn(0f, 1f)
+        return rememberUpdatedState(progress)
     }
 
-    var currentElapsed by remember(timer.id, timer.anchorElapsedRealtime) {
-        mutableLongStateOf(SystemClock.elapsedRealtime())
-    }
-    var currentWall by remember(timer.id, timer.anchorWallClockMillis) {
-        mutableLongStateOf(System.currentTimeMillis())
+    val progressState = remember(timer.id, timer.anchorElapsedRealtime, timer.runState) {
+        val initialRemaining = remainingMillis(timer, nowElapsed, nowWall)
+        mutableFloatStateOf((initialRemaining.toFloat() / timer.totalMillis.toFloat()).coerceIn(0f, 1f))
     }
 
-    LaunchedEffect(timer.id, timer.anchorElapsedRealtime, timer.runState) {
+    LaunchedEffect(timer.id, timer.anchorElapsedRealtime, timer.runState, timer.totalMillis) {
         while (true) {
+            var reachedZero = false
             withFrameMillis {
-                currentElapsed = SystemClock.elapsedRealtime()
-                currentWall = System.currentTimeMillis()
+                val currentElapsed = SystemClock.elapsedRealtime()
+                val currentWall = System.currentTimeMillis()
+                val remaining = remainingMillis(timer, currentElapsed, currentWall)
+                val currentProgress = (remaining.toFloat() / timer.totalMillis.toFloat()).coerceIn(0f, 1f)
+                progressState.floatValue = currentProgress
+                if (remaining <= 0L) {
+                    reachedZero = true
+                }
+            }
+            if (reachedZero) {
+                break
             }
         }
     }
 
-    val remaining = remainingMillis(timer, currentElapsed, currentWall)
-    return (remaining.toFloat() / timer.totalMillis.toFloat()).coerceIn(0f, 1f)
+    return progressState
 }
 
 /**
@@ -150,7 +160,7 @@ fun TimerCard(
     val isRunning = timer.runState == TimerRunState.RUNNING
 
     val remaining = remainingMillis(timer, nowElapsed, nowWall)
-    val progress = rememberTimerProgress(
+    val progressState = rememberTimerProgress(
         timer = timer,
         nowElapsed = nowElapsed,
         nowWall = nowWall,
@@ -165,7 +175,7 @@ fun TimerCard(
     }
     val containerColor by animateColorAsState(
         targetValue = targetContainerColor,
-        animationSpec = tween(durationMillis = TIMER_COLOR_TRANSITION_MS),
+        animationSpec = timerColorAnimationSpec(),
         label = "TimerContainerColor",
     )
 
@@ -177,7 +187,7 @@ fun TimerCard(
     }
     val arcColor by animateColorAsState(
         targetValue = targetArcColor,
-        animationSpec = tween(durationMillis = TIMER_COLOR_TRANSITION_MS),
+        animationSpec = timerColorAnimationSpec(),
         label = "TimerArcColor",
     )
 
@@ -189,7 +199,7 @@ fun TimerCard(
     }
     val textColor by animateColorAsState(
         targetValue = targetTextColor,
-        animationSpec = tween(durationMillis = TIMER_COLOR_TRANSITION_MS),
+        animationSpec = timerColorAnimationSpec(),
         label = "TimerTextColor",
     )
 
@@ -269,6 +279,7 @@ fun TimerCard(
                         )
 
                         // 残りぶんの弧: 主役の色。12時の位置(-90度)から時計回りに描き、減っていく
+                        val progress = progressState.value
                         if (progress > 0.001f) {
                             val sweepAngle = 360f * progress
                             drawArc(
@@ -314,7 +325,8 @@ fun TimerCard(
                         .semantics { contentDescription = actionDesc },
                 ) {
                     val remainingDisplay = if (isFinished) {
-                        "0:00"
+                        val overdue = overdueMillis(timer, nowElapsed, nowWall)
+                        "−" + formatTimerRemaining(overdue)
                     } else {
                         formatTimerRemaining(remaining)
                     }
@@ -354,7 +366,7 @@ fun TimerCard(
                 }
                 val animatedExtendTextColor by animateColorAsState(
                     targetValue = extendTextColor,
-                    animationSpec = tween(durationMillis = TIMER_COLOR_TRANSITION_MS),
+                    animationSpec = timerColorAnimationSpec(),
                     label = "TimerExtendTextColor",
                 )
 
@@ -394,7 +406,7 @@ fun TimerCard(
                     }
                     val animatedResetIconColor by animateColorAsState(
                         targetValue = resetIconColor,
-                        animationSpec = tween(durationMillis = TIMER_COLOR_TRANSITION_MS),
+                        animationSpec = timerColorAnimationSpec(),
                         label = "TimerResetIconColor",
                     )
 

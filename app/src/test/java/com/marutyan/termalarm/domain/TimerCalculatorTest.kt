@@ -49,6 +49,27 @@ class TimerCalculatorTest {
         assertEquals(66_000L, remainingMillis(extended, nowElapsedRealtime = 20_000L, nowWallClockMillis = 20_000L))
     }
 
+    @Test
+    fun `鳴動中に延長すると残り時間と合計時間が延長時間になりRUNNINGで再開する`() {
+        val running = startTimer(id = 1L, label = "t", durationMillis = 10_000L, nowElapsedRealtime = 0L, nowWallClockMillis = 0L)
+        val finished = finishTimer(running, nowElapsedRealtime = 10_000L, nowWallClockMillis = 10_000L)
+        assertEquals(TimerRunState.FINISHED, finished.runState)
+
+        // 鳴動中に1分(60_000ms)延長
+        val extended = extendTimer(finished, extraMillis = 60_000L, nowElapsedRealtime = 15_000L, nowWallClockMillis = 15_000L)
+        assertEquals(TimerRunState.RUNNING, extended.runState)
+        assertEquals(60_000L, extended.totalMillis)
+        assertEquals(60_000L, extended.remainingMillisAtAnchor)
+        assertEquals(15_000L, extended.anchorElapsedRealtime)
+        assertEquals(15_000L, extended.anchorWallClockMillis)
+        // 延長直後は残り60秒
+        assertEquals(60_000L, remainingMillis(extended, nowElapsedRealtime = 15_000L, nowWallClockMillis = 15_000L))
+        // 5秒経過後は残り55秒
+        assertEquals(55_000L, remainingMillis(extended, nowElapsedRealtime = 20_000L, nowWallClockMillis = 20_000L))
+        // 鳴動中ではないのでoverdueMillisは0
+        assertEquals(0L, overdueMillis(extended, nowElapsedRealtime = 20_000L, nowWallClockMillis = 20_000L))
+    }
+
     // --- 一時停止→再開 ---
 
     @Test

@@ -73,7 +73,7 @@ class TimerScreenTest {
 
     private fun setScreen() {
         composeTestRule.setContent {
-            TimerScreen(viewModel = remember { TimerViewModel(repository, testAppContext()) }, bottomBar = {})
+            TimerScreen(viewModel = remember { TimerViewModel(repository, testAppContext()) })
         }
     }
 

@@ -77,7 +77,6 @@ fun StopwatchScreen(
     onOpenSettings: () -> Unit = {},
     onOpenPrivacyPolicy: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
-    bottomBar: @Composable () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val laps by viewModel.laps.collectAsStateWithLifecycle()

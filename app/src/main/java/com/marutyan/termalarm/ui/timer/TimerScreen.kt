@@ -83,7 +83,6 @@ fun TimerScreen(
     onOpenSettings: () -> Unit = {},
     onOpenPrivacyPolicy: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
-    bottomBar: @Composable () -> Unit,
 ) {
     var showAddScreen by rememberSaveable { mutableStateOf(false) }
     val timers by viewModel.timers.collectAsStateWithLifecycle()

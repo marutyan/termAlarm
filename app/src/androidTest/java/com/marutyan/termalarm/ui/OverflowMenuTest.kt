@@ -185,7 +185,6 @@ class OverflowMenuTest {
         composeTestRule.setContent {
             TimerScreen(
                 viewModel = remember { TimerViewModel(timerRepository, testAppContext()) },
-                bottomBar = {},
             )
         }
         composeTestRule.onNodeWithText(string(R.string.app_name)).assertExists()
@@ -205,7 +204,6 @@ class OverflowMenuTest {
                 onOpenSettings = { openedSettings = true },
                 onOpenPrivacyPolicy = { openedPrivacy = true },
                 onOpenAbout = { openedAbout = true },
-                bottomBar = {},
             )
         }
 
@@ -231,7 +229,6 @@ class OverflowMenuTest {
         composeTestRule.setContent {
             StopwatchScreen(
                 viewModel = remember { StopwatchViewModel(stopwatchRepository, testAppContext()) },
-                bottomBar = {},
             )
         }
         composeTestRule.onNodeWithText(string(R.string.app_name)).assertExists()
@@ -251,7 +248,6 @@ class OverflowMenuTest {
                 onOpenSettings = { openedSettings = true },
                 onOpenPrivacyPolicy = { openedPrivacy = true },
                 onOpenAbout = { openedAbout = true },
-                bottomBar = {},
             )
         }
 
