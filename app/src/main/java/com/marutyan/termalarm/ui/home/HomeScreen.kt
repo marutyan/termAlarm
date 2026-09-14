@@ -65,6 +65,8 @@ import com.marutyan.termalarm.domain.sessionStartDate
 import com.marutyan.termalarm.ui.common.TermAlarmTopBar
 import com.marutyan.termalarm.ui.common.clockTimePattern
 import com.marutyan.termalarm.ui.common.formatClockMinutes
+import com.marutyan.termalarm.ui.permission.ExactAlarmPermissionBanner
+import com.marutyan.termalarm.ui.permission.NotificationPermissionBanner
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
 import com.marutyan.termalarm.ui.theme.customColors
 import com.marutyan.termalarm.ui.theme.ibmPlexMonoFontFamily
@@ -124,9 +126,9 @@ fun HomeScreen(
     val terms by viewModel.terms.collectAsStateWithLifecycle()
     val now = rememberCurrentSecond()
 
-    // 進行中のタームを抽出する。有効かつ当日セッション終了が可能なものの中で次回鳴動が最も近いものを採用する。
+    // 次に鳴動予定のタームを抽出する。有効で次回鳴動があるものの中で最も近いものを採用する。
     val activeSchedule = remember(terms, now) {
-        terms.filter { it.enabled && canEndTodaySession(it, now) }
+        terms.filter { it.enabled && nextTrigger(it, now) != null }
             .minByOrNull { schedule ->
                 nextTrigger(schedule, now)?.toEpochSecond() ?: Long.MAX_VALUE
             }
@@ -207,6 +209,10 @@ fun HomeScreen(
             ),
             modifier = Modifier.padding(start = 9.dp),
         )
+
+        // 権限バナー（通知権限・正確なアラーム権限）。足りないものがあれば縦に並べ、足りているときは余白も作らない
+        NotificationPermissionBanner()
+        ExactAlarmPermissionBanner()
 
         // 3. 34dp空ける
         Spacer(modifier = Modifier.height(34.dp))
@@ -297,48 +303,50 @@ fun HomeScreen(
                     .height(12.dp),
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            // 8. 「このタームを終了」。セッションが開始済みで当日終了が可能な場合のみ表示する
+            if (canEndTodaySession(activeSchedule, now)) {
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // 8. 「このタームを終了」。13.5sp、薄い文字の色。押せる高さ44dp
-            val subtleTextColor = MaterialTheme.customColors.subtleText
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(9.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = ripple(),
-                        onClick = { onEndTodayTerm(activeSchedule.id) },
-                    ),
-            ) {
-                Canvas(modifier = Modifier.size(17.dp)) {
-                    val strokeWidth = 1.7.dp.toPx()
-                    val r = (size.minDimension - strokeWidth) / 2f
-                    val center = Offset(size.width / 2f, size.height / 2f)
-                    drawCircle(
-                        color = subtleTextColor,
-                        radius = r,
-                        center = center,
-                        style = Stroke(width = strokeWidth),
-                    )
-                    val scale = size.width / 24f
-                    drawLine(
-                        color = subtleTextColor,
-                        start = Offset(8.5f * scale, 8.5f * scale),
-                        end = Offset(15.5f * scale, 15.5f * scale),
-                        strokeWidth = strokeWidth,
-                        cap = StrokeCap.Round,
+                val subtleTextColor = MaterialTheme.customColors.subtleText
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(9.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = ripple(),
+                            onClick = { onEndTodayTerm(activeSchedule.id) },
+                        ),
+                ) {
+                    Canvas(modifier = Modifier.size(17.dp)) {
+                        val strokeWidth = 1.7.dp.toPx()
+                        val r = (size.minDimension - strokeWidth) / 2f
+                        val center = Offset(size.width / 2f, size.height / 2f)
+                        drawCircle(
+                            color = subtleTextColor,
+                            radius = r,
+                            center = center,
+                            style = Stroke(width = strokeWidth),
+                        )
+                        val scale = size.width / 24f
+                        drawLine(
+                            color = subtleTextColor,
+                            start = Offset(8.5f * scale, 8.5f * scale),
+                            end = Offset(15.5f * scale, 15.5f * scale),
+                            strokeWidth = strokeWidth,
+                            cap = StrokeCap.Round,
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.home_end_term),
+                        style = TextStyle(
+                            fontSize = 13.5.sp,
+                            color = subtleTextColor,
+                        ),
                     )
                 }
-                Text(
-                    text = stringResource(R.string.home_end_term),
-                    style = TextStyle(
-                        fontSize = 13.5.sp,
-                        color = subtleTextColor,
-                    ),
-                )
             }
 
             Spacer(modifier = Modifier.height(14.dp))

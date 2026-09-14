@@ -1,5 +1,7 @@
 package com.marutyan.termalarm.ui.alarmedit
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
@@ -51,9 +54,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.marutyan.termalarm.R
+import com.marutyan.termalarm.alarm.NotificationPermission
 import com.marutyan.termalarm.domain.ChallengeLevel
 import com.marutyan.termalarm.domain.ChallengeTiming
 import com.marutyan.termalarm.ui.common.formatClockMinutes
+import com.marutyan.termalarm.ui.permission.isNotificationPermissionRequested
+import com.marutyan.termalarm.ui.permission.setNotificationPermissionRequested
 import com.marutyan.termalarm.ui.theme.customColors
 import com.marutyan.termalarm.ui.theme.ibmPlexMonoFontFamily
 import java.time.DayOfWeek
@@ -80,7 +86,29 @@ fun AlarmEditScreen(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     val uiState = viewModel.uiState
+
+    // 通知権限の要求ランチャー。初回保存時に要求し、結果受け取り後に保存を実行する
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) {
+        setNotificationPermissionRequested(context)
+        viewModel.save()
+    }
+
+    // ターム保存時のアクション。初回保存時かつ未要求の場合は通知権限を先に求め、それ以外は直接保存する
+    val onSave = {
+        val shouldRequestPermission = NotificationPermission.isRuntimeRequestRequired() &&
+            !NotificationPermission.isGranted(context) &&
+            !isNotificationPermissionRequested(context)
+
+        if (shouldRequestPermission) {
+            notificationPermissionLauncher.launch(NotificationPermission.PERMISSION)
+        } else {
+            viewModel.save()
+        }
+    }
 
     // 保存または削除が完了したら閉じる
     LaunchedEffect(uiState.isSaved, uiState.isDeleted) {
@@ -500,7 +528,7 @@ fun AlarmEditScreen(
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = ripple(),
-                                onClick = viewModel::save,
+                                onClick = onSave,
                             )
                             .padding(horizontal = 36.dp),
                         contentAlignment = Alignment.Center,

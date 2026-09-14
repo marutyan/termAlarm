@@ -161,5 +161,92 @@ class HomeScreenTest {
         composeTestRule.onNodeWithText("通常アラームラベル").assertDoesNotExist()
     }
 
+    /**
+     * まだ開始時刻に達していないタームでも「次の鳴動」が表示され、「このタームを終了」ボタンは表示されないことを検証する。
+     * セッション開始前であっても次回鳴動をホームで確認できるようにしつつ、未開始タームへの不要な終了導線を出さないことを保証する。
+     */
+    @Test
+    fun 未開始のタームでも次の鳴動が表示されこのタームを終了は表示されない() {
+        val now = java.time.ZonedDateTime.now()
+        // 確実に未開始（次回鳴動が翌日以降）となるよう、翌日の曜日に設定する
+        val tomorrow = now.toLocalDate().plusDays(1)
+        val schedule = defaultTestSchedule(
+            startMinutes = 7 * 60,
+            endMinutes = 9 * 60,
+            repeatDays = setOf(tomorrow.dayOfWeek),
+            intervalMinutes = 5,
+        )
+        runBlocking { repository.add(schedule) }
+
+        composeTestRule.setContent { ListEditHost(repository) }
+
+        // 「次の鳴動」ラベルが表示されていること
+        composeTestRule.waitUntilAtLeastOneExists(hasText(context().getString(R.string.home_next_trigger_label)), 5_000)
+        composeTestRule.onNodeWithText(context().getString(R.string.home_next_trigger_label)).assertExists()
+
+        // 次回鳴動時刻（7:00）が表示されていること
+        composeTestRule.onNodeWithText("7:00").assertExists()
+
+        // まだ始まっていないため「このタームを終了」ボタンは表示されないこと
+        composeTestRule.onNodeWithText(context().getString(R.string.home_end_term)).assertDoesNotExist()
+    }
+
+    /**
+     * 当日のセッション開始前のタームでも「次の鳴動」が表示され、「このタームを終了」ボタンは表示されないことを検証する。
+     * 直前に控えているタームがホームで確認でき、かつ開始前には終了ボタンが出ないことを保証する。
+     */
+    @Test
+    fun 当日未開始のタームでも次の鳴動が表示されこのタームを終了は表示されない() {
+        val now = java.time.ZonedDateTime.now()
+        val minuteOfDay = now.hour * 60 + now.minute
+        if (minuteOfDay < 1400) {
+            val startMinutes = minuteOfDay + 10
+            val endMinutes = (minuteOfDay + 30).coerceAtMost(1439)
+            val schedule = defaultTestSchedule(
+                startMinutes = startMinutes,
+                endMinutes = endMinutes,
+                repeatDays = setOf(now.dayOfWeek),
+                intervalMinutes = 5,
+            )
+            runBlocking { repository.add(schedule) }
+
+            composeTestRule.setContent { ListEditHost(repository) }
+
+            composeTestRule.waitUntilAtLeastOneExists(hasText(context().getString(R.string.home_next_trigger_label)), 5_000)
+            composeTestRule.onNodeWithText(context().getString(R.string.home_next_trigger_label)).assertExists()
+            composeTestRule.onNodeWithText(context().getString(R.string.home_end_term)).assertDoesNotExist()
+        }
+    }
+
+    /**
+     * 通知権限の状態に応じたバナーの表示・非表示を検証する。
+     * 未許可環境ではバナーが表示され、許可済み環境ではバナーが表示されないことを確認する。
+     */
+    @Test
+    fun 通知権限の状態に応じてバナーが適切に表示される() {
+        composeTestRule.setContent { ListEditHost(repository) }
+        val bannerText = context().getString(R.string.notification_permission_banner)
+        if (com.marutyan.termalarm.alarm.NotificationPermission.isGranted(context())) {
+            composeTestRule.onNodeWithText(bannerText).assertDoesNotExist()
+        } else {
+            composeTestRule.onNodeWithText(bannerText).assertExists()
+        }
+    }
+
+    /**
+     * 正確なアラーム権限の状態に応じたバナーの表示・非表示を検証する。
+     * 権限が揃っているときにはバナーが表示されないことを確認する。
+     */
+    @Test
+    fun 正確なアラーム権限の状態に応じてバナーが適切に表示される() {
+        composeTestRule.setContent { ListEditHost(repository) }
+        val bannerText = context().getString(R.string.exact_alarm_permission_banner)
+        if (com.marutyan.termalarm.alarm.ExactAlarmPermission.isGranted(context())) {
+            composeTestRule.onNodeWithText(bannerText).assertDoesNotExist()
+        } else {
+            composeTestRule.onNodeWithText(bannerText).assertExists()
+        }
+    }
+
     private fun context() = composeTestRule.activity
 }
