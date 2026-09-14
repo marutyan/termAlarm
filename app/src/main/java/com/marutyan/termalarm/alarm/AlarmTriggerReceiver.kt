@@ -48,6 +48,14 @@ class AlarmTriggerReceiver : BroadcastReceiver() {
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "termalarm:trigger")
         wakeLock.acquire(15_000L)
 
+        // 次の1回を、鳴らす前にここで予約しておく。
+        // 停止したときに予約していると、記録の書き込みで失敗した・鳴動中にプロセスが落ちた・
+        // 強制停止された、といったときに鎖が切れ、そのタームが二度と鳴らなくなる。
+        // 二度寝チェックは範囲の外の1回なので、ここでは次を予約しない
+        if (!isWakeCheck) {
+            runAsync { AlarmScheduler.scheduleNextBeforeRinging(appContext, id) }
+        }
+
         val serviceIntent = Intent(context, RingingService::class.java).apply {
             putExtra(EXTRA_ALARM_ID, id)
             putExtra(EXTRA_TRIGGER_AT_MILLIS, triggerAtMillis)

@@ -20,6 +20,7 @@ import com.marutyan.termalarm.notification.NotificationChannels
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
+import com.marutyan.termalarm.domain.StopMethod
 import com.marutyan.termalarm.domain.remainingOccurrenceCount
 import com.marutyan.termalarm.ui.common.clockTimePattern
 import kotlinx.coroutines.CoroutineScope
@@ -89,6 +90,12 @@ class RingingService : Service() {
             stopSelf()
             return
         }
+        // すでに別のタームが鳴っているなら、そちらを先に畳んでから切り替える。
+        // 畳まずに上書きすると、前のMediaPlayerを掴む手段が無くなって鳴り続け、
+        // そのタームの記録も次回の予約も行われないまま取り残される
+        if (currentAlarmId != -1L && currentAlarmId != id) {
+            handOverFromPreviousAlarm()
+        }
         currentAlarmId = id
         currentIsWakeCheck = intent?.getBooleanExtra(EXTRA_IS_WAKE_CHECK, false) == true
         currentTriggerAtMillis = intent?.getLongExtra(EXTRA_TRIGGER_AT_MILLIS, System.currentTimeMillis())
@@ -112,6 +119,39 @@ class RingingService : Service() {
         }
     }
 
+    /**
+     * 別のタームが鳴り始めるとき、いま鳴っているぶんを畳む。
+     *
+     * 利用者が止めたわけではないので、放置として記録する。
+     * 鳴ったこと自体は事実であり、記録から落とすと実績が実態とずれる。
+     */
+    private fun handOverFromPreviousAlarm() {
+        val previousId = currentAlarmId
+        val previousTrigger = currentTriggerAtMillis
+        val previousIsWakeCheck = currentIsWakeCheck
+        val previousOccurrence = occurrenceAt()
+        currentAlarmId = -1L
+        releaseRingingResources()
+        scope.launch {
+            runCatching {
+                recordRingSession(
+                    previousId,
+                    previousTrigger,
+                    isTimeout = true,
+                    explicitStopMethod = StopMethod.AUTO_SILENCED.name,
+                )
+            }
+            runCatching {
+                AlarmScheduler.onStopped(
+                    this@RingingService,
+                    previousId,
+                    previousOccurrence,
+                    previousIsWakeCheck,
+                )
+            }
+        }
+    }
+
     // 一定時間(設定「消音までの時間」)操作が無ければ、無視されたものとして
     // 「停止」と同じ扱いにする（docs/SPEC.md「無視（放置）」）
     private fun scheduleAutoStop(silenceMinutes: Int) {
@@ -119,10 +159,23 @@ class RingingService : Service() {
         val stoppedOccurrence = occurrenceAt()
         timeoutJob = scope.launch {
             delay(silenceMinutes * 60_000L)
-            stopRinging(isTimeout = true, explicitStopMethod = com.marutyan.termalarm.domain.StopMethod.AUTO_SILENCED.name) { id ->
+            stopRinging(isTimeout = true, explicitStopMethod = StopMethod.AUTO_SILENCED.name) { id ->
                 AlarmScheduler.onStopped(this@RingingService, id, stoppedOccurrence, wasWakeCheck)
             }
         }
+    }
+
+    /**
+     * 音・バイブ・自動消音の予約を片付ける。
+     * 停止のときと、別のタームへ切り替えるときの両方から使う。
+     */
+    private fun releaseRingingResources() {
+        timeoutJob?.cancel()
+        timeoutJob = null
+        mediaPlayer?.let { player -> runCatching { player.stop() }; player.release() }
+        mediaPlayer = null
+        vibrator?.cancel()
+        vibrator = null
     }
 
     private fun stopRinging(
@@ -131,23 +184,28 @@ class RingingService : Service() {
         reschedule: suspend (Long) -> Unit,
     ) {
         val id = currentAlarmId
+        // 鳴動画面の「ストップ」と通知の「停止」がほぼ同時に届くと、
+        // 記録が二重に入り予約も二重に走る。片方だけを通す
+        if (id == -1L) return
         val triggerMillis = currentTriggerAtMillis
-        timeoutJob?.cancel()
-        mediaPlayer?.let { player -> runCatching { player.stop() }; player.release() }
-        mediaPlayer = null
-        vibrator?.cancel()
-        vibrator = null
+        currentAlarmId = -1L
+        releaseRingingResources()
 
         // 通知の操作ボタンから止めた場合、ロック画面に出ている鳴動画面が取り残されるため閉じさせる
         sendBroadcast(Intent(ACTION_RINGING_FINISHED).setPackage(packageName))
 
         scope.launch {
-            if (id != -1L) {
-                recordRingSession(id, triggerMillis, isTimeout, explicitStopMethod)
-                reschedule(id)
+            try {
+                if (id != -1L) {
+                    // 記録の失敗で予約の入れ直しまで巻き添えにしない。記録は残らなくても鳴り続ける方が大事
+                    runCatching { recordRingSession(id, triggerMillis, isTimeout, explicitStopMethod) }
+                    runCatching { reschedule(id) }
+                }
+            } finally {
+                // 何が失敗しても前面サービスは必ず畳む。残すと通知が消えず、次の鳴動にも影響する
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
             }
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
         }
     }
 

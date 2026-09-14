@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowCompat
+import com.marutyan.termalarm.alarm.AlarmScheduler
 import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.domain.AppSettings
@@ -36,6 +37,10 @@ class MainActivity : ComponentActivity() {
         // 動いているタイマーがあれば、その通知を出し直す。
         // 通知を消してしまっても、アプリを開けば戻るようにするため
         lifecycleScope.launch { TimerActions.refreshNotification(applicationContext) }
+        // アラームの予約をすべて入れ直す。
+        // 強制停止や電池最適化で予約が消えても、端末を再起動せずアプリを開くだけで戻るようにする。
+        // 同じ宛先への登録は上書きになるので、重ねて入ることはない
+        lifecycleScope.launch { AlarmScheduler.rescheduleAll(applicationContext) }
         setContent {
             val context = LocalContext.current
             // 設定で選んだ配色を反映する。読み込みが終わるまでは既定値のまま描く

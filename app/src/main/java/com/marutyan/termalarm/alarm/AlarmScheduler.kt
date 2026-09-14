@@ -44,9 +44,27 @@ object AlarmScheduler {
         }
     }
 
+    /**
+     * 鳴り始める直前に、次の1回だけを予約する。
+     *
+     * 停止したときに予約していると、記録の書き込みで失敗した・鳴動中にプロセスが落ちた・
+     * 強制停止された、といったときに鎖が切れ、そのタームが二度と鳴らなくなる。
+     * 事前通知はここでは触らない。鳴っている最中に「次のアラーム」を出し直すと、
+     * 鳴動側が消したものが後から復活して残ってしまう。
+     */
+    suspend fun scheduleNextBeforeRinging(context: Context, id: Long) {
+        val schedule = repository(context).getById(id) ?: return
+        val next = nextTrigger(schedule, ZonedDateTime.now()) ?: return
+        registerExact(context, id, next)
+    }
+
     // 全アラームの予約を再計算して登録し直す。BOOT_COMPLETED等のブロードキャスト契機で使う
     suspend fun rescheduleAll(context: Context) {
-        repository(context).observeAll().first().forEach { scheduleNextOccurrence(context, it) }
+        // 1件で失敗しても残りを止めない。1つの取りこぼしで他のアラームまで
+        // 鳴らなくなる方が被害が大きい
+        repository(context).observeAll().first().forEach { schedule ->
+            runCatching { scheduleNextOccurrence(context, schedule) }
+        }
     }
 
     // 指定idの予約を取り消す。鳴動の予約だけでなく、事前通知の予約と掲示中の通知も一緒に片付ける
