@@ -26,7 +26,7 @@ class TimerTriggerReceiver : BroadcastReceiver() {
         runAsync {
             try {
                 if (TimerActions.markDueTimersFinished(appContext)) {
-                    TimerRingingService.start(appContext)
+                    TimerForegroundService.start(appContext)
                 }
             } finally {
                 runCatching { wakeLock.release() }

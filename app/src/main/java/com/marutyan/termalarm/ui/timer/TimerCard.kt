@@ -64,12 +64,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.marutyan.termalarm.R
-import com.marutyan.termalarm.domain.REMAINING_DISPLAY_ROUND_UP_MILLIS
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
-import com.marutyan.termalarm.domain.overdueMillis
+import com.marutyan.termalarm.domain.isTimerOverdue
+import com.marutyan.termalarm.domain.timerDisplayText
+import com.marutyan.termalarm.domain.timerRemainingFraction
+import com.marutyan.termalarm.domain.userLabelOrNull
 import com.marutyan.termalarm.domain.remainingMillis
-import com.marutyan.termalarm.timer.formatDuration
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
 import com.marutyan.termalarm.ui.theme.customColors
 import com.marutyan.termalarm.ui.theme.pressScaleEffect
@@ -155,14 +156,11 @@ fun rememberTimerProgress(
         return rememberUpdatedState(0f)
     }
     if (timer.runState != TimerRunState.RUNNING || reduceMotion) {
-        val remaining = remainingMillis(timer, nowElapsed, nowWall)
-        val progress = (remaining.toFloat() / timer.totalMillis.toFloat()).coerceIn(0f, 1f)
-        return rememberUpdatedState(progress)
+        return rememberUpdatedState(timerRemainingFraction(timer, nowElapsed, nowWall))
     }
 
     val progressState = remember(timer.id, timer.anchorElapsedRealtime, timer.runState) {
-        val initialRemaining = remainingMillis(timer, nowElapsed, nowWall)
-        mutableFloatStateOf((initialRemaining.toFloat() / timer.totalMillis.toFloat()).coerceIn(0f, 1f))
+        mutableFloatStateOf(timerRemainingFraction(timer, nowElapsed, nowWall))
     }
 
     LaunchedEffect(timer.id, timer.anchorElapsedRealtime, timer.runState, timer.totalMillis) {
@@ -172,8 +170,7 @@ fun rememberTimerProgress(
                 val currentElapsed = SystemClock.elapsedRealtime()
                 val currentWall = System.currentTimeMillis()
                 val remaining = remainingMillis(timer, currentElapsed, currentWall)
-                val currentProgress = (remaining.toFloat() / timer.totalMillis.toFloat()).coerceIn(0f, 1f)
-                progressState.floatValue = currentProgress
+                progressState.floatValue = timerRemainingFraction(timer, currentElapsed, currentWall)
                 if (remaining <= 0L) {
                     reachedZero = true
                 }
@@ -208,10 +205,8 @@ fun TimerCard(
     val reduceMotion = remember(context) { isReduceMotionEnabled(context) }
     // 残りが尽きたら、状態が鳴動中へ変わるのを待たずに鳴り終わった見せ方へ移る。
     // 状態が変わるのはサービスが気づいた後で数秒遅れることがあり、その間画面が固まって見えるため
-    val isDueNow = timer.runState == TimerRunState.RUNNING &&
-        remainingMillis(timer, nowElapsed, nowWall) <= 0L
-    val isFinished = timer.runState == TimerRunState.FINISHED || isDueNow
-    val isRunning = timer.runState == TimerRunState.RUNNING && !isDueNow
+    val isFinished = isTimerOverdue(timer, nowElapsed, nowWall)
+    val isRunning = timer.runState == TimerRunState.RUNNING && !isFinished
 
     val remaining = remainingMillis(timer, nowElapsed, nowWall)
     val progressState = rememberTimerProgress(
@@ -275,11 +270,8 @@ fun TimerCard(
                     .height(24.dp),
             ) {
                 val formattedDuration = formatTimerDuration(timer.totalMillis)
-                val labelText = if (timer.label.isNotBlank() && timer.label != formatDuration(timer.totalMillis)) {
-                    "${timer.label} · $formattedDuration"
-                } else {
-                    formattedDuration
-                }
+                val userLabel = timer.userLabelOrNull()
+                val labelText = if (userLabel != null) "$userLabel · $formattedDuration" else formattedDuration
                 Text(
                     text = labelText,
                     style = TextStyle(
@@ -386,14 +378,9 @@ fun TimerCard(
                         )
                         .semantics { contentDescription = actionDesc },
                 ) {
-                    val remainingDisplay = if (isFinished) {
-                        val overdue = overdueMillis(timer, nowElapsed, nowWall)
-                        "−" + formatTimerElapsed(overdue)
-                    } else {
-                        formatTimerRemaining(remaining)
-                    }
                     Text(
-                        text = remainingDisplay,
+                        // 通知とステータスバーのチップも同じ文字を出す
+                        text = timerDisplayText(timer, nowElapsed, nowWall),
                         style = TextStyle(
                             fontFamily = IbmPlexMono,
                             fontWeight = FontWeight.W200,
@@ -601,39 +588,6 @@ fun TimerResetIcon(
         scale(scale = size.width / 24f, pivot = Offset.Zero) {
             drawPath(path = path, color = color)
         }
-    }
-}
-
-/**
- * 動作中タイマーの残り時間表示用文字列を生成する。
- * design/Timer.dc.html に合わせ、1時間未満は「1:47」のようにM:SS、1時間以上は「H:MM:SS」とする。
- */
-internal fun formatTimerRemaining(millis: Long): String {
-    // 切り上げる。理由と通知との揃え方は REMAINING_DISPLAY_ROUND_UP_MILLIS の説明にある
-    val totalSeconds = ((millis + REMAINING_DISPLAY_ROUND_UP_MILLIS) / 1000).coerceAtLeast(0L)
-    val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
-    val seconds = totalSeconds % 60
-    return if (hours > 0) {
-        "%d:%02d:%02d".format(hours, minutes, seconds)
-    } else {
-        "%d:%02d".format(minutes, seconds)
-    }
-}
-
-/**
- * 鳴っている間に数え上げる経過時間の文字列を作る。
- * 残り時間とは逆に切り捨てる。切り上げると、0を過ぎた直後に「1秒」と出てしまうため。
- */
-internal fun formatTimerElapsed(millis: Long): String {
-    val totalSeconds = (millis / 1000).coerceAtLeast(0L)
-    val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
-    val seconds = totalSeconds % 60
-    return if (hours > 0) {
-        "%d:%02d:%02d".format(hours, minutes, seconds)
-    } else {
-        "%d:%02d".format(minutes, seconds)
     }
 }
 

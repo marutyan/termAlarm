@@ -35,9 +35,11 @@ const val TAB_TRANSITION_DURATION_MS = 150
 
 /**
  * 下位の画面を出し入れする時間(ミリ秒)。
+ *
  * 純正は指を離してから約400msかけるが、それでは遅く感じるため短くしている。
+ * 開くときと戻るときで同じ長さにして、行き来の手触りを揃える。
  */
-const val SCREEN_TRANSITION_DURATION_MS = 150
+const val SCREEN_TRANSITION_DURATION_MS = 110
 
 /**
  * 閉じていく画面が縮む先の倍率。

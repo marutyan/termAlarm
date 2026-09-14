@@ -12,6 +12,7 @@ import com.marutyan.termalarm.domain.isDue
 import com.marutyan.termalarm.domain.pauseTimer
 import com.marutyan.termalarm.domain.resetTimer
 import com.marutyan.termalarm.domain.resumeTimer
+import com.marutyan.termalarm.domain.startTimer
 import kotlinx.coroutines.flow.first
 
 /**
@@ -22,6 +23,27 @@ import kotlinx.coroutines.flow.first
  * 呼び出し側それぞれに手順を書き写さない。
  */
 object TimerActions {
+
+    /**
+     * 新しいタイマーを始める。戻り値は作られたタイマーのid。
+     *
+     * 名前は空にしておく。以前は「0:05」のような設定時間の文字列を入れていたが、
+     * 延長すると設定時間だけが変わって名前が古いまま残り、通知の見出しにも
+     * その古い数字が出ていた。設定時間は保存された長さから作れば足りる。
+     */
+    suspend fun start(context: Context, durationMillis: Long): Long {
+        val state = startTimer(
+            id = 0L,
+            label = "",
+            durationMillis = durationMillis,
+            nowElapsedRealtime = SystemClock.elapsedRealtime(),
+            nowWallClockMillis = System.currentTimeMillis(),
+        )
+        val id = repository(context).add(state)
+        TimerScheduler.reschedule(context, id)
+        afterChange(context)
+        return id
+    }
 
     /**
      * 通知や画面の「停止」。鳴るのをやめ、設定した長さへ戻して一覧に残す。
@@ -83,7 +105,7 @@ object TimerActions {
         afterChange(context)
     }
 
-    /** 鳴っているタイマーが1つでもあるか。音を鳴らすサービスを続けるかの判断に使う */
+    /** 鳴っているタイマーが1つでもあるか。音を鳴らし続けるかの判断に使う */
     suspend fun hasRingingTimer(context: Context): Boolean =
         repository(context).observeAll().first().any { it.runState == TimerRunState.FINISHED }
 
@@ -92,11 +114,22 @@ object TimerActions {
         TimerNotifications.refresh(context, repository(context).observeAll().first())
     }
 
-    // 状態を変えた後に必ず行うこと。鳴っているものが無くなったら音も止める
-    private suspend fun afterChange(context: Context) {
+    /**
+     * 状態を変えた後に必ず行うこと。
+     *
+     * 数字が進むタイマー（動作中か、0を過ぎて数え上げているもの）が1件でもあれば、
+     * 秒ごとに通知を出し直すサービスを起こす。1件も無ければ止める。
+     * 一時停止中は数字が動かないので、サービスは要らない。
+     */
+    suspend fun afterChange(context: Context) {
         refreshNotification(context)
-        if (!hasRingingTimer(context)) {
-            TimerRingingService.stop(context)
+        val hasTicking = repository(context).observeAll().first().any {
+            it.runState == TimerRunState.RUNNING || it.runState == TimerRunState.FINISHED
+        }
+        if (hasTicking) {
+            TimerForegroundService.start(context)
+        } else {
+            TimerForegroundService.stop(context)
         }
     }
 

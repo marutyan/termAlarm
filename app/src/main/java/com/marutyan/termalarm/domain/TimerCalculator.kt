@@ -145,33 +145,33 @@ fun rebaseTimerAfterReboot(state: TimerState, nowElapsedRealtime: Long, nowWallC
 }
 
 /**
- * 残り時間の秒を出すときの繰り上げ幅(ミリ秒)。
+ * 表示の秒が次に変わるまでのミリ秒。
  *
- * 画面は残りを切り上げて出す。切り捨てると、まだ1秒近く残っているのに「0:00」と見えて、
- * リングの残りや実際に鳴る時刻とずれてしまうため。
- * 通知は数字を書き込まずシステムに数えさせるが、システム側は切り捨てる。
- * そこで通知へ渡す終わりの時刻をこのぶん後ろへずらし、画面と同じ数字に見せる。
- */
-const val REMAINING_DISPLAY_ROUND_UP_MILLIS = 999L
-
-/**
- * 残り時間の表示が次の秒へ変わるまでのミリ秒。
+ * ただ1秒ごとに描き直すと、秒が切り替わる位置が通知とずれて見える。
+ * 動いているタイマーのうち、いちばん早く変わるものに合わせて描き直せば、
+ * 画面・通知・ステータスバーのチップが同じ瞬間に同じ数字へ変わる。
  *
- * 画面をただ1秒ごとに描き直すと、通知に出る秒と最大1秒ずれる。
- * 通知は「残り時間が尽きる時刻」から逆算して数えるため、画面を開いた時刻とは関係がないため。
- * 動いているタイマーのうち、いちばん早く秒が変わるものに合わせて描き直せば、通知と同じ数字が出る。
- *
- * 動いているタイマーが1つも無ければ1秒を返す。
+ * 残り時間は切り上げ、0を過ぎてからの数え上げは切り捨てなので、変わる位置が違う。
+ * 変わるものが1つも無ければ1秒を返す。
  */
 fun millisUntilNextSecondBoundary(
     timers: List<TimerState>,
     nowElapsedRealtime: Long,
     nowWallClockMillis: Long,
 ): Long {
-    val remainder = timers
-        .filter { it.runState == TimerRunState.RUNNING }
-        .minOfOrNull { remainingMillis(it, nowElapsedRealtime, nowWallClockMillis) % 1000L }
-        ?: 0L
-    // ちょうど区切りのときは、まるまる1秒待つ
-    return if (remainder <= 0L) 1000L else remainder
+    val next = timers.mapNotNull { state ->
+        when {
+            isTimerOverdue(state, nowElapsedRealtime, nowWallClockMillis) -> {
+                // 数え上げは切り捨てなので、1000の倍数を越えた瞬間に1つ増える
+                1000L - overdueMillis(state, nowElapsedRealtime, nowWallClockMillis) % 1000L
+            }
+            state.runState == TimerRunState.RUNNING -> {
+                // 残りは切り上げなので、1000の倍数を割った瞬間に1つ減る
+                val remainder = remainingMillis(state, nowElapsedRealtime, nowWallClockMillis) % 1000L
+                if (remainder <= 0L) 1000L else remainder
+            }
+            else -> null
+        }
+    }.minOrNull() ?: 1000L
+    return next.coerceIn(1L, 1000L)
 }

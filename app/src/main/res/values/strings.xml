@@ -210,13 +210,12 @@
     <!-- タイマーのフォアグラウンド通知 -->
     <string name="timer_notification_channel_name">タイマー</string>
     <string name="timer_firing_notification_channel_name">タイマーの通知音</string>
-    <string name="timer_notification_title">タイマー動作中</string>
+    <string name="timer_notification_title">タイマー</string>
     <string name="timer_notification_summary">%1$d件のタイマー</string>
     <string name="timer_notification_finished">タイムアップ</string>
     <string name="timer_notification_paused">一時停止中</string>
     <string name="timer_notification_running">動作中</string>
     <!-- タイムアップ時にステータスバーのチップへ出す短い文字（setShortCriticalText用） -->
-    <string name="timer_notification_short_finished">タイムアップ</string>
     <!-- 一覧画面: 次のアラームまでの残り時間(有効なアラームのみ表示) -->
 
     <!-- ストップウォッチタブ -->

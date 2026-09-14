@@ -121,9 +121,13 @@
         <!-- 動作中/完了のタイマーが1件でもある間だけ生存するフォアグラウンドサービス。通知に残り時間を出し、
              完了時にUSAGE_ALARMで鳴らす -->
         <service
-            android:name=".timer.TimerRingingService"
+            android:name=".timer.TimerForegroundService"
             android:exported="false"
-            android:foregroundServiceType="mediaPlayback" />
+            android:foregroundServiceType="mediaPlayback|specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="timer" />
+        </service>
 
         <!-- 通知のボタン(停止/+1分/一時停止)の受け口。自アプリ内のPendingIntent経由でのみ呼ばれる -->
         <receiver
