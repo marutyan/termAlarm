@@ -71,12 +71,8 @@ class TimerViewModel(private val repository: TimerRepository, context: Context) 
     // 削除。FINISHED(鳴動中)の「停止」ボタンも同じ操作として扱う
     // (domain/TimerState.ktの「停止するとタイマー自体を削除する想定」)
     fun delete(id: Long) {
-        viewModelScope.launch {
-            repository.delete(id)
-            TimerScheduler.cancel(appContext, id)
-            // 通知はTimerActionsに任せる。削除そのものは、この画面が持つRepositoryへ行う
-            TimerActions.refreshNotification(appContext)
-        }
+        // 手順をここへ書き写さない。通知の側と同じ道を通す
+        viewModelScope.launch { TimerActions.delete(appContext, id) }
     }
 
     private fun mutate(id: Long, transform: (TimerState, Long, Long) -> TimerState) {

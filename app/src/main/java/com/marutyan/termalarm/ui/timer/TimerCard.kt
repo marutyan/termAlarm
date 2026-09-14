@@ -422,6 +422,10 @@ fun TimerCard(
             }
 
             // リングからボタン行(上端417.1dp)までの間隔
+            // 設定した長さのまま止まっているときは、延長もリセットも意味が無いので出さない。
+            // 純正の時計アプリも、停止して元へ戻った状態ではボタンの行ごと消える
+            val isAtFullDuration = !isRunning && !isFinished && remaining >= timer.totalMillis
+            if (!isAtFullDuration) {
             Spacer(modifier = Modifier.height(34.6.dp))
 
             // 4. 下に2つのボタン。「＋1:00」（幅176.2dp、高さ91.2dp、角丸45.6dp）と、リセット（直径85.4dpの円）。間隔11.2dp、中央揃え
@@ -503,6 +507,7 @@ fun TimerCard(
                         }
                     }
                 }
+            }
             }
 
             // カードの下の余白（実測値26.1dp）

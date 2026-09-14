@@ -150,7 +150,7 @@ private fun NextRingRow(
         if (remaining > 0) {
             Text(
                 text = "  残り${remaining}回",
-                style = TextStyle(color = palette.subtleText, fontSize = 12.sp, fontFamily = fontStyle.family),
+                style = TextStyle(color = palette.subtleText, fontSize = 13.sp, fontFamily = fontStyle.family),
             )
         }
     }

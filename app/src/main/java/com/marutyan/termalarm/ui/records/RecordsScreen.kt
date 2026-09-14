@@ -288,7 +288,7 @@ private fun MetricCard(
                 text = topLabel,
                 style = TextStyle(
                     fontFamily = IbmPlexMono,
-                    fontSize = 11.sp,
+                    fontSize = 13.sp,
                     letterSpacing = 0.1.em,
                     color = MaterialTheme.customColors.subtleText,
                 ),
@@ -312,7 +312,7 @@ private fun MetricCard(
                     Text(
                         text = unitText,
                         style = TextStyle(
-                            fontSize = 12.sp,
+                            fontSize = 13.sp,
                             color = MaterialTheme.customColors.subtleText,
                         ),
                         modifier = Modifier.padding(bottom = 2.dp),
@@ -322,7 +322,7 @@ private fun MetricCard(
             Text(
                 text = bottomLabel,
                 style = TextStyle(
-                    fontSize = 11.sp,
+                    fontSize = 13.sp,
                     color = MaterialTheme.customColors.subtleText,
                 ),
             )
@@ -365,7 +365,7 @@ private fun WeeklyBarChart(
                     text = stringResource(R.string.records_chart_title),
                     style = TextStyle(
                         fontFamily = IbmPlexMono,
-                        fontSize = 11.sp,
+                        fontSize = 13.sp,
                         letterSpacing = 0.12.em,
                         color = MaterialTheme.customColors.subtleText,
                     ),
@@ -374,7 +374,7 @@ private fun WeeklyBarChart(
                     text = weekDateRangeText,
                     style = TextStyle(
                         fontFamily = IbmPlexMono,
-                        fontSize = 11.sp,
+                        fontSize = 13.sp,
                         color = MaterialTheme.customColors.subtleText,
                     ),
                 )
@@ -426,7 +426,7 @@ private fun WeeklyBarColumn(
             text = bar.valueText,
             style = TextStyle(
                 fontFamily = IbmPlexMono,
-                fontSize = 11.sp,
+                fontSize = 13.sp,
                 color = subtleTextColor,
             ),
         )
@@ -481,7 +481,7 @@ private fun WeeklyBarColumn(
             text = bar.dayOfWeekText,
             style = TextStyle(
                 fontFamily = IbmPlexMono,
-                fontSize = 11.sp,
+                fontSize = 13.sp,
                 color = dayLabelColor,
             ),
         )
@@ -506,7 +506,7 @@ private fun DailyRecordList(
             text = stringResource(R.string.records_list_title),
             style = TextStyle(
                 fontFamily = IbmPlexMono,
-                fontSize = 11.sp,
+                fontSize = 13.sp,
                 letterSpacing = 0.12.em,
                 color = MaterialTheme.customColors.subtleText,
             ),
@@ -581,7 +581,7 @@ private fun DailyRecordRow(
             text = row.dateText,
             style = TextStyle(
                 fontFamily = IbmPlexMono,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontFeatureSettings = "tnum",
                 color = subtleTextColor,
             ),
@@ -605,7 +605,7 @@ private fun DailyRecordRow(
             text = row.durationText,
             style = TextStyle(
                 fontFamily = IbmPlexMono,
-                fontSize = 12.5.sp,
+                fontSize = 13.sp,
                 fontFeatureSettings = "tnum",
                 color = subtleTextColor,
             ),
@@ -616,7 +616,7 @@ private fun DailyRecordRow(
         Text(
             text = row.methodText,
             style = TextStyle(
-                fontSize = 11.5.sp,
+                fontSize = 13.sp,
                 color = methodColor,
             ),
         )

@@ -2,7 +2,8 @@ package com.marutyan.termalarm.domain
 
 /**
  * タイマー1件の実行状態。RUNNING/PAUSEDはユーザー操作で行き来し、残り時間が0になるとFINISHEDへ移る。
- * FINISHEDは鳴動中（停止するまで）を表し、停止するとタイマー自体を削除する想定（ui/timer側の契約）。
+ * FINISHEDは鳴動中（停止するまで）を表す。停止すると設定した長さへ戻して一覧に残し、
+ * 消すのは「×」の役目とする（純正の時計アプリと同じ）。
  */
 enum class TimerRunState { RUNNING, PAUSED, FINISHED }
 

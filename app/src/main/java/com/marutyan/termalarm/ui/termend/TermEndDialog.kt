@@ -129,7 +129,7 @@ fun TermEndDialog(
                             )
                             Text(
                                 text = stringResource(R.string.term_end_remaining_note, remainingCount),
-                                fontSize = 12.5.sp,
+                                fontSize = 13.sp,
                                 color = MaterialTheme.customColors.subtleText,
                             )
                         }
@@ -138,7 +138,7 @@ fun TermEndDialog(
                     // 説明文
                     Text(
                         text = stringResource(R.string.term_end_description),
-                        fontSize = 12.5.sp,
+                        fontSize = 13.sp,
                         lineHeight = 21.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

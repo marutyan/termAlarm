@@ -6,6 +6,7 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.animation.slideInHorizontally
@@ -37,10 +38,17 @@ const val TAB_TRANSITION_DURATION_MS = 150
 //
 // 中身は「96dp分だけ横へ滑らせる」だけで、消える側・現れる側のどちらかが短くフェードする。
 const val SCREEN_SLIDE_DISTANCE_DP = 96
-const val SCREEN_SLIDE_DURATION_MS = 450
-const val SCREEN_FADE_DURATION_MS = 83
-const val SCREEN_OPEN_FADE_DELAY_MS = 50
-const val SCREEN_CLOSE_FADE_DELAY_MS = 35
+/**
+ * 下位の画面を出し入れする時間(ミリ秒)。
+ * 純正の時計アプリを録画して測った、変化の始まりから完了までの長さ。
+ */
+const val SCREEN_TRANSITION_DURATION_MS = 140
+
+/**
+ * 下位の画面が現れるときの、始めの大きさの倍率。
+ * 純正は横へ滑らせず、その場で少し小さいところから実寸へ広げる。
+ */
+const val SCREEN_TRANSITION_START_SCALE = 0.92f
 
 // 端の引っ張りで戻すとき、閉じる画面が縮む倍率。純正を実機で測ると0.900だった
 const val PREDICTIVE_POP_SCALE = 0.9f
@@ -100,24 +108,37 @@ val FastOutExtraSlowIn: Easing = PathInterpolator(
     },
 ).let { interpolator -> Easing { fraction -> interpolator.getInterpolation(fraction) } }
 
-/** 画面を開くとき、現れる側。右から96dp滑り込みながら、少し遅れて短くフェードインする */
+/**
+ * 下位の画面を出し入れする動きの時間の取り方。
+ *
+ * 純正の時計アプリで設定から戻る様子を録画して測ると、横へは滑らせていなかった。
+ * その場で薄く小さいところから実寸へ広げ、手前の画面は同じ場所で薄くなって消える。
+ * 変化の始まりから完了までは約140msだった。
+ */
+private fun screenTransitionSpec(): TweenSpec<Float> = tween(
+    durationMillis = SCREEN_TRANSITION_DURATION_MS,
+    easing = FastOutSlowInEasing,
+)
+
+/** 下位の画面が現れるとき。その場で少し広がりながら濃くなる */
 fun screenOpenEnter(slidePx: Int): EnterTransition =
-    slideInHorizontally(animationSpec = screenSlideSpec()) { slidePx } +
-        fadeIn(
-            animationSpec = tween(
-                durationMillis = SCREEN_FADE_DURATION_MS,
-                delayMillis = SCREEN_OPEN_FADE_DELAY_MS,
-                easing = LinearEasing,
-            ),
+    fadeIn(animationSpec = screenTransitionSpec()) +
+        scaleIn(
+            animationSpec = screenTransitionSpec(),
+            initialScale = SCREEN_TRANSITION_START_SCALE,
         )
 
-/** 画面を開くとき、隠れる側。左へ96dp滑るだけで、透明度は変えない */
+/** 下位の画面を開くとき、下に隠れる側。その場で薄くなるだけ */
 fun screenOpenExit(slidePx: Int): ExitTransition =
-    slideOutHorizontally(animationSpec = screenSlideSpec()) { -slidePx }
+    fadeOut(animationSpec = screenTransitionSpec())
 
-/** 戻るとき、戻り先。左から96dp滑って戻るだけで、透明度は変えない */
+/** 戻るとき、下から現れる側。開くときと同じく、その場で少し広がりながら濃くなる */
 fun screenCloseEnter(slidePx: Int): EnterTransition =
-    slideInHorizontally(animationSpec = screenSlideSpec()) { -slidePx }
+    fadeIn(animationSpec = screenTransitionSpec()) +
+        scaleIn(
+            animationSpec = screenTransitionSpec(),
+            initialScale = SCREEN_TRANSITION_START_SCALE,
+        )
 
 /**
  * 端の引っ張りで戻すとき、閉じる側。指の進みに合わせて0.9倍まで縮む。
@@ -131,21 +152,10 @@ fun screenPredictivePopExit(): ExitTransition = scaleOut(
     transformOrigin = TransformOrigin(pivotFractionX = 0.5f, pivotFractionY = 0.5f),
 )
 
-/** 戻るとき、閉じる側。右へ96dp滑りながら、少し遅れて短くフェードアウトする */
+/** 戻るとき、閉じる側。その場で薄くなって消える */
 fun screenCloseExit(slidePx: Int): ExitTransition =
-    slideOutHorizontally(animationSpec = screenSlideSpec()) { slidePx } +
-        fadeOut(
-            animationSpec = tween(
-                durationMillis = SCREEN_FADE_DURATION_MS,
-                delayMillis = SCREEN_CLOSE_FADE_DELAY_MS,
-                easing = LinearEasing,
-            ),
-        )
+    fadeOut(animationSpec = screenTransitionSpec())
 
-private fun screenSlideSpec(): TweenSpec<IntOffset> = tween(
-    durationMillis = SCREEN_SLIDE_DURATION_MS,
-    easing = FastOutExtraSlowIn,
-)
 
 /**
  * タイマー追加画面の上下スライドを補間するAnimationSpecを生成する。

@@ -400,7 +400,7 @@ internal fun RingingContent(
                         text = occurrenceLabelText,
                         style = TextStyle(
                             fontFamily = ibmPlexMonoFontFamily(400),
-                            fontSize = 11.sp,
+                            fontSize = 13.sp,
                             letterSpacing = 0.16.em,
                             color = MaterialTheme.colorScheme.primary,
                         ),
@@ -450,7 +450,7 @@ internal fun RingingContent(
             Text(
                 text = remainingText,
                 style = TextStyle(
-                    fontSize = 12.5.sp,
+                    fontSize = 13.sp,
                     color = MaterialTheme.customColors.subtleText,
                 ),
             )

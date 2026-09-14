@@ -239,7 +239,7 @@ fun IntervalEditDialog(
                                     ) {
                                         Text(
                                             text = stringResource(R.string.term_edit_interval_start),
-                                            fontSize = 11.sp,
+                                            fontSize = 13.sp,
                                             fontFamily = ibmPlexMonoFontFamily(400),
                                             letterSpacing = 0.14.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -273,7 +273,7 @@ fun IntervalEditDialog(
                                             )
                                             Text(
                                                 text = stringResource(R.string.unit_minutes),
-                                                fontSize = 12.sp,
+                                                fontSize = 13.sp,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
@@ -299,7 +299,7 @@ fun IntervalEditDialog(
                                     ) {
                                         Text(
                                             text = stringResource(R.string.term_edit_interval_end),
-                                            fontSize = 11.sp,
+                                            fontSize = 13.sp,
                                             fontFamily = ibmPlexMonoFontFamily(400),
                                             letterSpacing = 0.14.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -333,7 +333,7 @@ fun IntervalEditDialog(
                                             )
                                             Text(
                                                 text = stringResource(R.string.unit_minutes),
-                                                fontSize = 12.sp,
+                                                fontSize = 13.sp,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         }
@@ -425,7 +425,7 @@ fun IntervalEditDialog(
                     ) {
                         Text(
                             text = timesString,
-                            fontSize = 12.5.sp,
+                            fontSize = 13.sp,
                             fontFamily = ibmPlexMonoFontFamily(400),
                             lineHeight = 18.sp,
                             maxLines = 1,
@@ -438,7 +438,7 @@ fun IntervalEditDialog(
                             } else {
                                 stringResource(R.string.term_edit_interval_constant_note, count)
                             },
-                            fontSize = 11.5.sp,
+                            fontSize = 13.sp,
                             maxLines = 1,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

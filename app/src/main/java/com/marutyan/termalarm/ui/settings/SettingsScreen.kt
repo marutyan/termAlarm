@@ -314,7 +314,7 @@ private fun SettingsSectionHeader(
         text = text,
         style = TextStyle(
             fontFamily = IbmPlexMono,
-            fontSize = 11.sp,
+            fontSize = 13.sp,
             letterSpacing = 0.15.em,
             color = MaterialTheme.customColors.subtleText,
         ),

@@ -520,7 +520,7 @@ fun AlarmEditScreen(
                             )
                             Text(
                                 text = stringResource(R.string.term_edit_wake_check_desc, wakeCheckMinutes),
-                                fontSize = 11.5.sp,
+                                fontSize = 13.sp,
                                 color = MaterialTheme.customColors.subtleText,
                             )
                         }

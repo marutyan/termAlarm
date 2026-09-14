@@ -66,7 +66,7 @@ internal fun SequentialTapGameContent(
             Text(
                 text = stringResource(R.string.sequential_tap_prompt),
                 style = TextStyle(
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             )
@@ -74,7 +74,7 @@ internal fun SequentialTapGameContent(
                 text = "${tappedOrder.size} / 12",
                 style = TextStyle(
                     fontFamily = ibmPlexMonoFontFamily(400),
-                    fontSize = 11.sp,
+                    fontSize = 13.sp,
                     fontFeatureSettings = "tnum",
                     color = MaterialTheme.colorScheme.primary,
                 ),
@@ -191,7 +191,7 @@ internal fun SequenceRecallGameContent(
                     stringResource(R.string.sequence_recall_prompt_input)
                 },
                 style = TextStyle(
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             )
@@ -199,7 +199,7 @@ internal fun SequenceRecallGameContent(
                 text = "${userTappedOrder.size} / ${question.sequence.size}",
                 style = TextStyle(
                     fontFamily = ibmPlexMonoFontFamily(400),
-                    fontSize = 11.sp,
+                    fontSize = 13.sp,
                     fontFeatureSettings = "tnum",
                     color = MaterialTheme.colorScheme.primary,
                 ),
@@ -292,7 +292,7 @@ internal fun MemoryPairsGameContent(
             Text(
                 text = stringResource(R.string.memory_pairs_prompt),
                 style = TextStyle(
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             )
@@ -300,7 +300,7 @@ internal fun MemoryPairsGameContent(
                 text = stringResource(R.string.memory_pairs_progress, matchedIndices.size / 2, 6),
                 style = TextStyle(
                     fontFamily = ibmPlexMonoFontFamily(400),
-                    fontSize = 11.sp,
+                    fontSize = 13.sp,
                     fontFeatureSettings = "tnum",
                     color = MaterialTheme.colorScheme.primary,
                 ),

@@ -126,7 +126,7 @@ private fun BottomBarItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = TextStyle(
-                    fontSize = 11.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Normal,
                 ),
                 color = contentColor,

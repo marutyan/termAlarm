@@ -130,7 +130,7 @@ fun GameListScreen(
         Text(
             text = stringResource(R.string.game_list_subtitle),
             style = TextStyle(
-                fontSize = 12.5.sp,
+                fontSize = 13.sp,
                 lineHeight = 20.sp,
                 color = MaterialTheme.customColors.subtleText,
             ),
@@ -261,7 +261,7 @@ private fun GameItemRow(
         Text(
             text = note,
             style = TextStyle(
-                fontSize = 11.5.sp,
+                fontSize = 13.sp,
                 color = if (isEnabled) subtleTextColor else subtleTextColor.copy(alpha = 0.4f),
             ),
         )

@@ -194,9 +194,11 @@ class ThemeTest {
 
     @Test
     fun typography_captionSizeIsAtLeast11sp() {
-        assertTrue(CaptionStyle.fontSize.value >= 11f)
-        assertTrue(AppTypography.labelSmall.fontSize.value >= 11f)
-        assertTrue(AppTypography.labelMedium.fontSize.value >= 11f)
+        // 画面の文字は13spを下限にしている。11spはAppleのHIGが定める読みやすさの最低線で、
+        // 実機で見ると小さすぎたため、こちらで下限を上げた（docs/SPEC.md「読みやすさ」）
+        assertTrue(CaptionStyle.fontSize.value >= 13f)
+        assertTrue(AppTypography.labelSmall.fontSize.value >= 13f)
+        assertTrue(AppTypography.labelMedium.fontSize.value >= 13f)
         assertTrue(AppTypography.labelLarge.fontSize.value >= 11f)
         assertTrue(AppTypography.bodySmall.fontSize.value >= 11f)
     }

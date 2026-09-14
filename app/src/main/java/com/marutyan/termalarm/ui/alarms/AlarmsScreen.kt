@@ -174,7 +174,7 @@ fun AlarmsScreen(
             text = stringResource(R.string.alarms_subtitle),
             style = TextStyle(
                 fontFamily = FontFamily.Default,
-                fontSize = 12.5.sp,
+                fontSize = 13.sp,
                 lineHeight = 20.sp,
                 color = MaterialTheme.customColors.subtleText,
             ),
@@ -283,7 +283,7 @@ private fun AlarmCard(
                 text = repeatDaysText,
                 style = TextStyle(
                     fontFamily = IbmPlexMono,
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     lineHeight = 16.sp,
                     color = subtleTextColor,
                 ),

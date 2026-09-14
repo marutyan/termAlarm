@@ -10,6 +10,7 @@ import com.marutyan.termalarm.domain.extendTimer
 import com.marutyan.termalarm.domain.finishTimer
 import com.marutyan.termalarm.domain.isDue
 import com.marutyan.termalarm.domain.pauseTimer
+import com.marutyan.termalarm.domain.resetTimer
 import com.marutyan.termalarm.domain.resumeTimer
 import kotlinx.coroutines.flow.first
 
@@ -22,8 +23,16 @@ import kotlinx.coroutines.flow.first
  */
 object TimerActions {
 
-    /** 通知の「停止」。鳴っているタイマーは止めると消える(domain/TimerState.ktの契約) */
+    /**
+     * 通知や画面の「停止」。鳴るのをやめ、設定した長さへ戻して一覧に残す。
+     * 消すのは「×」の役目とする（純正の時計アプリも停止では消えない）。
+     */
     suspend fun stop(context: Context, id: Long) {
+        mutate(context, id, ::resetTimer)
+    }
+
+    /** 「×」。タイマーを一覧から消す。 */
+    suspend fun delete(context: Context, id: Long) {
         repository(context).delete(id)
         TimerScheduler.cancel(context, id)
         afterChange(context)

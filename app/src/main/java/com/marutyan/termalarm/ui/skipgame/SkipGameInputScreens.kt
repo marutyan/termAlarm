@@ -68,7 +68,7 @@ internal fun GameKindBadge(
             text = title,
             style = TextStyle(
                 fontFamily = ibmPlexMonoFontFamily(400),
-                fontSize = 11.sp,
+                fontSize = 13.sp,
                 letterSpacing = 0.08.em,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             ),

@@ -65,7 +65,7 @@ internal fun VolumeIndicator(
             text = stringResource(R.string.ringing_volume_label),
             style = TextStyle(
                 fontFamily = ibmPlexMonoFontFamily(400),
-                fontSize = 11.sp,
+                fontSize = 13.sp,
                 letterSpacing = 0.1.em,
                 color = MaterialTheme.customColors.subtleText,
             ),
@@ -201,7 +201,7 @@ internal fun RingingStopCard(
                 Text(
                     text = nextOccurrenceText,
                     style = TextStyle(
-                        fontSize = 12.5.sp,
+                        fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.primaryContainer,
                     ),
                 )

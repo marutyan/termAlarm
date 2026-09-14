@@ -133,7 +133,7 @@ fun SkipGameScreen(
                         text = topLabelText,
                         style = TextStyle(
                             fontFamily = ibmPlexMonoFontFamily(400),
-                            fontSize = 11.sp,
+                            fontSize = 13.sp,
                             letterSpacing = 0.16.em,
                             color = MaterialTheme.colorScheme.primary,
                         ),
@@ -192,7 +192,7 @@ fun SkipGameScreen(
             Text(
                 text = hintText,
                 style = TextStyle(
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = MaterialTheme.customColors.subtleText,
                 ),
             )
@@ -212,7 +212,7 @@ fun SkipGameScreen(
                         ),
                         style = TextStyle(
                             fontFamily = ibmPlexMonoFontFamily(500),
-                            fontSize = 12.sp,
+                            fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.primary,
                         ),
                     )

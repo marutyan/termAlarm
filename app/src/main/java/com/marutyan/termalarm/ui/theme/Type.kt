@@ -75,14 +75,24 @@ val BodyStyle = TextStyle(
 )
 
 /**
+ * 画面に出す文字の下限。
+ *
+ * これより小さい文字は読めない人が出る（docs/SPEC.md「読みやすさ」）。
+ * 値を1か所へ置き、下限を動かすときに取りこぼしが出ないようにする。
+ */
+val TEXT_MIN_SIZE = 13.sp
+
+/**
  * 補助文字用の基本スタイル。
- * 端末標準フォントを適用し、最小可読サイズである11spを下限とする補助注記テキストに用いる。
+ *
+ * 画面の文字は13spを下限にする。11spはAppleのHIGが定める読みやすさの最低線だが、
+ * 実機で見ると小さすぎた（docs/SPEC.md「読みやすさ」）。
  */
 val CaptionStyle = TextStyle(
     fontFamily = FontFamily.Default,
     fontWeight = FontWeight.Normal,
-    fontSize = 11.sp,
-    lineHeight = 16.sp,
+    fontSize = TEXT_MIN_SIZE,
+    lineHeight = 18.sp,
 )
 
 // --- Typography 拡張プロパティ ---
@@ -115,10 +125,10 @@ val AppTypography = Typography(
     titleSmall = HeadlineStyle.copy(fontSize = 14.sp, lineHeight = 20.sp),
     bodyLarge = BodyStyle.copy(fontSize = 16.sp, lineHeight = 24.sp),
     bodyMedium = BodyStyle.copy(fontSize = 14.sp, lineHeight = 20.sp),
-    bodySmall = BodyStyle.copy(fontSize = 12.sp, lineHeight = 16.sp),
+    bodySmall = BodyStyle.copy(fontSize = TEXT_MIN_SIZE, lineHeight = 18.sp),
     labelLarge = CaptionStyle.copy(fontSize = 14.sp, lineHeight = 20.sp),
-    labelMedium = CaptionStyle.copy(fontSize = 12.sp, lineHeight = 16.sp),
-    labelSmall = CaptionStyle.copy(fontSize = 11.sp, lineHeight = 16.sp),
+    labelMedium = CaptionStyle.copy(fontSize = 13.5.sp, lineHeight = 18.sp),
+    labelSmall = CaptionStyle.copy(fontSize = TEXT_MIN_SIZE, lineHeight = 18.sp),
 )
 
 // --- 画面互換用 TextStyle 拡張関数 ---

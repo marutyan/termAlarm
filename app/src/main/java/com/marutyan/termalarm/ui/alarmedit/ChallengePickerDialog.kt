@@ -161,7 +161,7 @@ fun ChallengePickerDialog(
                                 )
                                 Text(
                                     text = note,
-                                    fontSize = 11.5.sp,
+                                    fontSize = 13.sp,
                                     lineHeight = 16.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -254,7 +254,7 @@ fun ChallengePickerDialog(
                     // 難易度説明
                     Text(
                         text = stringResource(R.string.challenge_hard_note),
-                        fontSize = 11.5.sp,
+                        fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 9.dp),
                     )

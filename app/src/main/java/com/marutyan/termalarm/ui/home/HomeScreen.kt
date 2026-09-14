@@ -279,12 +279,12 @@ fun HomeScreen(
                 val totalOccurrences = occurrenceCount(currentSchedule)
                 val remainingOccurrences = remainingOccurrenceCount(currentSchedule, currentNextTriggerTime) + 1
 
-                // 4. 「次の鳴動」のラベル。11sp、字間0.15em、薄い文字の色
+                // 4. 「次の鳴動」のラベル。字間0.15em、薄い文字の色
                 Text(
                     text = stringResource(R.string.home_next_trigger_label),
                     style = TextStyle(
                         fontFamily = IbmPlexMono,
-                        fontSize = 11.sp,
+                        fontSize = 13.sp,
                         letterSpacing = 0.15.em,
                         color = MaterialTheme.customColors.subtleText,
                     ),
@@ -317,7 +317,7 @@ fun HomeScreen(
                         text = stringResource(R.string.home_remaining_count, remainingOccurrences),
                         modifier = Modifier.alignByBaseline(),
                         style = TextStyle(
-                            fontSize = 13.sp,
+                            fontSize = 14.5.sp,
                             color = MaterialTheme.customColors.subtleText,
                         ),
                     )
@@ -342,7 +342,7 @@ fun HomeScreen(
                     text = rangeAndInterval,
                     style = TextStyle(
                         fontFamily = IbmPlexMono,
-                        fontSize = 13.5.sp,
+                        fontSize = 15.sp,
                         fontFeatureSettings = "tnum",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     ),
@@ -398,7 +398,7 @@ fun HomeScreen(
                         Text(
                             text = stringResource(R.string.home_end_term),
                             style = TextStyle(
-                                fontSize = 13.5.sp,
+                                fontSize = 15.sp,
                                 color = subtleTextColor,
                             ),
                         )
@@ -416,7 +416,7 @@ fun HomeScreen(
                 text = stringResource(R.string.home_section_terms),
                 style = TextStyle(
                     fontFamily = IbmPlexMono,
-                    fontSize = 11.sp,
+                    fontSize = 13.sp,
                     letterSpacing = 0.15.em,
                     color = MaterialTheme.customColors.subtleText,
                 ),
@@ -582,12 +582,12 @@ private fun TermCard(
                 .padding(vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
-            // 時刻の範囲 19sp
+            // 時刻の範囲
             Text(
                 text = timeRangeText,
                 style = TextStyle(
                     fontFamily = IbmPlexMono,
-                    fontSize = 21.sp,
+                    fontSize = 24.sp,
                     lineHeight = 22.sp,
                     fontFeatureSettings = "tnum",
                     color = timeColor,
@@ -645,7 +645,7 @@ private fun TermCard(
                             Text(
                                 text = dayShortLabel(day),
                                 style = TextStyle(
-                                    fontSize = 14.sp,
+                                    fontSize = 15.sp,
                                     color = circleFg,
                                     fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
                                 ),
@@ -659,7 +659,7 @@ private fun TermCard(
             Text(
                 text = summaryText,
                 style = TextStyle(
-                    fontSize = 13.sp,
+                    fontSize = 14.5.sp,
                     color = subtleTextColor,
                 ),
             )
@@ -756,7 +756,7 @@ private fun AddTermButton(
         Text(
             text = stringResource(R.string.home_add_term),
             style = TextStyle(
-                fontSize = 13.sp,
+                fontSize = 14.5.sp,
                 color = subtleTextColor,
             ),
         )
