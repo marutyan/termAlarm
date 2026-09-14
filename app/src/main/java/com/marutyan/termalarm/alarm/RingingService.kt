@@ -53,6 +53,9 @@ class RingingService : Service() {
     private var currentAlarmId: Long = -1L
     private var currentTriggerAtMillis: Long = -1L
 
+    // いま鳴っているのが二度寝チェックか。止めたときにもう一度チェックを入れないために持つ
+    private var currentIsWakeCheck: Boolean = false
+
     // 鳴動中のoccurrenceの実時刻。domainの残り回数計算・当日終了のセッション判定に使う
     private fun occurrenceAt(): ZonedDateTime =
         ZonedDateTime.ofInstant(Instant.ofEpochMilli(currentTriggerAtMillis), ZoneId.systemDefault())
@@ -63,8 +66,10 @@ class RingingService : Service() {
         when (intent?.action) {
             ACTION_STOP, ACTION_SNOOZE -> {
                 val method = intent.getStringExtra(EXTRA_STOP_METHOD)
+                val wasWakeCheck = currentIsWakeCheck
+                val stoppedOccurrence = occurrenceAt()
                 stopRinging(isTimeout = false, explicitStopMethod = method) { id ->
-                    AlarmScheduler.onStopped(this, id)
+                    AlarmScheduler.onStopped(this, id, stoppedOccurrence, wasWakeCheck)
                 }
             }
             ACTION_SKIP -> {
@@ -85,6 +90,7 @@ class RingingService : Service() {
             return
         }
         currentAlarmId = id
+        currentIsWakeCheck = intent?.getBooleanExtra(EXTRA_IS_WAKE_CHECK, false) == true
         currentTriggerAtMillis = intent?.getLongExtra(EXTRA_TRIGGER_AT_MILLIS, System.currentTimeMillis())
             ?: System.currentTimeMillis()
 
@@ -109,10 +115,12 @@ class RingingService : Service() {
     // 一定時間(設定「消音までの時間」)操作が無ければ、無視されたものとして
     // 「停止」と同じ扱いにする（docs/SPEC.md「無視（放置）」）
     private fun scheduleAutoStop(silenceMinutes: Int) {
+        val wasWakeCheck = currentIsWakeCheck
+        val stoppedOccurrence = occurrenceAt()
         timeoutJob = scope.launch {
             delay(silenceMinutes * 60_000L)
             stopRinging(isTimeout = true, explicitStopMethod = com.marutyan.termalarm.domain.StopMethod.AUTO_SILENCED.name) { id ->
-                AlarmScheduler.onStopped(this@RingingService, id)
+                AlarmScheduler.onStopped(this@RingingService, id, stoppedOccurrence, wasWakeCheck)
             }
         }
     }
@@ -195,7 +203,7 @@ class RingingService : Service() {
      * 展開すると停止を押せるようにする。
      */
     private fun startForegroundNotification(schedule: AlarmSchedule) {
-        val fullScreenIntent = RingingActivity.fullScreenPendingIntent(this, currentAlarmId, currentTriggerAtMillis)
+        val fullScreenIntent = RingingActivity.fullScreenPendingIntent(this, currentAlarmId, currentTriggerAtMillis, currentIsWakeCheck)
         val builder = NotificationCompat.Builder(this, ensureChannel())
             .setSmallIcon(R.drawable.ic_stat_alarm)
             .setContentTitle(schedule.label.ifBlank { getString(R.string.ringing_notification_title) })

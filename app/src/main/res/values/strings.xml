@@ -12,6 +12,7 @@
     <!-- 鳴動画面: 次回の鳴動時刻の表示 -->
     <!-- 鳴動画面刷新用文字列 -->
     <string name="ringing_occurrence_label">%1$d回目 / %2$d回</string>
+    <string name="ringing_wake_check_label">二度寝チェック</string>
     <string name="ringing_range_and_interval">%1$s – %2$s · %3$s</string>
     <string name="ringing_interval_constant">%1$d分ごと</string>
     <string name="ringing_volume_label">音量</string>
@@ -92,7 +93,7 @@
     <string name="term_edit_interval_label">間隔</string>
     <string name="term_edit_challenge_label">ミッション</string>
     <string name="term_edit_wake_check_label">二度寝チェック</string>
-    <string name="term_edit_wake_check_desc">ターム終了の5分後に再度鳴動</string>
+    <string name="term_edit_wake_check_desc">ターム終了の%1$d分後に再度鳴動</string>
     <string name="term_edit_delete">削除</string>
     <string name="term_edit_interval_constant">等間隔</string>
     <string name="term_edit_interval_accelerate">加速</string>

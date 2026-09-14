@@ -9,6 +9,9 @@ import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
 import com.marutyan.termalarm.domain.isOneShotSessionFinished
+import com.marutyan.termalarm.domain.remainingOccurrenceCount
+import com.marutyan.termalarm.domain.shouldPerformWakeCheck
+import com.marutyan.termalarm.domain.wakeCheckTime
 import com.marutyan.termalarm.domain.nextTrigger
 import kotlinx.coroutines.flow.first
 import java.time.Duration
@@ -50,6 +53,8 @@ object AlarmScheduler {
     fun cancel(context: Context, id: Long) {
         alarmManager(context).cancel(operationPendingIntent(context, id))
         alarmManager(context).cancel(upcomingPendingIntent(context, id))
+        // 二度寝チェックも片付ける。切ったのに後から確認が鳴ると驚かせる
+        alarmManager(context).cancel(wakeCheckPendingIntent(context, id))
         AlarmNotifications.cancelUpcoming(context, id)
     }
 
@@ -93,9 +98,63 @@ object AlarmScheduler {
      * 曜日を指定していないタームはここで鳴り終わりを判定し、自分でオフにする。
      * そうでなければ次の1回を予約し直す。
      */
-    suspend fun onStopped(context: Context, id: Long) {
-        if (disableIfOneShotFinished(context, id)) return
-        reschedule(context, id)
+    suspend fun onStopped(
+        context: Context,
+        id: Long,
+        occurrenceAt: ZonedDateTime = ZonedDateTime.now(),
+        isWakeCheck: Boolean = false,
+    ) {
+        val schedule = repository(context).getById(id)
+        if (!disableIfOneShotFinished(context, id)) {
+            reschedule(context, id)
+        }
+        // 二度寝チェックを止めたときは、もう一度チェックを入れない。そのセッションはここで終わる
+        if (schedule != null && !isWakeCheck) {
+            scheduleWakeCheckIfSessionDone(context, schedule, occurrenceAt)
+        }
+    }
+
+    /**
+     * 範囲の最後の回を止めたときだけ、二度寝チェックを1回予約する。
+     *
+     * 範囲の中では間隔で鳴り続けるため、途中に確認を挟むと役目が重なる。
+     * だから範囲の外に1回だけ置く（docs/SPEC.md「二度寝チェック」）。
+     * 「タームを終了」で終わらせたセッションでは確認しない。その判定は
+     * [shouldPerformWakeCheck] が skippedSessionStart を見て行う。
+     */
+    private suspend fun scheduleWakeCheckIfSessionDone(
+        context: Context,
+        schedule: AlarmSchedule,
+        occurrenceAt: ZonedDateTime,
+    ) {
+        if (!shouldPerformWakeCheck(schedule, occurrenceAt)) return
+        // まだ範囲の中に鳴る回が残っているなら、最後の回ではない
+        if (remainingOccurrenceCount(schedule, occurrenceAt) > 0) return
+        val minutes = Repositories.settings(context).observe().first().wakeCheckMinutes
+        val at = wakeCheckTime(schedule, ZonedDateTime.now(), minutes) ?: return
+        registerWakeCheck(context, schedule.id, at)
+    }
+
+    // 二度寝チェックの予約。鳴らすので、通常の鳴動と同じく確実な方法で登録する
+    private fun registerWakeCheck(context: Context, id: Long, at: ZonedDateTime) {
+        if (!ExactAlarmPermission.isGranted(context)) return
+        val triggerAtMillis = at.toInstant().toEpochMilli()
+        val info = AlarmManager.AlarmClockInfo(triggerAtMillis, showPendingIntent(context, id))
+        alarmManager(context).setAlarmClock(info, wakeCheckPendingIntent(context, id, triggerAtMillis))
+    }
+
+    // 二度寝チェックの予約の宛先。鳴動用・事前通知用とはactionで区別される
+    private fun wakeCheckPendingIntent(context: Context, id: Long, triggerAtMillis: Long = 0L): PendingIntent {
+        val intent = Intent(context, AlarmTriggerReceiver::class.java)
+            .setAction(ACTION_WAKE_CHECK)
+            .putExtra(EXTRA_ALARM_ID, id)
+            .putExtra(EXTRA_TRIGGER_AT_MILLIS, triggerAtMillis)
+        return PendingIntent.getBroadcast(
+            context,
+            id.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 
     /**

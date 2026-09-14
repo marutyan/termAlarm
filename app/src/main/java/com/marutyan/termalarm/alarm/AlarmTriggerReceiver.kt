@@ -36,6 +36,10 @@ class AlarmTriggerReceiver : BroadcastReceiver() {
             }
         }
 
+        // 二度寝チェックは通常の鳴動と同じ流れで鳴らす。止めたときに
+        // もう一度チェックを入れないよう、目印だけ持たせて渡す
+        val isWakeCheck = intent.action == ACTION_WAKE_CHECK
+
         val triggerAtMillis = intent.getLongExtra(EXTRA_TRIGGER_AT_MILLIS, System.currentTimeMillis())
 
         // Doze中でもRingingServiceがstartForeground()するまでCPUを維持するための短時間ウェイクロック。
@@ -47,6 +51,7 @@ class AlarmTriggerReceiver : BroadcastReceiver() {
         val serviceIntent = Intent(context, RingingService::class.java).apply {
             putExtra(EXTRA_ALARM_ID, id)
             putExtra(EXTRA_TRIGGER_AT_MILLIS, triggerAtMillis)
+            putExtra(EXTRA_IS_WAKE_CHECK, isWakeCheck)
         }
         ContextCompat.startForegroundService(context, serviceIntent)
     }

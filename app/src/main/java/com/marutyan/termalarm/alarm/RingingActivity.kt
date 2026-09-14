@@ -107,6 +107,7 @@ class RingingActivity : ComponentActivity() {
         )
 
         val alarmId = intent.getLongExtra(EXTRA_ALARM_ID, -1L)
+        val isWakeCheck = intent.getBooleanExtra(EXTRA_IS_WAKE_CHECK, false)
         val triggerAtMillis = intent.getLongExtra(EXTRA_TRIGGER_AT_MILLIS, System.currentTimeMillis())
 
         lifecycleScope.launch {
@@ -121,6 +122,7 @@ class RingingActivity : ComponentActivity() {
                     RingingScreen(
                         alarmId = alarmId,
                         triggerAtMillis = triggerAtMillis,
+                        isWakeCheck = isWakeCheck,
                         silenceAfterMinutes = settings.silenceAfterMinutes,
                         onFinish = { finish() },
                     )
@@ -158,21 +160,32 @@ class RingingActivity : ComponentActivity() {
 
     companion object {
         // RingingServiceが全画面通知に載せる、このActivityを開くIntentを組み立てる
-        private fun launchIntent(context: Context, alarmId: Long, triggerAtMillis: Long): Intent =
+        private fun launchIntent(
+            context: Context,
+            alarmId: Long,
+            triggerAtMillis: Long,
+            isWakeCheck: Boolean,
+        ): Intent =
             Intent(context, RingingActivity::class.java).apply {
                 putExtra(EXTRA_ALARM_ID, alarmId)
                 putExtra(EXTRA_TRIGGER_AT_MILLIS, triggerAtMillis)
+                putExtra(EXTRA_IS_WAKE_CHECK, isWakeCheck)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                     Intent.FLAG_ACTIVITY_SINGLE_TOP or
                     Intent.FLAG_ACTIVITY_NO_USER_ACTION
             }
 
         // 通知のfullScreenIntent/contentIntentに使うPendingIntent。idごとに一意にする
-        fun fullScreenPendingIntent(context: Context, alarmId: Long, triggerAtMillis: Long): PendingIntent =
+        fun fullScreenPendingIntent(
+            context: Context,
+            alarmId: Long,
+            triggerAtMillis: Long,
+            isWakeCheck: Boolean = false,
+        ): PendingIntent =
             PendingIntent.getActivity(
                 context,
                 alarmId.toInt(),
-                launchIntent(context, alarmId, triggerAtMillis),
+                launchIntent(context, alarmId, triggerAtMillis, isWakeCheck),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
     }
@@ -188,6 +201,7 @@ private fun RingingScreen(
     alarmId: Long,
     triggerAtMillis: Long,
     silenceAfterMinutes: Int?,
+    isWakeCheck: Boolean,
     onFinish: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -245,6 +259,7 @@ private fun RingingScreen(
         )
     } else {
         RingingContent(
+            isWakeCheck = isWakeCheck,
             schedule = currentSchedule,
             occurrenceAt = occurrenceAt,
             totalCount = totalCount,
@@ -289,17 +304,20 @@ internal fun RingingContent(
     onStop: () -> Unit,
     onEndTerm: () -> Unit,
     modifier: Modifier = Modifier,
+    // 二度寝チェックとして鳴っているか。何回目かの代わりに用件を出すために用いる
+    isWakeCheck: Boolean = false,
 ) {
     val context = LocalContext.current
     val timePattern = remember { clockTimePattern(false) }
     val timeFormatter = remember(timePattern) { DateTimeFormatter.ofPattern(timePattern, Locale.getDefault()) }
 
     // 1. 「4回目 / 25回」のラベルテキスト (10sp, 字間0.16em, 主役色)
-    val occurrenceLabelText = stringResource(
-        R.string.ringing_occurrence_label,
-        currentOccurrence,
-        totalCount,
-    )
+    // 二度寝チェックは範囲の外で1回だけ鳴るので、何回目かではなく用件を出す
+    val occurrenceLabelText = if (isWakeCheck) {
+        stringResource(R.string.ringing_wake_check_label)
+    } else {
+        stringResource(R.string.ringing_occurrence_label, currentOccurrence, totalCount)
+    }
 
     // 2. 鳴っている時刻テキスト (86sp, 太さ200, 等幅数字)
     val occurrenceTimeString = remember(occurrenceAt, timeFormatter) {

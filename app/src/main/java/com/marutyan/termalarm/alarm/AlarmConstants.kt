@@ -20,3 +20,11 @@ const val ACTION_UPCOMING = "com.marutyan.termalarm.alarm.action.UPCOMING"
 
 // 事前通知の「このタームを終了」を押したときに送られてくる目印
 const val ACTION_END_SESSION = "com.marutyan.termalarm.alarm.action.END_SESSION"
+
+// ターム終了後の二度寝チェックの予約に付ける目印。鳴動そのものの予約と同じ
+// AlarmTriggerReceiverで受け、actionで区別する
+const val ACTION_WAKE_CHECK = "com.marutyan.termalarm.alarm.action.WAKE_CHECK"
+
+// 鳴っているのが二度寝チェックかどうか。止めたときにもう一度チェックを入れないための目印であり、
+// 鳴動画面の見出しを変えるためにも使う
+const val EXTRA_IS_WAKE_CHECK = "com.marutyan.termalarm.alarm.EXTRA_IS_WAKE_CHECK"
