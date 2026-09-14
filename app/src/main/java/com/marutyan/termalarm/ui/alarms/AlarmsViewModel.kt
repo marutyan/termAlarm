@@ -3,6 +3,7 @@ package com.marutyan.termalarm.ui.alarms
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.marutyan.termalarm.alarm.ScheduleStore
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,6 +18,8 @@ import kotlinx.coroutines.launch
  */
 class AlarmsViewModel(
     private val repository: AlarmRepository,
+    // 保存と予約の入れ直しを対で行う窓口。ホームの一覧と同じものを使う
+    private val scheduleStore: ScheduleStore,
 ) : ViewModel() {
 
     /** 登録されている通常アラームの最新一覧を提供するStateFlow。開始と終了が異なるタームは除外する。 */
@@ -30,12 +33,10 @@ class AlarmsViewModel(
 
     /**
      * 指定された通常アラームの有効・無効状態を更新する。
-     * リポジトリ経由でデータベース内のenabledフラグを書き換えて鳴動予約を同期するために用いる。
+     * 保存するだけでなく予約も入れ直す。保存だけだと、オンにしても鳴らず、オフにしても鳴り続ける。
      */
     fun toggleEnabled(schedule: AlarmSchedule, enabled: Boolean) {
-        viewModelScope.launch {
-            repository.setEnabled(schedule.id, enabled)
-        }
+        viewModelScope.launch { scheduleStore.setEnabled(schedule.id, enabled) }
     }
 }
 
@@ -45,11 +46,12 @@ class AlarmsViewModel(
  */
 class AlarmsViewModelFactory(
     private val repository: AlarmRepository,
+    private val scheduleStore: ScheduleStore,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(AlarmsViewModel::class.java)) {
-            return AlarmsViewModel(repository) as T
+            return AlarmsViewModel(repository, scheduleStore) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

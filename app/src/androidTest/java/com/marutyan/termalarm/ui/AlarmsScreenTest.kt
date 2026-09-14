@@ -6,6 +6,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.marutyan.termalarm.alarm.AlarmSchedulerStore
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
@@ -42,7 +43,7 @@ class AlarmsScreenTest {
         val (database, repo) = createTestRepository()
         db = database
         repository = repo
-        viewModel = AlarmsViewModel(repository)
+        viewModel = AlarmsViewModel(repository, AlarmSchedulerStore(testAppContext()))
     }
 
     // 見出しとサブタイトルが表示されることを保証する

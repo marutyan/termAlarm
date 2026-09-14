@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.marutyan.termalarm.alarm.AlarmScheduler
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
@@ -55,6 +57,7 @@ fun TermEndDialog(
     modifier: Modifier = Modifier,
     onStartChallenge: (Long) -> Unit = {},
 ) {
+    val context = LocalContext.current.applicationContext
     val coroutineScope = rememberCoroutineScope()
     val remainingCount = remember(schedule, now) {
         remainingOccurrenceCount(schedule, now)
@@ -184,7 +187,8 @@ fun TermEndDialog(
                                             onDismiss()
                                         } else {
                                             coroutineScope.launch {
-                                                repository.endTodaySession(schedule.id, now)
+                                                // 保存だけだと、既に入っている今日の次の1回がそのまま鳴る
+                                                AlarmScheduler.onSessionEnded(context, schedule.id, now)
                                                 onDismiss()
                                             }
                                         }

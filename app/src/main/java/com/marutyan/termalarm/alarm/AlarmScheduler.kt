@@ -17,7 +17,13 @@ import java.time.ZonedDateTime
 /**
  * AlarmManagerへの予約登録・解除をすべて担う。1件のAlarmScheduleにつき常に「次の1回」だけを
  * setAlarmClock()で登録し、全回を一括登録しない（docs/SPEC.md「予約の方式」）。
- * ui層はRepositoryを追加・変更・削除・有効切替した直後、必ず reschedule/rescheduleAll を呼び直す契約とする。
+ *
+ * **鳴る時刻を変える保存は、必ずこの object を通すこと。**
+ * 「保存する」と「予約を入れ直す」を呼び出し側それぞれに任せると、片方だけ呼ぶ経路が必ず生まれる。
+ * 実際に、一覧の切り替えとタームの終了で予約の入れ直しが漏れ、切り替えても鳴らない・
+ * 終了させても次の1回が鳴る、という不具合が起きた。
+ * そのため保存と予約をここで対にし、[setEnabled] [updateSchedule] [endSession] を入口とする。
+ * 呼び出し側から Repository の書き込みを直接行わないこと。
  */
 object AlarmScheduler {
 
@@ -45,6 +51,41 @@ object AlarmScheduler {
         alarmManager(context).cancel(operationPendingIntent(context, id))
         alarmManager(context).cancel(upcomingPendingIntent(context, id))
         AlarmNotifications.cancelUpcoming(context, id)
+    }
+
+    /**
+     * 有効・無効を切り替え、予約もそれに合わせる。
+     * 保存だけだと、オンにしても鳴らず、オフにしても鳴り続ける。
+     */
+    suspend fun setEnabled(context: Context, id: Long, enabled: Boolean) {
+        repository(context).setEnabled(id, enabled)
+        if (enabled) reschedule(context, id) else cancel(context, id)
+    }
+
+    /**
+     * タームの内容を保存し、予約もそれに合わせる。
+     * 時刻・間隔・曜日のどれが変わっても、次に鳴る回は変わりうる。
+     */
+    suspend fun updateSchedule(context: Context, schedule: AlarmSchedule) {
+        repository(context).update(schedule)
+        if (schedule.enabled) reschedule(context, schedule.id) else cancel(context, schedule.id)
+    }
+
+    /**
+     * タームを新しく登録し、予約も入れる。登録したidを返す。
+     */
+    suspend fun addSchedule(context: Context, schedule: AlarmSchedule): Long {
+        val id = repository(context).add(schedule)
+        reschedule(context, id)
+        return id
+    }
+
+    /**
+     * タームを削除し、予約も取り消す。
+     */
+    suspend fun deleteSchedule(context: Context, schedule: AlarmSchedule) {
+        repository(context).delete(schedule)
+        cancel(context, schedule.id)
     }
 
     /**

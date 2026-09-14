@@ -311,7 +311,8 @@ class AlarmEditViewModel(
                 validated.id
             }
             AlarmScheduler.reschedule(appContext, savedId)
-            uiState = uiState.copy(isSaved = true)
+            // 登録したidを持たせる。持たせないと、続けてもう一度押したときにもう1件できてしまう
+            uiState = uiState.copy(id = savedId, isSaved = true)
         }
     }
 

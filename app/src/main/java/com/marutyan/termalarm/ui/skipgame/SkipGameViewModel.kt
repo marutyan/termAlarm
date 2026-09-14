@@ -176,8 +176,8 @@ class SkipGameViewModel(
                 // 全問正解時の処理
                 viewModelScope.launch {
                     if (isTermEndScenario) {
-                        repository.endTodaySession(alarmId, ZonedDateTime.now())
-                        appContext?.let { AlarmScheduler.reschedule(it, alarmId) }
+                        // 保存と予約の入れ直し、曜日なしタームのオフまでを1か所へ任せる
+                        appContext?.let { AlarmScheduler.onSessionEnded(it, alarmId, ZonedDateTime.now()) }
                     }
                     uiState = uiState.copy(isSuccess = true, justFailed = false)
                 }

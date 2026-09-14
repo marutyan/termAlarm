@@ -1,5 +1,6 @@
 package com.marutyan.termalarm.ui.alarms
 
+import com.marutyan.termalarm.alarm.FakeScheduleStore
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.FakeAlarmDao
 import com.marutyan.termalarm.domain.AlarmSchedule
@@ -20,13 +21,15 @@ class AlarmsViewModelTest {
 
     private lateinit var dao: FakeAlarmDao
     private lateinit var repository: AlarmRepository
+    private lateinit var store: FakeScheduleStore
     private lateinit var viewModel: AlarmsViewModel
 
     @Before
     fun setUp() {
         dao = FakeAlarmDao()
         repository = AlarmRepository(dao)
-        viewModel = AlarmsViewModel(repository)
+        store = FakeScheduleStore(repository)
+        viewModel = AlarmsViewModel(repository, store)
     }
 
     @Test
@@ -82,4 +85,33 @@ class AlarmsViewModelTest {
         val updated = repository.observeAll().first { list -> list.any { it.id == id && !it.enabled } }
         assertFalse(updated.first { it.id == id }.enabled)
     }
+    @Test
+    fun `切り替えると保存だけでなく予約も入れ直される`() = runTest {
+        val id = repository.add(
+            AlarmSchedule(
+                id = 0L,
+                startMinutes = 8 * 60,
+                endMinutes = 8 * 60,
+                startIntervalMinutes = 5,
+                endIntervalMinutes = 5,
+                repeatDays = emptySet(),
+                label = "",
+                enabled = true,
+            ),
+        )
+
+        viewModel.toggleEnabled(repository.getById(id)!!, false)
+        repository.observeAll().first { list -> list.any { it.id == id && !it.enabled } }
+        assertEquals(listOf(id), store.cancelled)
+
+        viewModel.toggleEnabled(repository.getById(id)!!, true)
+        repository.observeAll().first { list -> list.any { it.id == id && it.enabled } }
+        assertEquals(listOf(id), store.rescheduled)
+
+        // 続けて3回目。取り消しが2件たまること
+        viewModel.toggleEnabled(repository.getById(id)!!, false)
+        repository.observeAll().first { list -> list.any { it.id == id && !it.enabled } }
+        assertEquals(listOf(id, id), store.cancelled)
+    }
+
 }

@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.marutyan.termalarm.alarm.AlarmSchedulerStore
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
@@ -114,7 +115,7 @@ class OverflowMenuTest {
     fun ターム画面でメニューを開くと3項目が表示される() {
         composeTestRule.setContent {
             HomeScreen(
-                viewModel = remember { HomeViewModel(repository) },
+                viewModel = remember { HomeViewModel(repository, AlarmSchedulerStore(testAppContext())) },
             )
         }
         composeTestRule.onNodeWithText(string(R.string.app_name)).assertExists()
@@ -130,7 +131,7 @@ class OverflowMenuTest {
 
         composeTestRule.setContent {
             HomeScreen(
-                viewModel = remember { HomeViewModel(repository) },
+                viewModel = remember { HomeViewModel(repository, AlarmSchedulerStore(testAppContext())) },
                 onOpenSettings = { openedSettings = true },
                 onOpenPrivacyPolicy = { openedPrivacy = true },
                 onOpenAbout = { openedAbout = true },
@@ -158,7 +159,7 @@ class OverflowMenuTest {
     fun 通常アラーム画面でメニューを開くと3項目が表示される() {
         composeTestRule.setContent {
             AlarmsScreen(
-                viewModel = remember { AlarmsViewModel(repository) },
+                viewModel = remember { AlarmsViewModel(repository, AlarmSchedulerStore(testAppContext())) },
                 onAddAlarm = {},
                 onEditAlarm = {},
             )

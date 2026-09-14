@@ -3,6 +3,7 @@ package com.marutyan.termalarm.ui
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
@@ -16,6 +17,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
+import com.marutyan.termalarm.alarm.AlarmSchedulerStore
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.SettingsRepository
@@ -107,21 +109,24 @@ internal fun ListEditHost(repository: AlarmRepository) {
     val context = testAppContext()
     var editingAlarmId by remember { mutableStateOf<Long?>(null) }
     var isAddingTerm by remember { mutableStateOf(false) }
+    // 開くたびに変わる番号。本物の画面(TermAlarmNavHost)と同じく、ViewModelを使い回さないために要る。
+    // これが無いと、2回目の新規追加で前回の「保存済み」の状態を持ったものが再利用される
+    var editOpenId by remember { mutableIntStateOf(0) }
     var termEndAlarmId by remember { mutableStateOf<Long?>(null) }
 
-    val homeViewModel = remember { HomeViewModel(repository) }
+    val homeViewModel = remember { HomeViewModel(repository, AlarmSchedulerStore(testAppContext())) }
     val terms by homeViewModel.terms.collectAsState(initial = emptyList())
     HomeScreen(
         viewModel = homeViewModel,
-        onAddTerm = { isAddingTerm = true },
-        onEditTerm = { id -> editingAlarmId = id },
+        onAddTerm = { isAddingTerm = true; editOpenId++ },
+        onEditTerm = { id -> editingAlarmId = id; editOpenId++ },
         onEndTodayTerm = { id -> termEndAlarmId = id },
     )
 
     if (isAddingTerm || editingAlarmId != null) {
         val targetId = if (isAddingTerm) null else editingAlarmId
         AlarmEditScreen(
-            viewModel = remember(targetId) { AlarmEditViewModel(repository, context, targetId) },
+            viewModel = remember(targetId, editOpenId) { AlarmEditViewModel(repository, context, targetId) },
             onClose = {
                 isAddingTerm = false
                 editingAlarmId = null

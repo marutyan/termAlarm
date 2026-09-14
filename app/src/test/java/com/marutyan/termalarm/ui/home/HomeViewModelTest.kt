@@ -1,5 +1,6 @@
 package com.marutyan.termalarm.ui.home
 
+import com.marutyan.termalarm.alarm.FakeScheduleStore
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.FakeAlarmDao
 import com.marutyan.termalarm.domain.AlarmSchedule
@@ -20,13 +21,15 @@ class HomeViewModelTest {
 
     private lateinit var dao: FakeAlarmDao
     private lateinit var repository: AlarmRepository
+    private lateinit var store: FakeScheduleStore
     private lateinit var viewModel: HomeViewModel
 
     @Before
     fun setUp() {
         dao = FakeAlarmDao()
         repository = AlarmRepository(dao)
-        viewModel = HomeViewModel(repository)
+        store = FakeScheduleStore(repository)
+        viewModel = HomeViewModel(repository, store)
     }
 
     @Test
@@ -100,4 +103,59 @@ class HomeViewModelTest {
         assertEquals(1, terms.size)
         assertEquals(termSchedule.id, terms[0].id)
     }
+    @Test
+    fun `切り替えると保存だけでなく予約も入れ直される`() = runTest {
+        val id = repository.add(
+            AlarmSchedule(
+                id = 0L,
+                startMinutes = 7 * 60,
+                endMinutes = 9 * 60,
+                startIntervalMinutes = 5,
+                endIntervalMinutes = 5,
+                repeatDays = setOf(DayOfWeek.MONDAY),
+                label = "",
+                enabled = true,
+            ),
+        )
+        val schedule = repository.getById(id)!!
+
+        viewModel.toggleEnabled(schedule, false)
+        repository.observeAll().first { list -> list.any { it.id == id && !it.enabled } }
+        assertEquals(listOf(id), store.cancelled)
+        assertEquals(emptyList<Long>(), store.rescheduled)
+
+        viewModel.toggleEnabled(repository.getById(id)!!, true)
+        repository.observeAll().first { list -> list.any { it.id == id && it.enabled } }
+        assertEquals(listOf(id), store.rescheduled)
+    }
+
+    @Test
+    fun `曜日を押すと保存され予約も入れ直される`() = runTest {
+        val id = repository.add(
+            AlarmSchedule(
+                id = 0L,
+                startMinutes = 7 * 60,
+                endMinutes = 9 * 60,
+                startIntervalMinutes = 5,
+                endIntervalMinutes = 5,
+                repeatDays = setOf(DayOfWeek.MONDAY),
+                label = "",
+                enabled = true,
+            ),
+        )
+
+        viewModel.toggleDay(repository.getById(id)!!, DayOfWeek.TUESDAY)
+        repository.observeAll().first { list ->
+            list.any { it.id == id && it.repeatDays == setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY) }
+        }
+        assertEquals(listOf(id), store.rescheduled)
+
+        // 同じ曜日をもう一度押すと外れる（続けて操作したときの往復）
+        viewModel.toggleDay(repository.getById(id)!!, DayOfWeek.TUESDAY)
+        repository.observeAll().first { list ->
+            list.any { it.id == id && it.repeatDays == setOf(DayOfWeek.MONDAY) }
+        }
+        assertEquals(listOf(id, id), store.rescheduled)
+    }
+
 }

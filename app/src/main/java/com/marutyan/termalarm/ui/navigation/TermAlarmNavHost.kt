@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
+import com.marutyan.termalarm.alarm.AlarmSchedulerStore
 import com.marutyan.termalarm.ui.termend.TermEndDialog
 import java.time.ZonedDateTime
 import androidx.navigation.compose.NavHost
@@ -184,9 +185,9 @@ fun TermAlarmNavHost(
             ) {
                 // 1. ターム（ホーム画面）
                 composable(NavItem.TERMS.route) {
-                    val homeContext = LocalContext.current.applicationContext
+                    val scheduleStore = remember(context) { AlarmSchedulerStore(context.applicationContext) }
                     val viewModel: HomeViewModel =
-                        viewModel(factory = HomeViewModelFactory(repository, homeContext))
+                        viewModel(factory = HomeViewModelFactory(repository, scheduleStore))
                     val terms by viewModel.terms.collectAsStateWithLifecycle()
                     val activity = context as? Activity
                     val initialTermEndId = remember {
@@ -255,7 +256,7 @@ fun TermAlarmNavHost(
 
                 // 2. 通常アラーム画面
                 composable(NavItem.STANDARD_ALARM.route) {
-                    val viewModel: AlarmsViewModel = viewModel(factory = AlarmsViewModelFactory(repository))
+                    val viewModel: AlarmsViewModel = viewModel(factory = AlarmsViewModelFactory(repository, remember(context) { AlarmSchedulerStore(context.applicationContext) }))
                     var editTarget by remember { mutableStateOf<EditTarget?>(null) }
 
                     AlarmsScreen(
