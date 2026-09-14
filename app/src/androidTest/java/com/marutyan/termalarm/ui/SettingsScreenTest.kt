@@ -13,7 +13,6 @@ import androidx.compose.ui.test.performScrollTo
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.SettingsRepository
-import com.marutyan.termalarm.domain.ClockDisplayMode
 import com.marutyan.termalarm.ui.settings.SettingsScreen
 import com.marutyan.termalarm.ui.settings.SettingsViewModel
 import kotlinx.coroutines.flow.first

@@ -68,12 +68,22 @@ class GameTest {
     @Test
     fun `色と文字は文字色が正解で語の意味とは異なる色になる`() {
         val q = onlyType(GameType.COLOR_WORD, Random(6)) as GameQuestion.ColorWord
-        assertNotEquals(q.word, q.displayColor)
-        assertTrue(q.displayColor in q.choices)
-        assertEquals(q.displayColor, q.correctAnswer)
+        assertNotEquals(q.word, q.displayColor.label)
+        assertTrue(q.displayColor.label in q.choices)
+        assertEquals(q.displayColor.label, q.correctAnswer)
 
-        assertTrue(judgeGameAnswer(q, q.displayColor))
+        assertTrue(judgeGameAnswer(q, q.displayColor.label))
         assertFalse(judgeGameAnswer(q, q.word))
+    }
+
+    @Test
+    fun `色と文字の選択肢はすべて実際の色を持つ`() {
+        // 名前の一覧と色の値を別々に持っていたとき、名前を足しても画面側が
+        // 対応していないと黙って白い文字で出ていた。取りこぼしが起きない形を固定する
+        val labels = StroopColor.entries.map { it.label }
+        val q = onlyType(GameType.COLOR_WORD, Random(6)) as GameQuestion.ColorWord
+        assertEquals(labels, q.choices)
+        assertTrue(StroopColor.entries.all { it.rgb != 0L })
     }
 
     @Test

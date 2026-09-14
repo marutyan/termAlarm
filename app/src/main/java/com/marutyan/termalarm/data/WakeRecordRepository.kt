@@ -1,6 +1,5 @@
 package com.marutyan.termalarm.data
 
-import com.marutyan.termalarm.domain.AlarmSchedule
 import com.marutyan.termalarm.domain.RingRecord
 import com.marutyan.termalarm.domain.SessionRecord
 import com.marutyan.termalarm.domain.StopMethod
@@ -14,7 +13,6 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
-import java.time.ZonedDateTime
 
 /**
  * 起床記録および鳴動実績の永続化と集計アクセスを担うリポジトリ。

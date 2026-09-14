@@ -19,11 +19,9 @@ import com.marutyan.termalarm.domain.judgeGameAnswer
 import com.marutyan.termalarm.domain.occurrenceCount
 import com.marutyan.termalarm.domain.remainingOccurrenceCount
 import com.marutyan.termalarm.ui.common.clockTimePattern
-import com.marutyan.termalarm.ui.common.formatClockMinutes
+import com.marutyan.termalarm.ui.common.formatRangeAndInterval
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -128,14 +126,7 @@ class SkipGameViewModel(
                 }
                 val timeFormatter = DateTimeFormatter.ofPattern(timePattern, Locale.getDefault())
                 val timeStr = now.format(timeFormatter)
-                val startTimeStr = formatClockMinutes(schedule.startMinutes, timePattern)
-                val endTimeStr = formatClockMinutes(schedule.endMinutes, timePattern)
-                val intervalStr = if (schedule.startIntervalMinutes == schedule.endIntervalMinutes) {
-                    "${schedule.startIntervalMinutes}分ごと"
-                } else {
-                    "${schedule.startIntervalMinutes}〜${schedule.endIntervalMinutes}分ごと"
-                }
-                val rangeAndInterval = "$startTimeStr \u2013 $endTimeStr \u00B7 $intervalStr"
+                val rangeAndInterval = formatRangeAndInterval(schedule, timePattern)
 
                 uiState = uiState.copy(
                     isLoading = false,

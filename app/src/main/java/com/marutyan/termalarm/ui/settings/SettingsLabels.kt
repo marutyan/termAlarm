@@ -6,18 +6,11 @@ import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.marutyan.termalarm.R
-import com.marutyan.termalarm.domain.ClockDisplayMode
 
 /**
  * 設定の値を、画面へ出す言葉へ変える。
  * 設定画面が長くなりすぎたため、表示のための変換だけをこちらへ分けている。
  */
-
-@Composable
-internal fun clockStyleLabel(mode: ClockDisplayMode): String = when (mode) {
-    ClockDisplayMode.ANALOG -> stringResource(R.string.clock_display_mode_analog)
-    ClockDisplayMode.DIGITAL -> stringResource(R.string.clock_display_mode_digital)
-}
 
 // 秒数の表示用整形。0は「なし」、小数を含む場合はそのまま(1.5秒)、整数なら小数点を出さない(5秒)
 @Composable

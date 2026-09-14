@@ -6,7 +6,6 @@ import android.content.Intent
 import com.marutyan.termalarm.notification.runAsync
 import android.os.SystemClock
 import com.marutyan.termalarm.data.Repositories
-import com.marutyan.termalarm.data.TimerRepository
 import com.marutyan.termalarm.domain.rebaseTimerAfterReboot
 
 /**

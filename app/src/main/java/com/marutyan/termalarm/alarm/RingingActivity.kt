@@ -60,6 +60,7 @@ import com.marutyan.termalarm.domain.occurrenceCount
 import com.marutyan.termalarm.domain.remainingOccurrenceCount
 import com.marutyan.termalarm.ui.common.clockTimePattern
 import com.marutyan.termalarm.ui.common.formatClockMinutes
+import com.marutyan.termalarm.ui.common.formatRangeAndInterval
 import com.marutyan.termalarm.ui.navigation.EXTRA_DEEPLINK_END_TERM_ID
 import com.marutyan.termalarm.ui.skipgame.SkipGameScreen
 import com.marutyan.termalarm.ui.skipgame.SkipGameViewModel
@@ -325,27 +326,13 @@ internal fun RingingContent(
     }
 
     // 3. 範囲と間隔テキスト (13sp, 薄い文字)
-    val startTimeText = remember(schedule.startMinutes, timePattern) {
-        formatClockMinutes(schedule.startMinutes, timePattern)
+    val rangeAndIntervalText = remember(schedule, timePattern) {
+        formatRangeAndInterval(schedule, timePattern)
     }
+    // 終了時刻は「9:00まで 残り21回」でも使う
     val endTimeText = remember(schedule.endMinutes, timePattern) {
         formatClockMinutes(schedule.endMinutes, timePattern)
     }
-    val intervalText = if (schedule.startIntervalMinutes == schedule.endIntervalMinutes) {
-        stringResource(R.string.ringing_interval_constant, schedule.startIntervalMinutes)
-    } else {
-        stringResource(
-            R.string.term_edit_interval_accelerate_summary,
-            schedule.startIntervalMinutes,
-            schedule.endIntervalMinutes,
-        )
-    }
-    val rangeAndIntervalText = stringResource(
-        R.string.ringing_range_and_interval,
-        startTimeText,
-        endTimeText,
-        intervalText,
-    )
 
     // 4. 音量レベル (0..5)
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager }

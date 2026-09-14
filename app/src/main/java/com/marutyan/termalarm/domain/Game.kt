@@ -17,8 +17,24 @@ private const val SHAKE_REQUIRED_COUNT = 10
 // 図形を数えるゲームで並べる図形の総数
 private const val COUNT_SHAPES_TOTAL = 12
 
-// 色と文字ゲーム（ストループ）で使う色名の一覧。文字の意味と文字色をこの中からずらして選ぶ
-private val STROOP_COLOR_NAMES = listOf("赤", "青", "緑", "黄", "紫", "橙")
+/**
+ * 色と文字ゲーム（ストループ）で使う色。文字の意味と文字色を、この中からずらして選ぶ。
+ *
+ * 名前と実際の色を1つにまとめている。以前は名前の一覧をここに、色の値を画面側に
+ * 別々に持っていたため、色を足しても画面側の対応を忘れると、その色だけ黙って
+ * 白い文字で出てしまう状態だった。
+ *
+ * @property label 画面に出す色の名前
+ * @property rgb 文字を塗る色。0xAARRGGBB形式で、画面側でColorへ変換して使う
+ */
+enum class StroopColor(val label: String, val rgb: Long) {
+    RED("赤", 0xFFE53935),
+    BLUE("青", 0xFF1E88E5),
+    GREEN("緑", 0xFF43A047),
+    YELLOW("黄", 0xFFFDD835),
+    PURPLE("紫", 0xFF8E24AA),
+    ORANGE("橙", 0xFFFB8C00),
+}
 
 // 光った順を再現ゲームで選ぶ数字の個数。短期記憶として負荷が高すぎず寝起きに集中を要する5つとする。
 private const val SEQUENCE_RECALL_COUNT = 5
@@ -90,7 +106,7 @@ sealed class GameQuestion(val type: GameType) {
     // 文字の意味(word)と文字色(displayColor)が異なる語を見せ、文字色を選択肢から選ばせる
     data class ColorWord(
         val word: String,
-        val displayColor: String,
+        val displayColor: StroopColor,
         val choices: List<String>,
         override val correctAnswer: String,
     ) : GameQuestion(GameType.COLOR_WORD)
@@ -169,10 +185,17 @@ private fun generateCountShapes(random: Random): GameQuestion.CountShapes {
 
 // 文字の意味と文字色が異なる語を1問作る（ストループ課題）
 private fun generateColorWord(random: Random): GameQuestion.ColorWord {
-    val word = STROOP_COLOR_NAMES[random.nextInt(STROOP_COLOR_NAMES.size)]
+    val colors = StroopColor.entries
+    val word = colors[random.nextInt(colors.size)]
     // 表示色は語の意味と必ず異なるものにする（同じだと文字色を問う意味がなくなるため）
-    val displayColor = STROOP_COLOR_NAMES.filter { it != word }[random.nextInt(STROOP_COLOR_NAMES.size - 1)]
-    return GameQuestion.ColorWord(word, displayColor, STROOP_COLOR_NAMES, displayColor)
+    val others = colors.filter { it != word }
+    val displayColor = others[random.nextInt(others.size)]
+    return GameQuestion.ColorWord(
+        word = word.label,
+        displayColor = displayColor,
+        choices = colors.map { it.label },
+        correctAnswer = displayColor.label,
+    )
 }
 
 /**

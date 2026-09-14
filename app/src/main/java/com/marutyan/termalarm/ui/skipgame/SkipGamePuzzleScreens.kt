@@ -435,7 +435,8 @@ internal fun ColorWordGameContent(
                 style = TextStyle(
                     fontSize = 44.sp,
                     fontWeight = FontWeight.Bold,
-                    color = colorForStroopName(question.displayColor),
+                    // 色は出題データが持っている。画面側で名前から引き直さない
+                    color = Color(question.displayColor.rgb),
                 ),
             )
         }
@@ -482,16 +483,3 @@ internal fun ColorWordGameContent(
     }
 }
 
-/**
- * ストループ課題で用いる固定色見本を返すヘルパー関数。
- * 「赤・青・緑・黄・紫・橙」の各色相を明確に識別可能なColor値へ変換するために用いる。
- */
-private fun colorForStroopName(name: String): Color = when (name) {
-    "赤" -> Color(0xFFE53935)
-    "青" -> Color(0xFF1E88E5)
-    "緑" -> Color(0xFF43A047)
-    "黄" -> Color(0xFFFDD835)
-    "紫" -> Color(0xFF8E24AA)
-    "橙" -> Color(0xFFFB8C00)
-    else -> Color.White
-}

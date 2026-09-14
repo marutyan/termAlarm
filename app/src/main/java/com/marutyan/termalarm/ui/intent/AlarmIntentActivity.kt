@@ -9,7 +9,6 @@ import com.marutyan.termalarm.MainActivity
 import com.marutyan.termalarm.alarm.AlarmScheduler
 import com.marutyan.termalarm.alarm.RingingService
 import com.marutyan.termalarm.data.Repositories
-import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
 import com.marutyan.termalarm.ui.navigation.EXTRA_DEEPLINK_ALARM_ID
 import java.time.DayOfWeek
