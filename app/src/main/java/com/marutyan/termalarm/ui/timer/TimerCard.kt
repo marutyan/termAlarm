@@ -51,7 +51,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -103,6 +105,15 @@ val TIMER_CARD_CLOSE_ICON_SIZE = 24.dp
 /** カード右上の閉じる「×」ボタンのタップ領域サイズ(dp)。アクセシビリティ基準を満たすため48dpとする。 */
 val TIMER_CARD_CLOSE_BUTTON_SIZE = 48.dp
 
+/**
+ * リセットの記号の形。24の座標系で描いた、輪をひと回りして戻る矢印。
+ * 設定した長さへ戻すことを表す。線ではなく塗りで描くため、小さくしても潰れない。
+ */
+private const val TIMER_RESET_PATH =
+    "M17.65,6.35C16.2,4.9 14.21,4 12,4c-4.42,0 -7.99,3.58 -8,8s3.58,8 8,8c3.73,0 6.84,-2.55 7.73,-6" +
+        "h-2.08c-0.82,2.33 -3.04,4 -5.65,4 -3.31,0 -6,-2.69 -6,-6s2.69,-6 6,-6c1.66,0 3.14,0.69 4.22,1.78" +
+        "L13,11h7V4L17.65,6.35z"
+
 /** カード中央の一時停止・再開の印のサイズ(dp)。純正時計アプリの実測値27dpに基づく。 */
 val TIMER_ACTION_ICON_SIZE = 27.dp
 
@@ -110,7 +121,7 @@ val TIMER_ACTION_ICON_SIZE = 27.dp
  * 一時停止・再開の印を、円の中心からどれだけ下へずらすか。
  * 残り時間を中心に置いたうえで、その下へ重ならずに収まる位置とする。
  */
-val TIMER_ACTION_ICON_CENTER_OFFSET = 54.dp
+val TIMER_ACTION_ICON_CENTER_OFFSET = 64.dp
 
 /**
  * 端末の「アニメーションを減らす」または「アニメーションの無効化」が有効になっているかを判定する。
@@ -386,14 +397,14 @@ fun TimerCard(
                         style = TextStyle(
                             fontFamily = IbmPlexMono,
                             fontWeight = FontWeight.W200,
-                            fontSize = 60.sp,
-                            lineHeight = 60.sp,
+                            fontSize = 68.sp,
+                            lineHeight = 68.sp,
                             letterSpacing = (-0.03).em,
                             fontFeatureSettings = "tnum",
                         ),
                         autoSize = TextAutoSize.StepBased(
                             minFontSize = 28.sp,
-                            maxFontSize = 60.sp,
+                            maxFontSize = 68.sp,
                             stepSize = 1.sp,
                         ),
                         maxLines = 1,
@@ -579,42 +590,12 @@ fun TimerResetIcon(
     color: Color,
     modifier: Modifier = Modifier,
 ) {
+    val path = remember { PathParser().parsePathString(TIMER_RESET_PATH).toPath() }
     Canvas(modifier = modifier.size(26.dp)) {
-        val scale = size.width / 24f
-        // 24の座標系で2.0の太さ。dpへ直してから掛けると二重に拡大され、線が潰れる
-        val strokeWidth = 2.0f * scale
-
-        // 円弧: 中心(12, 11)、半径9の円弧を時計回りに描画
-        val arcRadius = 9f * scale
-        val arcCenter = Offset(12f * scale, 11f * scale)
-        val arcTopLeft = Offset(arcCenter.x - arcRadius, arcCenter.y - arcRadius)
-        val arcSize = Size(arcRadius * 2f, arcRadius * 2f)
-
-        drawArc(
-            color = color,
-            startAngle = 175f,
-            sweepAngle = 285f,
-            useCenter = false,
-            topLeft = arcTopLeft,
-            size = arcSize,
-            style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-        )
-
-        // 矢印の先端: カギ型の折れ線 (3, 5) -> (3, 10) -> (8, 10)
-        val arrowPath = Path().apply {
-            moveTo(3f * scale, 5f * scale)
-            lineTo(3f * scale, 10f * scale)
-            lineTo(8f * scale, 10f * scale)
+        // 24の座標系で描かれた形なので、実際の大きさへ合わせて全体を拡大する
+        scale(scale = size.width / 24f, pivot = Offset.Zero) {
+            drawPath(path = path, color = color)
         }
-        drawPath(
-            path = arrowPath,
-            color = color,
-            style = Stroke(
-                width = strokeWidth,
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round,
-            ),
-        )
     }
 }
 

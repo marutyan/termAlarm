@@ -4,6 +4,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -37,10 +41,18 @@ fun TermAlarmTopBar(
     onOpenAbout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // 位置は帯の側で決める。呼び出し側ごとに余白が違うと、画面を移るたびに
+    // アイコンとアプリ名がわずかに動いて見えるため
+    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(44.dp),
+            .padding(
+                top = statusBarTop + TOP_BAR_TOP_INSET,
+                start = SCREEN_HORIZONTAL_PADDING,
+                end = SCREEN_HORIZONTAL_PADDING,
+            )
+            .height(TOP_BAR_HEIGHT),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -107,10 +119,16 @@ private const val APP_ICON_FOREGROUND_SCALE = 1.64f
  * 上の帯をステータスバーの下端からどれだけ下げるか。
  * 5つの主な画面が同じ位置に帯を置くため、値をここ1か所で持つ。
  */
-val TOP_BAR_TOP_INSET = 44.dp
+val TOP_BAR_TOP_INSET = 36.dp
 
 /**
  * 上の帯と、その下に続く中身との間隔。
  * 帯と中身がくっついて見えないよう、行の高さとは別にここで空ける。
  */
 val TOP_BAR_CONTENT_GAP = 22.dp
+
+/** 上の帯の高さ。アイコンと三点が縦に中央で並ぶ高さとする。 */
+val TOP_BAR_HEIGHT = 44.dp
+
+/** 主な画面の左右の余白。上の帯と中身で同じ値を使い、縦の線を揃える。 */
+val SCREEN_HORIZONTAL_PADDING = 20.dp

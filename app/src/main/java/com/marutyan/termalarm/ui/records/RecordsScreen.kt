@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.common.SCREEN_HORIZONTAL_PADDING
 import com.marutyan.termalarm.ui.common.TOP_BAR_CONTENT_GAP
 import com.marutyan.termalarm.ui.common.TOP_BAR_TOP_INSET
 import com.marutyan.termalarm.R
@@ -64,27 +65,25 @@ fun RecordsScreen(
     onOpenAbout: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    // ステータスバーの下端から74dp空けるため、WindowInsets.statusBarsの高さを足す
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(
-                top = statusBarTop + TOP_BAR_TOP_INSET,
-                start = 20.dp,
-                end = 20.dp,
-                bottom = 24.dp,
-            ),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        // 画面上部の帯: アプリ名と三点メニュー
+    // 画面上部の帯。スクロールの外へ置き、どの画面でも同じ位置に固定する
+    Column(modifier = modifier.fillMaxSize()) {
         TermAlarmTopBar(
             onOpenSettings = onOpenSettings,
             onOpenPrivacyPolicy = onOpenPrivacyPolicy,
             onOpenAbout = onOpenAbout,
         )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(
+                start = SCREEN_HORIZONTAL_PADDING,
+                end = SCREEN_HORIZONTAL_PADDING,
+                bottom = 24.dp,
+            ),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
 
         Spacer(modifier = Modifier.height(TOP_BAR_CONTENT_GAP))
 
@@ -124,6 +123,7 @@ fun RecordsScreen(
             rows = uiState.dailyRows,
             isEmpty = uiState.isEmpty,
         )
+    }
     }
 }
 

@@ -111,7 +111,11 @@ object TimerNotifications {
         nowElapsed: Long,
         nowWall: Long,
     ) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) {
+        // 鳴っている間はMetricStyleを使わない。
+        // MetricStyleは0を過ぎると「5」「6」と数え上げてしまい、画面の「−0:05」と食い違う。
+        // 通知の時計機能は0を過ぎるとマイナス付きで出すので、画面と同じ見え方になる
+        val isRinging = main.runState == TimerRunState.FINISHED
+        if (isRinging || Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) {
             applyChronometerFallback(builder, main, nowElapsed, nowWall)
             builder.setContentText(context.getString(statusTextRes(main.runState)))
             return

@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.common.SCREEN_HORIZONTAL_PADDING
 import com.marutyan.termalarm.ui.common.TOP_BAR_CONTENT_GAP
 import com.marutyan.termalarm.ui.common.TOP_BAR_TOP_INSET
 import com.marutyan.termalarm.R
@@ -100,7 +101,6 @@ fun TimerScreen(
     // タイマーが1件も無いときは、案内を出さずに数字を入れる画面をそのまま見せる。
     // 押す先が同じ画面になるため、そのときは右下の追加ボタンも出さない
     val showKeypad = showAddScreen || sortedTimers.isEmpty()
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
     Box(modifier = Modifier.fillMaxSize()) {
         AnimatedContent(
@@ -130,24 +130,18 @@ fun TimerScreen(
                 )
             } else {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(top = statusBarTop + TOP_BAR_TOP_INSET, start = TIMER_CARD_HORIZONTAL_PADDING, end = TIMER_CARD_HORIZONTAL_PADDING, bottom = 24.dp),
-                    ) {
-                        // 画面上部の帯: アプリ名と三点メニュー
-                        Box(modifier = Modifier.padding(horizontal = 8.dp)) {
-                            TermAlarmTopBar(
-                                onOpenSettings = onOpenSettings,
-                                onOpenPrivacyPolicy = onOpenPrivacyPolicy,
-                                onOpenAbout = onOpenAbout,
-                            )
-                        }
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        // 画面上部の帯。位置は帯の側が持つので、ここでは余白を足さない
+                        TermAlarmTopBar(
+                            onOpenSettings = onOpenSettings,
+                            onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                            onOpenAbout = onOpenAbout,
+                        )
 
                         Spacer(modifier = Modifier.height(TOP_BAR_CONTENT_GAP))
 
                         // 見出し「タイマー」 (28sp、太さ300)
-                        Box(modifier = Modifier.padding(horizontal = 8.dp)) {
+                        Box(modifier = Modifier.padding(horizontal = SCREEN_HORIZONTAL_PADDING)) {
                             Text(
                                 text = stringResource(R.string.tab_timer),
                                 style = TextStyle(
@@ -165,7 +159,11 @@ fun TimerScreen(
 
                         // 1件も無いときはこの枝に来ない（数字を入れる画面をそのまま出すため）
                         LazyColumn(
-                                contentPadding = PaddingValues(bottom = 96.dp),
+                                contentPadding = PaddingValues(
+                                    start = TIMER_CARD_HORIZONTAL_PADDING,
+                                    end = TIMER_CARD_HORIZONTAL_PADDING,
+                                    bottom = 96.dp,
+                                ),
                                 verticalArrangement = Arrangement.spacedBy(16.dp),
                                 modifier = Modifier.fillMaxSize(),
                             ) {

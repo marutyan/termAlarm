@@ -104,23 +104,14 @@ fun TimerAddScreen(
     val seconds = padded.substring(4, 6).toInt()
 
     val isStartEnabled = inputDigits.isNotEmpty() && (hours > 0 || minutes > 0 || seconds > 0)
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
     Column(modifier = modifier.fillMaxSize()) {
         // 他の画面と同じ帯。ここだけ無いと、タイマーが0件のときアプリ名が消えてしまう
-        Box(
-            modifier = Modifier.padding(
-                top = statusBarTop + TOP_BAR_TOP_INSET,
-                start = 20.dp,
-                end = 20.dp,
-            ),
-        ) {
-            TermAlarmTopBar(
-                onOpenSettings = onOpenSettings,
-                onOpenPrivacyPolicy = onOpenPrivacyPolicy,
-                onOpenAbout = onOpenAbout,
-            )
-        }
+        TermAlarmTopBar(
+            onOpenSettings = onOpenSettings,
+            onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+            onOpenAbout = onOpenAbout,
+        )
 
         Box(
             modifier = Modifier.fillMaxSize(),
