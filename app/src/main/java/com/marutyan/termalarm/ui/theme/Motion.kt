@@ -35,9 +35,9 @@ const val TAB_TRANSITION_DURATION_MS = 150
 
 /**
  * 下位の画面を出し入れする時間(ミリ秒)。
- * 押して開く・戻るときの長さ。純正より短くして、待たされる感じを無くしている。
+ * 純正は指を離してから約400msかけるが、それでは遅く感じるため短くしている。
  */
-const val SCREEN_TRANSITION_DURATION_MS = 200
+const val SCREEN_TRANSITION_DURATION_MS = 150
 
 /**
  * 閉じていく画面が縮む先の倍率。
@@ -47,9 +47,11 @@ const val SCREEN_EXIT_SCALE = 0.86f
 
 /**
  * 現れる画面が始まるときの倍率。
- * 開くときに親画面が[SCREEN_EXIT_SCALE]の逆数まで広がるので、戻るときはそこから縮んでくる。
+ *
+ * [SCREEN_EXIT_SCALE]の逆数にあたる1.16だと、戻り先の画面が動いていることが分かりにくい。
+ * 戻っていることが伝わる強さを優先して、そこから少し広げている。
  */
-const val SCREEN_ENTER_START_SCALE = 1.16f
+const val SCREEN_ENTER_START_SCALE = 1.25f
 
 /**
  * 後ろで順番を待っている画面の濃さ。
