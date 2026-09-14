@@ -50,6 +50,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.common.TOP_BAR_CONTENT_GAP
+import com.marutyan.termalarm.ui.common.TOP_BAR_TOP_INSET
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
@@ -125,7 +127,7 @@ fun TimerScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(top = statusBarTop + 74.dp, start = TIMER_CARD_HORIZONTAL_PADDING, end = TIMER_CARD_HORIZONTAL_PADDING, bottom = 24.dp),
+                            .padding(top = statusBarTop + TOP_BAR_TOP_INSET, start = TIMER_CARD_HORIZONTAL_PADDING, end = TIMER_CARD_HORIZONTAL_PADDING, bottom = 24.dp),
                     ) {
                         // 画面上部の帯: アプリ名と三点メニュー
                         Box(modifier = Modifier.padding(horizontal = 8.dp)) {
@@ -136,7 +138,7 @@ fun TimerScreen(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(TOP_BAR_CONTENT_GAP))
 
                         // 見出し「タイマー」 (28sp、太さ300)
                         Box(modifier = Modifier.padding(horizontal = 8.dp)) {

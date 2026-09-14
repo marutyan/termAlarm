@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.marutyan.termalarm.ui.common.TOP_BAR_TOP_INSET
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
 import com.marutyan.termalarm.ui.theme.pressScaleEffect
@@ -195,7 +196,8 @@ fun TimerAddScreen(
                 onClick = onClose,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = statusBarTop + 74.dp, end = 20.dp)
+                    // 他の画面の三点と同じ高さに揃える
+                    .padding(top = statusBarTop + TOP_BAR_TOP_INSET, end = 20.dp)
                     .size(CLOSE_BUTTON_SIZE),
             ) {
                 Icon(
