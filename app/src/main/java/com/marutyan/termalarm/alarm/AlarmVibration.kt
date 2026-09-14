@@ -1,6 +1,7 @@
 package com.marutyan.termalarm.alarm
 
 import android.content.Context
+import android.media.AudioAttributes
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -17,6 +18,16 @@ object AlarmVibration {
     private val PATTERN = longArrayOf(0, 1000, 1000)
 
     /**
+     * 振動の用途。音と同じくアラームとして扱わせる。
+     * 用途を渡さないと通知の振動として扱われ、マナーモードや通知を切る設定で振動しなくなる。
+     * 音はUSAGE_ALARMで鳴らしているので、振動だけ別の扱いになっていると食い違う。
+     */
+    private val ALARM_ATTRIBUTES: AudioAttributes = AudioAttributes.Builder()
+        .setUsage(AudioAttributes.USAGE_ALARM)
+        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+        .build()
+
+    /**
      * 振動を始めて、止めるためのVibratorを返す。
      * 端末の振動装置は版によって取り方が違うため、その差もここで吸収する。
      */
@@ -29,7 +40,7 @@ object AlarmVibration {
             context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         }
         // 第2引数の1は「1番目の要素から繰り返す」の意味。0番目は待ち時間なので飛ばす
-        vibrator.vibrate(VibrationEffect.createWaveform(PATTERN, 1))
+        vibrator.vibrate(VibrationEffect.createWaveform(PATTERN, 1), ALARM_ATTRIBUTES)
         return vibrator
     }
 }

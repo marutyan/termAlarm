@@ -10,7 +10,11 @@ import com.marutyan.termalarm.domain.StopwatchRunState
 import com.marutyan.termalarm.domain.rebaseStopwatchAfterReboot
 
 /**
- * 端末再起動後にストップウォッチを復元する（docs/SPEC.md「端末を再起動しても計測を続ける」）。
+ * 端末再起動後・アプリ更新後にストップウォッチを復元する
+ * （docs/SPEC.md「端末を再起動しても計測を続ける」）。
+ *
+ * アプリを入れ替えるとサービスも通知も消えるため、計測中でも経過が見えなくなる。
+ * 再起動と同じ手順で立て直す。
  * alarm/AlarmRescheduleReceiver.ktは書き込み範囲外のため既存のBOOT_COMPLETED受信口には相乗りせず、
  * stopwatch専用の別Receiverとして新設した(timer機能のTimerRescheduleReceiverと同じ方針)。
  * RUNNING中だった場合だけSystemClock.elapsedRealtime()を現在値へ張り直し
@@ -19,8 +23,10 @@ import com.marutyan.termalarm.domain.rebaseStopwatchAfterReboot
 class StopwatchRescheduleReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         // 外部アプリから偽のIntentが送られた場合に意図しない復元処理が走るのを防ぐため、
-        // AndroidManifest.xmlのintent-filterで定義された想定通りのaction (BOOT_COMPLETED) であるか検証する。
-        if (intent.action != Intent.ACTION_BOOT_COMPLETED) {
+        // AndroidManifest.xmlのintent-filterで定義した想定どおりのactionかを検証する。
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED &&
+            intent.action != Intent.ACTION_MY_PACKAGE_REPLACED
+        ) {
             return
         }
 

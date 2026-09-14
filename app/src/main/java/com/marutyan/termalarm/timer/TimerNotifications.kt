@@ -71,6 +71,23 @@ object TimerNotifications {
     }
 
     /**
+     * 中身が決まる前に、フォアグラウンドとして立つためだけに出す通知。
+     *
+     * startForegroundService()からは数秒以内にstartForeground()を呼ぶ決まりがある。
+     * 中身を作るにはDBを読む必要があり、端末や初回の起動では間に合わないことがある。
+     * まずこれで立ってから、読み終えた内容で出し直す。
+     */
+    fun buildStarting(context: Context): Notification =
+        Notification.Builder(context, ensureChannel(context, isFiring = false))
+            .setSmallIcon(R.drawable.ic_stat_timer)
+            .setContentTitle(context.getString(R.string.timer_notification_title))
+            .setOngoing(true)
+            .setCategory(Notification.CATEGORY_STOPWATCH)
+            .setLocalOnly(true)
+            .setShowWhen(false)
+            .build()
+
+    /**
      * 通知そのものを作る。サービスがstartForegroundへ渡すためにも使う。
      * 渡す一覧は[activeTimers]で絞ったものにすること。
      */
