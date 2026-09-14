@@ -27,8 +27,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * タイマーの数字が進んでいる間だけ生きるフォアグラウンドサービス。
@@ -51,6 +54,9 @@ class TimerForegroundService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var tickJob: Job? = null
 
+    // 見回りは「秒が変わったとき」と「状態が保存されたとき」の2つから呼ばれる。同時に走らせない
+    private val tickMutex = Mutex()
+
     // 鳴動中のタイマーidごとの再生。複数同時に鳴る場合があるためidで持つ
     private val ringingPlayers = mutableMapOf<Long, MediaPlayer>()
     private var vibrator: Vibrator? = null
@@ -62,15 +68,21 @@ class TimerForegroundService : Service() {
         super.onCreate()
         tickJob = scope.launch {
             settings = Repositories.settings(this@TimerForegroundService).observe().first()
+            // 保存された内容が変わったら、秒を待たずに見回る。
+            // 「停止」を押したときに通知を消すのはこの経路。次の秒まで待つと、
+            // 止めたはずの通知が1秒近く残って見える
+            launch { repository().observeAll().collect { runTick() } }
             while (isActive) {
-                val timers = tickOnce() ?: break
-                // 次に数字が変わる瞬間まで待つ。少し過ぎてから起きないと、
+                val timers = runTick() ?: break
+                // 次に数字が変わる瞬間まで待つ。通知は少し先の時刻で作るので、
+                // 待ち時間も同じ先の時刻で数える。少し過ぎてから起きないと、
                 // 同じ秒のまま起きてしまい1秒飛ばすことがある
+                val lead = TimerNotifications.DISPLAY_LEAD_MILLIS
                 delay(
                     millisUntilNextSecondBoundary(
                         timers,
-                        SystemClock.elapsedRealtime(),
-                        System.currentTimeMillis(),
+                        SystemClock.elapsedRealtime() + lead,
+                        System.currentTimeMillis() + lead,
                     ) + TICK_OVERSHOOT_MILLIS,
                 )
             }
@@ -80,9 +92,12 @@ class TimerForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // startForegroundService()からは数秒以内にstartForeground()を呼ぶ必要がある。
         // 見回りの1周目を待つと間に合わないことがあるため、ここでも一度出す
-        scope.launch { tickOnce() }
+        scope.launch { runTick() }
         return START_NOT_STICKY
     }
+
+    /** 見回りを1つずつ順番に行う。秒の更新と保存の通知が重なっても、二重に走らせない */
+    private suspend fun runTick(): List<TimerState>? = tickMutex.withLock { tickOnce() }
 
     /**
      * 見回りの1周。通知を出し直し、鳴らすものを鳴らす。
@@ -97,15 +112,16 @@ class TimerForegroundService : Service() {
         }
         if (!isTicking) {
             stopRingingAll()
-            // 通知をサービスから切り離してから出し直す。途中で一時停止しているタイマーがあれば
-            // そのまま残り、停止して設定した長さへ戻っただけなら消える
-            stopForeground(STOP_FOREGROUND_DETACH)
+            // フォアグラウンドの通知は、サービスが手放すまで消せない。
+            // 切り離すだけでは消えなかったので、いったん確実に消してから、
+            // 残すべきもの（途中で一時停止しているタイマー）があれば出し直す
+            stopForeground(STOP_FOREGROUND_REMOVE)
             TimerNotifications.refresh(this, timers)
             stopSelf()
             return null
         }
         syncRinging(timers)
-        promote(TimerNotifications.activeTimers(timers))
+        promote(TimerNotifications.activeTimers(timers).ifEmpty { timers })
         return timers
     }
 

@@ -38,6 +38,15 @@ import com.marutyan.termalarm.ui.navigation.EXTRA_DEEPLINK_TAB
 object TimerNotifications {
 
     /**
+     * 通知の文字を、この分だけ先の時刻で作る(ミリ秒)。
+     *
+     * 通知を出してからステータスバーや通知欄へ届くまでに少し時間がかかる。
+     * 秒が変わるちょうどに出すと、画面の数字が先に変わって一瞬ずれて見える。
+     * 変わる少し前に、変わった後の値で出しておくと、同じ瞬間に切り替わって見える。
+     */
+    const val DISPLAY_LEAD_MILLIS = 60L
+
+    /**
      * いまのタイマー一覧に合わせて通知を出し直す。動いているものが1件も無ければ消す。
      * 動作中・一時停止中・鳴動中のどれでも同じ通知にまとめる（純正も1つにまとめている）。
      */
@@ -66,8 +75,9 @@ object TimerNotifications {
      * 渡す一覧は[activeTimers]で絞ったものにすること。
      */
     fun build(context: Context, timers: List<TimerState>): Notification {
-        val nowElapsed = SystemClock.elapsedRealtime()
-        val nowWall = System.currentTimeMillis()
+        // 届くまでの遅れを見越して、少し先の時刻で文字を作る（[DISPLAY_LEAD_MILLIS]）
+        val nowElapsed = SystemClock.elapsedRealtime() + DISPLAY_LEAD_MILLIS
+        val nowWall = System.currentTimeMillis() + DISPLAY_LEAD_MILLIS
         // 鳴っているものを最優先。それ以外は残り時間が短い順に見て、いちばん早く鳴るものを主役にする
         val main = timers.firstOrNull { it.runState == TimerRunState.FINISHED }
             ?: timers.filter { it.runState == TimerRunState.RUNNING }
