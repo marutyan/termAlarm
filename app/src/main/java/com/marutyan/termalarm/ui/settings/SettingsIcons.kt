@@ -30,6 +30,38 @@ private fun buildSettingsIcon(
     strokeLineJoin = StrokeJoin.Round,
 ).build()
 
+/**
+ * 線画に塗りつぶしのパスを重ねたImageVectorを構築する内部関数。
+ * パレットの絵の具の点のように、線だけでは表せない要素を持つアイコンのために用いる。
+ */
+private fun buildSettingsIconWithDots(
+    name: String,
+    strokePath: String,
+    dotPaths: List<String>,
+    strokeWidth: Float = 1.6f,
+): ImageVector {
+    val builder = ImageVector.Builder(
+        name = name,
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f,
+    ).addPath(
+        pathData = PathParser().parsePathString(strokePath).toNodes(),
+        stroke = SolidColor(Color.White),
+        strokeLineWidth = strokeWidth,
+        strokeLineCap = StrokeCap.Round,
+        strokeLineJoin = StrokeJoin.Round,
+    )
+    dotPaths.forEach { dot ->
+        builder.addPath(
+            pathData = PathParser().parsePathString(dot).toNodes(),
+            fill = SolidColor(Color.White),
+        )
+    }
+    return builder.build()
+}
+
 /** ベル（音）の線画アイコン。 */
 val SettingsSoundIcon: ImageVector by lazy {
     buildSettingsIcon(
@@ -80,9 +112,20 @@ val SettingsMiniGamesIcon: ImageVector by lazy {
 
 /** 配色の線画アイコン。 */
 val SettingsThemeIcon: ImageVector by lazy {
-    buildSettingsIcon(
+    buildSettingsIconWithDots(
         name = "SettingsTheme",
-        pathString = "M 12,3 a 9,9 0 1,0 0,18 a 9,9 0 1,0 0,-18 z M 12,3 a 9,9 0 0,0 0,18 z",
+        // 絵の具のパレット。親指の穴の側でくびれる輪郭を、円弧をつないで描く
+        strokePath = "M 12,3 C 6.8,3 3,6.9 3,12 C 3,16.7 6.6,20.5 11.1,20.95 " +
+            "C 12.3,21.05 13.1,20.2 13.1,19.2 C 13.1,18.7 12.9,18.3 12.6,18 " +
+            "C 12.3,17.7 12.1,17.3 12.1,16.8 C 12.1,15.8 12.9,15 13.9,15 " +
+            "H 15.6 C 18.6,15 21,12.6 21,9.6 C 21,5.9 17,3 12,3 z",
+        // 絵の具の点。輪郭の内側へ4つ置く
+        dotPaths = listOf(
+            "M 7.6,11.1 m -1.15,0 a 1.15,1.15 0 1,0 2.3,0 a 1.15,1.15 0 1,0 -2.3,0 z",
+            "M 10.1,7.6 m -1.15,0 a 1.15,1.15 0 1,0 2.3,0 a 1.15,1.15 0 1,0 -2.3,0 z",
+            "M 14.0,7.6 m -1.15,0 a 1.15,1.15 0 1,0 2.3,0 a 1.15,1.15 0 1,0 -2.3,0 z",
+            "M 16.9,10.8 m -1.15,0 a 1.15,1.15 0 1,0 2.3,0 a 1.15,1.15 0 1,0 -2.3,0 z",
+        ),
     )
 }
 

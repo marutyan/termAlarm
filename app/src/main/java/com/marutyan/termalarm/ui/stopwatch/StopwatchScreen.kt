@@ -48,6 +48,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.common.TOP_BAR_CONTENT_GAP
+import com.marutyan.termalarm.ui.common.TOP_BAR_TOP_INSET
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.StopwatchLap
 import com.marutyan.termalarm.domain.StopwatchRunState
@@ -91,7 +93,7 @@ fun StopwatchScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(top = statusBarTop + 74.dp, start = 20.dp, end = 20.dp, bottom = 24.dp),
+            .padding(top = statusBarTop + TOP_BAR_TOP_INSET, start = 20.dp, end = 20.dp, bottom = 24.dp),
     ) {
         // 画面上部の帯: アプリ名と三点メニュー
         TermAlarmTopBar(
@@ -100,7 +102,7 @@ fun StopwatchScreen(
             onOpenAbout = onOpenAbout,
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(TOP_BAR_CONTENT_GAP))
 
         // 1. 見出し「ストップウォッチ」 (28sp、太さ300)
         Text(

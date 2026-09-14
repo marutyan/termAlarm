@@ -12,13 +12,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
@@ -67,11 +71,38 @@ import com.marutyan.termalarm.ui.theme.customColors
 import com.marutyan.termalarm.ui.theme.pressScaleEffect
 import com.marutyan.termalarm.ui.theme.timerColorAnimationSpec
 
-/** 円形リングの直径(dp)。設計図 design/Timer.dc.html のサイズを再現するために用いる。 */
-val TIMER_RING_SIZE = 176.dp
+/** 円形リングの直径(dp)。純正時計アプリの実測値304.7dpに基づく。 */
+val TIMER_RING_SIZE = 304.7.dp
 
-/** 円形リングの線の太さ(dp)。設計図の視認性を確保するために用いる。 */
-val TIMER_RING_STROKE_WIDTH = 7.dp
+/** 円形リングの線の太さ(dp)。純正時計アプリの実測値11.2dpに基づく。 */
+val TIMER_RING_STROKE_WIDTH = 11.2.dp
+
+/** カードの角丸の半径(dp)。純正時計アプリの実測値38dpに基づく。 */
+val TIMER_CARD_CORNER_RADIUS = 38.dp
+
+/** カード下部の「＋1:00」ボタンの幅(dp)。純正時計アプリの実測値176.2dpに基づく。 */
+val TIMER_EXTEND_BUTTON_WIDTH = 176.2.dp
+
+/** カード下部のボタンの高さ(dp)。純正時計アプリの実測値91.2dpに基づく。 */
+val TIMER_BUTTON_ROW_HEIGHT = 91.2.dp
+
+/** カード下部のリセットボタンの直径(dp)。純正時計アプリの実測値85.4dpに基づく。 */
+val TIMER_RESET_BUTTON_SIZE = 85.4.dp
+
+/** カード下部のボタン間の間隔(dp)。純正時計アプリの実測値11.2dpに基づく。 */
+val TIMER_BUTTON_SPACING = 11.2.dp
+
+/** カード下部の余白(dp)。純正時計アプリの実測値26.1dpに基づく。 */
+val TIMER_CARD_BOTTOM_PADDING = 26.1.dp
+
+/** カード右上の閉じる「×」アイコンサイズ(dp)。純正時計アプリの実測値24dpに基づく。 */
+val TIMER_CARD_CLOSE_ICON_SIZE = 24.dp
+
+/** カード右上の閉じる「×」ボタンのタップ領域サイズ(dp)。アクセシビリティ基準を満たすため48dpとする。 */
+val TIMER_CARD_CLOSE_BUTTON_SIZE = 48.dp
+
+/** カード中央の一時停止・再開の印のサイズ(dp)。純正時計アプリの実測値27dpに基づく。 */
+val TIMER_ACTION_ICON_SIZE = 27.dp
 
 /**
  * 端末の「アニメーションを減らす」または「アニメーションの無効化」が有効になっているかを判定する。
@@ -179,10 +210,10 @@ fun TimerCard(
         label = "TimerContainerColor",
     )
 
-    // 円形リングの弧の色。一時停止時は沈んだ色 scalePast へ移り変わる
+    // 円形リングの弧の色。一時停止時は沈んだ色 subtleText へ移り変わる
     val targetArcColor = when (timer.runState) {
         TimerRunState.RUNNING -> MaterialTheme.colorScheme.primary
-        TimerRunState.PAUSED -> MaterialTheme.customColors.scalePast
+        TimerRunState.PAUSED -> MaterialTheme.customColors.subtleText
         TimerRunState.FINISHED -> MaterialTheme.colorScheme.primary
     }
     val arcColor by animateColorAsState(
@@ -205,19 +236,20 @@ fun TimerCard(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(TIMER_CARD_CORNER_RADIUS),
         colors = CardDefaults.cardColors(containerColor = containerColor),
     ) {
         Column(
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 35.5.dp, start = 16.dp, end = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // 1. 上の行: 左にラベル(12.5sp)、右に閉じる「×」(18dp)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+            // 1. 上の行: 左にラベル(16sp、薄い色)、右に閉じる「×」(24dp、タップ領域48dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(24.dp),
             ) {
                 val formattedDuration = formatTimerDuration(timer.totalMillis)
                 val labelText = if (timer.label.isNotBlank() && timer.label != formatDuration(timer.totalMillis)) {
@@ -228,32 +260,39 @@ fun TimerCard(
                 Text(
                     text = labelText,
                     style = TextStyle(
-                        fontSize = 12.5.sp,
-                        lineHeight = 16.sp,
+                        fontSize = 16.sp,
+                        lineHeight = 22.sp,
                         color = MaterialTheme.customColors.subtleText,
                     ),
-                    modifier = Modifier.weight(1f, fill = false),
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(end = TIMER_CARD_CLOSE_BUTTON_SIZE),
                 )
 
                 IconButton(
                     onClick = onDelete,
-                    modifier = Modifier.size(44.dp),
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .size(TIMER_CARD_CLOSE_BUTTON_SIZE),
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Close,
                         contentDescription = stringResource(if (isFinished) R.string.timer_stop else R.string.timer_delete),
                         tint = MaterialTheme.customColors.subtleText,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(TIMER_CARD_CLOSE_ICON_SIZE),
                     )
                 }
             }
 
-            // 2. 円形のリング(直径176dp、線幅7dp) と 3. 中央の残り時間・印
+            // ラベル行からリング上端(77.8dp)までの間隔
+            Spacer(modifier = Modifier.height(18.3.dp))
+
+            // 2. 円形のリング(直径304.7dp、線幅11.2dp) と 3. 中央の残り時間・印
             Box(
                 modifier = Modifier.size(TIMER_RING_SIZE),
                 contentAlignment = Alignment.Center,
             ) {
-                val scaleUpcoming = MaterialTheme.customColors.scaleUpcoming
+                val outlineColor = MaterialTheme.colorScheme.outline
                 val primaryColor = MaterialTheme.colorScheme.primary
 
                 Canvas(modifier = Modifier.fillMaxSize()) {
@@ -270,9 +309,9 @@ fun TimerCard(
                             center = center,
                         )
                     } else {
-                        // 下地の円: 「まだ鳴っていない目盛」の色
+                        // 下地の円: 地とはっきり見分けがつく輪郭の色(outline)
                         drawCircle(
-                            color = scaleUpcoming,
+                            color = outlineColor,
                             radius = radius,
                             center = center,
                             style = Stroke(width = strokePx),
@@ -295,7 +334,7 @@ fun TimerCard(
                     }
                 }
 
-                // リング中央: 残り時間 (40sp, 太さ200, 等幅数字) と 一時停止/再開/停止の印 (20dp)
+                // リング中央: 残り時間 (54sp, 太さ200, 等幅数字, 28spまで自動縮小) と 一時停止/再開/停止の印 (27dp)
                 val actionDesc = stringResource(
                     when {
                         isFinished -> R.string.timer_stop
@@ -314,12 +353,12 @@ fun TimerCard(
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.8.dp),
                     modifier = Modifier
-                        .sizeIn(minWidth = 100.dp, minHeight = 80.dp)
+                        .sizeIn(minWidth = 135.dp, minHeight = 108.dp)
                         .clickable(
                             interactionSource = centerInteraction,
-                            indication = ripple(bounded = false, radius = 56.dp),
+                            indication = ripple(bounded = false, radius = 75.dp),
                             onClick = toggleAction,
                         )
                         .semantics { contentDescription = actionDesc },
@@ -335,11 +374,18 @@ fun TimerCard(
                         style = TextStyle(
                             fontFamily = IbmPlexMono,
                             fontWeight = FontWeight.W200,
-                            fontSize = 40.sp,
-                            lineHeight = 40.sp,
+                            fontSize = 54.sp,
+                            lineHeight = 54.sp,
                             letterSpacing = (-0.03).em,
                             fontFeatureSettings = "tnum",
                         ),
+                        autoSize = TextAutoSize.StepBased(
+                            minFontSize = 28.sp,
+                            maxFontSize = 54.sp,
+                            stepSize = 1.sp,
+                        ),
+                        maxLines = 1,
+                        softWrap = false,
                         color = textColor,
                     )
 
@@ -350,14 +396,18 @@ fun TimerCard(
                 }
             }
 
-            // 4. 下に2つのボタン。「＋1:00」（横に広がる）と、リセット（56dp幅）。高さ48dp、角丸24dp
+            // リングからボタン行(上端417.1dp)までの間隔
+            Spacer(modifier = Modifier.height(34.6.dp))
+
+            // 4. 下に2つのボタン。「＋1:00」（幅176.2dp、高さ91.2dp、角丸45.6dp）と、リセット（直径85.4dpの円）。間隔11.2dp、中央揃え
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    .height(TIMER_BUTTON_ROW_HEIGHT),
+                horizontalArrangement = Arrangement.spacedBy(TIMER_BUTTON_SPACING, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                // ボタン1: ＋1:00 (横に広がる)
+                // ボタン1: ＋1:00 (幅176.2dp、高さ91.2dp、角丸45.6dp)
                 val extendInteraction = remember { MutableInteractionSource() }
                 val extendTextColor = if (isRunning || isFinished) {
                     MaterialTheme.colorScheme.onSurface
@@ -373,11 +423,11 @@ fun TimerCard(
                 Surface(
                     onClick = onExtend,
                     interactionSource = extendInteraction,
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.customColors.scaleUpcoming,
+                    shape = RoundedCornerShape(45.6.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
+                        .width(TIMER_EXTEND_BUTTON_WIDTH)
+                        .height(TIMER_BUTTON_ROW_HEIGHT)
                         .pressScaleEffect(extendInteraction),
                 ) {
                     Box(
@@ -388,14 +438,14 @@ fun TimerCard(
                             text = stringResource(R.string.timer_extend_one_minute_button),
                             style = TextStyle(
                                 fontFamily = IbmPlexMono,
-                                fontSize = 14.5.sp,
+                                fontSize = 19.5.sp,
                             ),
                             color = animatedExtendTextColor,
                         )
                     }
                 }
 
-                // ボタン2: リセット (56dp幅)。完了時は出さない
+                // ボタン2: リセット (直径85.4dpの円)。完了時は出さない
                 if (!isFinished) {
                     val resetInteraction = remember { MutableInteractionSource() }
                     val resetDesc = stringResource(R.string.timer_reset)
@@ -413,11 +463,10 @@ fun TimerCard(
                     Surface(
                         onClick = onReset,
                         interactionSource = resetInteraction,
-                        shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.customColors.scaleUpcoming,
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         modifier = Modifier
-                            .width(56.dp)
-                            .height(48.dp)
+                            .size(TIMER_RESET_BUTTON_SIZE)
                             .semantics { contentDescription = resetDesc }
                             .pressScaleEffect(resetInteraction),
                     ) {
@@ -425,18 +474,22 @@ fun TimerCard(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            TimerResetIcon(color = animatedResetIconColor)
+                            TimerResetIcon(color = animatedResetIconColor, modifier = Modifier.size(32.4.dp))
                         }
                     }
                 }
             }
+
+            // カードの下の余白（実測値26.1dp）
+            Spacer(modifier = Modifier.height(TIMER_CARD_BOTTOM_PADDING))
         }
     }
 }
 
 /**
- * 一時停止・再開・停止の状態に応じた20dpの印を描画するComposable。
+ * 一時停止・再開・停止の状態に応じた27dpの印を描画するComposable。
  * 動作中は一時停止(縦2本線)、一時停止中は再開(三角)、完了時は停止(四角)を表示する。
+ * 純正時計アプリの実測値27dpに基づく。
  */
 @Composable
 fun TimerActionIcon(
@@ -444,11 +497,11 @@ fun TimerActionIcon(
     color: Color,
     modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier.size(20.dp)) {
+    Canvas(modifier = modifier.size(TIMER_ACTION_ICON_SIZE)) {
         when (runState) {
             TimerRunState.RUNNING -> {
                 // 一時停止の印: 縦2本線
-                val strokeWidth = 2.4.dp.toPx()
+                val strokeWidth = 3.24.dp.toPx()
                 val x1 = size.width * (9f / 24f)
                 val x2 = size.width * (15f / 24f)
                 val y1 = size.height * (5f / 24f)
@@ -480,7 +533,7 @@ fun TimerActionIcon(
                     path = path,
                     color = color,
                     style = Stroke(
-                        width = 2.dp.toPx(),
+                        width = 2.7.dp.toPx(),
                         cap = StrokeCap.Round,
                         join = StrokeJoin.Round,
                     ),
@@ -495,7 +548,7 @@ fun TimerActionIcon(
                     color = color,
                     topLeft = Offset(left, top),
                     size = Size(squareSize, squareSize),
-                    cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx()),
+                    cornerRadius = CornerRadius(2.7.dp.toPx(), 2.7.dp.toPx()),
                 )
             }
         }
@@ -503,17 +556,18 @@ fun TimerActionIcon(
 }
 
 /**
- * リセット操作を表す19dpの円形矢印アイコンを描画するComposable。
+ * リセット操作を表す円形矢印アイコンを描画するComposable。
  * 経過時間を最初の設定時間へ巻き戻す手応えを伝えるために用いる。
+ * 純正時計アプリの実測値に基づくリセットボタン内に適した大きさで描画する。
  */
 @Composable
 fun TimerResetIcon(
     color: Color,
     modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier.size(19.dp)) {
+    Canvas(modifier = modifier.size(26.dp)) {
         val scale = size.width / 24f
-        val strokeWidth = 1.8.dp.toPx()
+        val strokeWidth = 2.4.dp.toPx() * scale
 
         // 円弧: 中心(12, 11)、半径9の円弧を時計回りに描画
         val arcRadius = 9f * scale

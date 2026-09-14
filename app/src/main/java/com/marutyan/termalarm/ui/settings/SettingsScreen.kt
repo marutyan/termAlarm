@@ -61,6 +61,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.common.TOP_BAR_CONTENT_GAP
+import com.marutyan.termalarm.ui.common.TOP_BAR_TOP_INSET
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.AppSettings
 import com.marutyan.termalarm.domain.AppTheme
@@ -79,7 +81,6 @@ private enum class SettingsPickerType {
     FADE_IN,
     SILENCE_AFTER,
     WAKE_CHECK,
-    THEME,
 }
 
 /**
@@ -122,7 +123,7 @@ fun SettingsScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(
-                top = statusBarTop + 74.dp,
+                top = statusBarTop + TOP_BAR_TOP_INSET,
                 start = 20.dp,
                 end = 20.dp,
                 bottom = 24.dp,
@@ -240,7 +241,6 @@ fun SettingsScreen(
             SettingsThemeRow(
                 selectedTheme = settings.theme,
                 onSelectTheme = { viewModel.setTheme(it) },
-                onClickRow = { currentPicker = SettingsPickerType.THEME },
             )
         }
 
@@ -317,28 +317,6 @@ fun SettingsScreen(
                     selectedValue = settings.wakeCheckMinutes,
                     onSelect = {
                         viewModel.setWakeCheckMinutes(it)
-                        currentPicker = null
-                    },
-                    onDismiss = { currentPicker = null },
-                )
-            }
-            SettingsPickerType.THEME -> {
-                val isDynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                val themeOptions = buildList {
-                    add(PickerOption(AppTheme.NAVY, stringResource(R.string.settings_theme_navy)))
-                    add(PickerOption(AppTheme.LIGHT, stringResource(R.string.settings_theme_light)))
-                    add(PickerOption(AppTheme.BLACK, stringResource(R.string.settings_theme_black)))
-                    if (isDynamicAvailable) {
-                        add(PickerOption(AppTheme.DYNAMIC, stringResource(R.string.settings_theme_dynamic)))
-                    }
-                }
-                SettingsPickerPopup(
-                    title = stringResource(R.string.settings_theme_item_title),
-                    icon = SettingsThemeIcon,
-                    options = themeOptions,
-                    selectedValue = settings.theme,
-                    onSelect = {
-                        viewModel.setTheme(it)
                         currentPicker = null
                     },
                     onDismiss = { currentPicker = null },
@@ -550,22 +528,17 @@ private fun SettingsSwitchRow(
 private fun SettingsThemeRow(
     selectedTheme: AppTheme,
     onSelectTheme: (AppTheme) -> Unit,
-    onClickRow: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val subtleTextColor = MaterialTheme.customColors.subtleText
     val onSurfaceColor = MaterialTheme.colorScheme.onSurface
     val isDynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
+    // この行だけは行全体を押させない。丸をその場で切り替えるため、押し先が二つになると紛らわしい
     Row(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 58.dp)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = ripple(),
-                onClick = onClickRow,
-            )
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -610,14 +583,18 @@ private fun SettingsThemeRow(
                 )
             }
         }
-
-        ChevronRightIcon()
     }
 }
 
 /**
- * 単色配色テーマのプレビュー円。
- * 22dpの円形で、選択時は主役色2dpの枠線で強調する。
+ * 配色を選ぶ円の大きさ。
+ * 行の上でそのまま押して切り替えるため、指で狙える大きさにする。
+ */
+private val THEME_CIRCLE_SIZE = 28.dp
+
+/**
+ * 単色配色テーマの円。押すとその配色へ切り替わる。
+ * 選択中は主役色2dpの枠線で示す。
  */
 @Composable
 private fun ThemeCircle(
@@ -631,7 +608,7 @@ private fun ThemeCircle(
 
     Box(
         modifier = modifier
-            .size(22.dp)
+            .size(THEME_CIRCLE_SIZE)
             .background(color, CircleShape)
             .border(
                 width = if (isSelected) 2.dp else 1.dp,

@@ -105,6 +105,30 @@ class TimerScreenTest {
         assertEquals(TimerRunState.RUNNING, saved.runState)
     }
 
+    // すぐ選べる長さのボタン(例: 1分)を押すと、数字を入れて開始を押さなくても即座にタイマーが始まることを保証する
+    @Test
+    fun すぐ選べる長さのボタンを押すと即座にタイマーが始まる() {
+        setScreen()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).performClick()
+        composeTestRule.waitUntilAtLeastOneExists(hasText("1分"), 5_000)
+        composeTestRule.onNodeWithText("1分").performClick()
+
+        composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().size == 1 } }
+        val saved = runBlocking { repository.observeAll().first().single() }
+        assertEquals(60_000L, saved.totalMillis) // 1分 = 60,000ms
+        assertEquals(TimerRunState.RUNNING, saved.runState)
+    }
+
+    // 追加画面で右上の閉じるボタン(×)を押すと入力がキャンセルされて一覧に戻ることを保証する
+    @Test
+    fun 閉じるボタンを押すと追加画面が閉じる() {
+        setScreen()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).performClick()
+        composeTestRule.waitUntilAtLeastOneExists(hasContentDescription(string(R.string.timer_cancel)), 5_000)
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_cancel)).performClick()
+        composeTestRule.waitUntilAtLeastOneExists(hasContentDescription(string(R.string.timer_add)), 5_000)
+    }
+
     // 2件開始すると両方が一覧に出て、それぞれ独立した状態(合計時間・実行状態)を持つことを保証する
     @Test
     fun 複数開始すると両方一覧に出てそれぞれ独立している() {

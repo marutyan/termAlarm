@@ -42,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.marutyan.termalarm.ui.common.TOP_BAR_CONTENT_GAP
+import com.marutyan.termalarm.ui.common.TOP_BAR_TOP_INSET
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.ui.common.TermAlarmTopBar
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
@@ -70,7 +72,7 @@ fun RecordsScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(
-                top = statusBarTop + 74.dp,
+                top = statusBarTop + TOP_BAR_TOP_INSET,
                 start = 20.dp,
                 end = 20.dp,
                 bottom = 24.dp,
@@ -83,6 +85,8 @@ fun RecordsScreen(
             onOpenPrivacyPolicy = onOpenPrivacyPolicy,
             onOpenAbout = onOpenAbout,
         )
+
+        Spacer(modifier = Modifier.height(TOP_BAR_CONTENT_GAP))
 
         // 1. 見出し「記録」
         Text(

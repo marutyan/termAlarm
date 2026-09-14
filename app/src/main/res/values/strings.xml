@@ -165,9 +165,13 @@
     <string name="timer_start">開始</string>
     <!-- タイマー追加画面: テンキー入力 -->
     <string name="timer_time_description">%1$d時間%2$d分%3$d秒</string>
-    <string name="timer_unit_hours">h</string>
-    <string name="timer_unit_minutes">m</string>
-    <string name="timer_unit_seconds">s</string>
+    <string name="timer_unit_hours">時間</string>
+    <string name="timer_unit_minutes">分</string>
+    <string name="timer_unit_seconds">秒</string>
+    <string name="timer_quick_1m">1分</string>
+    <string name="timer_quick_5m">5分</string>
+    <string name="timer_quick_10m">10分</string>
+    <string name="timer_quick_15m">15分</string>
     <string name="timer_key_1">1</string>
     <string name="timer_key_2">2</string>
     <string name="timer_key_3">3</string>

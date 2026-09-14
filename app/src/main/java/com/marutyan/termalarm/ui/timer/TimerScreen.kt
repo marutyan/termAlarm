@@ -71,6 +71,9 @@ val TIMER_ADD_BUTTON_CORNER_RADIUS = 20.dp
 /** 追加ボタン内部のプラスアイコンのサイズ(dp)。視認性を保つために定義する。 */
 val TIMER_ADD_ICON_SIZE = 26.dp
 
+/** カード一覧の左右の余白(dp)。純正時計アプリの実測値16.2dpに基づく。 */
+val TIMER_CARD_HORIZONTAL_PADDING = 16.2.dp
+
 /**
  * タイマータブの画面。design/Timer.dc.html を再現する。
  * 見出し「タイマー」(28sp、太さ300)、動作中タイマーの円形リングカード一覧(角丸20dp)、
@@ -122,29 +125,33 @@ fun TimerScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(top = statusBarTop + 74.dp, start = 20.dp, end = 20.dp, bottom = 24.dp),
+                            .padding(top = statusBarTop + 74.dp, start = TIMER_CARD_HORIZONTAL_PADDING, end = TIMER_CARD_HORIZONTAL_PADDING, bottom = 24.dp),
                     ) {
                         // 画面上部の帯: アプリ名と三点メニュー
-                        TermAlarmTopBar(
-                            onOpenSettings = onOpenSettings,
-                            onOpenPrivacyPolicy = onOpenPrivacyPolicy,
-                            onOpenAbout = onOpenAbout,
-                        )
+                        Box(modifier = Modifier.padding(horizontal = 8.dp)) {
+                            TermAlarmTopBar(
+                                onOpenSettings = onOpenSettings,
+                                onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                                onOpenAbout = onOpenAbout,
+                            )
+                        }
 
                         Spacer(modifier = Modifier.height(14.dp))
 
                         // 見出し「タイマー」 (28sp、太さ300)
-                        Text(
-                            text = stringResource(R.string.tab_timer),
-                            style = TextStyle(
-                                fontFamily = FontFamily.Default,
-                                fontWeight = FontWeight.W300,
-                                fontSize = 28.sp,
-                                lineHeight = 36.sp,
-                                letterSpacing = (-0.01).em,
-                            ),
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
+                        Box(modifier = Modifier.padding(horizontal = 8.dp)) {
+                            Text(
+                                text = stringResource(R.string.tab_timer),
+                                style = TextStyle(
+                                    fontFamily = FontFamily.Default,
+                                    fontWeight = FontWeight.W300,
+                                    fontSize = 28.sp,
+                                    lineHeight = 36.sp,
+                                    letterSpacing = (-0.01).em,
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
 
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -153,7 +160,8 @@ fun TimerScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .weight(1f),
+                                    .weight(1f)
+                                    .padding(horizontal = 8.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(

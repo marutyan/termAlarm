@@ -102,3 +102,15 @@ private val APP_ICON_SIZE = 26.dp
  * 輪が枠の8割ほどを占めるところまで広げて中央を切り取る。
  */
 private const val APP_ICON_FOREGROUND_SCALE = 1.64f
+
+/**
+ * 上の帯をステータスバーの下端からどれだけ下げるか。
+ * 5つの主な画面が同じ位置に帯を置くため、値をここ1か所で持つ。
+ */
+val TOP_BAR_TOP_INSET = 62.dp
+
+/**
+ * 上の帯と、その下に続く中身との間隔。
+ * 帯と中身がくっついて見えないよう、行の高さとは別にここで空ける。
+ */
+val TOP_BAR_CONTENT_GAP = 22.dp
