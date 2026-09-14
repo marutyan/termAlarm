@@ -23,6 +23,7 @@ class TimerActionReceiver : BroadcastReceiver() {
                 TimerNotifications.ACTION_STOP -> TimerActions.stop(appContext, id)
                 TimerNotifications.ACTION_EXTEND -> TimerActions.extendOneMinute(appContext, id)
                 TimerNotifications.ACTION_PAUSE -> TimerActions.pause(appContext, id)
+                TimerNotifications.ACTION_RESUME -> TimerActions.resume(appContext, id)
             }
         }
     }

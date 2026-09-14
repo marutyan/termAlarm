@@ -86,10 +86,21 @@ object TimerNotifications {
         // 本文は書かない。MetricStyleが各タイマーの見出しを持つため、同じ言葉が2行続いてしまう
         builder.setContentTitle(main.label.ifBlank { context.getString(R.string.timer_notification_title) })
         applyRemainingTime(context, builder, timers, main, nowElapsed, nowWall)
-        builder.addAction(action(context, R.string.timer_stop, ACTION_STOP, main.id))
-        builder.addAction(action(context, R.string.timer_extend_one_minute, ACTION_EXTEND, main.id))
-        if (main.runState == TimerRunState.RUNNING) {
-            builder.addAction(action(context, R.string.timer_pause, ACTION_PAUSE, main.id))
+        // 操作は2つまでにする。3つ並べるとステータスバーのチップへ昇格せず、
+        // 動作中だけチップが出ない状態になっていた。純正も状態ごとに2つだけ出す
+        when (main.runState) {
+            TimerRunState.RUNNING -> {
+                builder.addAction(action(context, R.string.timer_pause, ACTION_PAUSE, main.id))
+                builder.addAction(action(context, R.string.timer_extend_one_minute, ACTION_EXTEND, main.id))
+            }
+            TimerRunState.PAUSED -> {
+                builder.addAction(action(context, R.string.timer_resume, ACTION_RESUME, main.id))
+                builder.addAction(action(context, R.string.timer_stop, ACTION_STOP, main.id))
+            }
+            TimerRunState.FINISHED -> {
+                builder.addAction(action(context, R.string.timer_stop, ACTION_STOP, main.id))
+                builder.addAction(action(context, R.string.timer_extend_one_minute, ACTION_EXTEND, main.id))
+            }
         }
         if (timers.size > 1) {
             builder.setSubText(context.getString(R.string.timer_notification_summary, timers.size))
@@ -111,11 +122,7 @@ object TimerNotifications {
         nowElapsed: Long,
         nowWall: Long,
     ) {
-        // 鳴っている間はMetricStyleを使わない。
-        // MetricStyleは0を過ぎると「5」「6」と数え上げてしまい、画面の「−0:05」と食い違う。
-        // 通知の時計機能は0を過ぎるとマイナス付きで出すので、画面と同じ見え方になる
-        val isRinging = main.runState == TimerRunState.FINISHED
-        if (isRinging || Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) {
             applyChronometerFallback(builder, main, nowElapsed, nowWall)
             builder.setContentText(context.getString(statusTextRes(main.runState)))
             return
@@ -169,7 +176,13 @@ object TimerNotifications {
         nowWall: Long,
     ): Notification.Metric {
         val remaining = remainingMillis(timer, nowElapsed, nowWall)
-        val value = if (timer.runState == TimerRunState.PAUSED) {
+        val value = if (timer.runState == TimerRunState.FINISHED) {
+            // システムに数えさせると0を過ぎたあと正の数で数え上げ、画面の「−0:05」と食い違う。
+            // 鳴っている間だけ自分で書く。鳴動サービスが1秒ごとに出し直すので数字は進む
+            Notification.Metric.FixedText(
+                "\u2212" + formatDuration(overdueMillis(timer, nowElapsed, nowWall)),
+            )
+        } else if (timer.runState == TimerRunState.PAUSED) {
             Notification.Metric.TimeDifference.forPausedTimer(
                 // システムは切り捨てて数えるので、画面の切り上げに合わせて繰り上げ幅を足す
                 Duration.ofMillis(remaining + REMAINING_DISPLAY_ROUND_UP_MILLIS),
@@ -272,4 +285,5 @@ object TimerNotifications {
     const val ACTION_STOP = "com.marutyan.termalarm.timer.STOP"
     const val ACTION_EXTEND = "com.marutyan.termalarm.timer.EXTEND"
     const val ACTION_PAUSE = "com.marutyan.termalarm.timer.PAUSE"
+    const val ACTION_RESUME = "com.marutyan.termalarm.timer.RESUME"
 }

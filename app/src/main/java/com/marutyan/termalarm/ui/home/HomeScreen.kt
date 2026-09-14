@@ -37,8 +37,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -137,6 +140,15 @@ fun HomeScreen(
     onOpenAbout: () -> Unit = {},
 ) {
     val terms by viewModel.terms.collectAsStateWithLifecycle()
+
+    // 追加した直後に一番下まで送られないよう、件数が増えたら上へ戻す。
+    // 追加のボタンが一覧の下にあり、シートを閉じたときにそこへ焦点が戻るのが原因
+    val scrollState = rememberScrollState()
+    var previousTermCount by rememberSaveable { mutableIntStateOf(terms.size) }
+    LaunchedEffect(terms.size) {
+        if (terms.size > previousTermCount) scrollState.animateScrollTo(0)
+        previousTermCount = terms.size
+    }
     val now = rememberCurrentSecond()
 
     // 次に鳴動予定のタームを抽出する。有効で次回鳴動があるものの中で最も近いものを採用する。
@@ -159,7 +171,7 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(start = SCREEN_HORIZONTAL_PADDING, end = SCREEN_HORIZONTAL_PADDING, bottom = 24.dp),
     ) {
 
@@ -483,10 +495,10 @@ private fun OccurrenceScale(
 }
 
 /** カードの曜日の丸の大きさ。設計図 design/Main.dc.html の26dpに合わせる。 */
-private val TERM_DAY_CIRCLE_SIZE = 26.dp
+private val TERM_DAY_CIRCLE_SIZE = 32.dp
 
 /** 曜日を押せる範囲の横幅。丸は26dpのまま、指で狙える幅を確保するために広げる。 */
-private val TERM_DAY_TOUCH_WIDTH = 32.dp
+private val TERM_DAY_TOUCH_WIDTH = 42.dp
 
 /** 曜日を押せる範囲の高さ。丸の外側にも余裕を持たせて押し外しを減らす。 */
 private val TERM_DAY_TOUCH_HEIGHT = 44.dp
@@ -633,7 +645,7 @@ private fun TermCard(
                             Text(
                                 text = dayShortLabel(day),
                                 style = TextStyle(
-                                    fontSize = 13.sp,
+                                    fontSize = 14.sp,
                                     color = circleFg,
                                     fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
                                 ),

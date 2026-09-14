@@ -31,6 +31,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -124,6 +128,15 @@ fun AlarmsScreen(
     val alarms by viewModel.alarms.collectAsStateWithLifecycle()
     val timePattern = remember { clockTimePattern(false) }
 
+    // 追加した直後に一番下まで送られてしまうため、件数が増えたら上へ戻す。
+    // 追加のボタンが一覧の下にあり、シートを閉じたときにそこへ焦点が戻るのが原因
+    val scrollState = rememberScrollState()
+    var previousCount by rememberSaveable { mutableIntStateOf(alarms.size) }
+    LaunchedEffect(alarms.size) {
+        if (alarms.size > previousCount) scrollState.animateScrollTo(0)
+        previousCount = alarms.size
+    }
+
 
     // 画面上部の帯。スクロールの外へ置き、どの画面でも同じ位置に固定する
     Column(modifier = modifier.fillMaxSize()) {
@@ -135,7 +148,7 @@ fun AlarmsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(start = SCREEN_HORIZONTAL_PADDING, end = SCREEN_HORIZONTAL_PADDING, bottom = 24.dp),
     ) {
 

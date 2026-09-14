@@ -10,6 +10,7 @@ import com.marutyan.termalarm.domain.extendTimer
 import com.marutyan.termalarm.domain.finishTimer
 import com.marutyan.termalarm.domain.isDue
 import com.marutyan.termalarm.domain.pauseTimer
+import com.marutyan.termalarm.domain.resumeTimer
 import kotlinx.coroutines.flow.first
 
 /**
@@ -36,6 +37,11 @@ object TimerActions {
     /** 通知や画面の「一時停止」 */
     suspend fun pause(context: Context, id: Long) {
         mutate(context, id, ::pauseTimer)
+    }
+
+    /** 通知や画面の「再開」 */
+    suspend fun resume(context: Context, id: Long) {
+        mutate(context, id, ::resumeTimer)
     }
 
     /**

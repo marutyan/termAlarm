@@ -100,7 +100,11 @@ class TimerRingingService : Service() {
         if (finishedIds.isEmpty()) {
             stopForeground(STOP_FOREGROUND_DETACH)
             stopSelf()
+            return
         }
+        // 鳴っている間の数え上げは、システムに任せると正の数になってしまうため
+        // 自分で文字を書いている。進めるにはここで出し直す必要がある
+        TimerActions.refreshNotification(this)
     }
 
     private fun startRingingFor(id: Long) {
