@@ -30,7 +30,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -126,18 +129,33 @@ fun SettingsScreen(
             ),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        // 見出し「設定」
-        Text(
-            text = stringResource(R.string.settings_title),
-            style = TextStyle(
-                fontFamily = com.marutyan.termalarm.ui.theme.HeadlineStyle.fontFamily,
-                fontWeight = FontWeight.W300,
-                fontSize = 28.sp,
-                letterSpacing = (-0.01).em,
-                color = MaterialTheme.colorScheme.onSurface,
-            ),
+        // 戻るボタンと見出し「設定」。下のナビから外れた画面なので、戻る道をここに置く
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.padding(bottom = 6.dp),
-        )
+        ) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.size(44.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back),
+                    tint = MaterialTheme.customColors.subtleText,
+                )
+            }
+            Text(
+                text = stringResource(R.string.settings_title),
+                style = TextStyle(
+                    fontFamily = com.marutyan.termalarm.ui.theme.HeadlineStyle.fontFamily,
+                    fontWeight = FontWeight.W300,
+                    fontSize = 28.sp,
+                    letterSpacing = (-0.01).em,
+                    color = MaterialTheme.colorScheme.onSurface,
+                ),
+            )
+        }
 
         // 1. アラーム セクション
         SettingsSectionHeader(text = stringResource(R.string.settings_section_alarm))
