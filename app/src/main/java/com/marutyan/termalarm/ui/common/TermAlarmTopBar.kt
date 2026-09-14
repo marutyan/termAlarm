@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -84,12 +85,20 @@ private fun AppIconMark() {
         Image(
             painter = painterResource(R.drawable.ic_launcher_foreground),
             contentDescription = null,
-            // アダプティブアイコンの前景は108dpの画に描かれ、実際に見えるのは中央の72dpだけ。
-            // 26dpの枠へ見える部分をそのまま収めるため、108/72倍に広げて中央を切り取る
-            modifier = Modifier.size(APP_ICON_SIZE * 108f / 72f),
+            // 枠より大きく描いて中央を切り取るため、親の制約を無視するrequiredSizeを使う。
+            // sizeだと親の26dpへ縮められ、拡大が効かない
+            modifier = Modifier.requiredSize(APP_ICON_SIZE * APP_ICON_FOREGROUND_SCALE),
         )
     }
 }
 
 /** 上の帯に出すアプリのアイコンの大きさ。デザインの26dpに合わせる。 */
 private val APP_ICON_SIZE = 26.dp
+
+/**
+ * アイコンの前景を広げる倍率。
+ * 前景は108の座標系に描かれ、時計の輪は直径54ほどしか使っていない。
+ * そのまま枠に収めると輪が小さく見えて読み取りにくいため、
+ * 輪が枠の8割ほどを占めるところまで広げて中央を切り取る。
+ */
+private const val APP_ICON_FOREGROUND_SCALE = 1.64f
