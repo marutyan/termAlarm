@@ -3,6 +3,7 @@ package com.marutyan.termalarm.widget
 import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -30,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -50,7 +52,7 @@ import kotlinx.coroutines.launch
 
 /**
  * ウィジェットを置くときに出す設定画面。
- * 配色と背景をここで選ばせ、選んだ内容をウィジェットごとに保存する。
+ * 配色、書体、背景をここで選ばせ、選んだ内容をウィジェットごとに保存する。
  */
 class WidgetConfigActivity : ComponentActivity() {
 
@@ -70,30 +72,35 @@ class WidgetConfigActivity : ComponentActivity() {
 
         setContent {
             ConfigScreen(
-                onDecide = { theme, transparent -> save(appWidgetId, theme, transparent) },
+                onDecide = { theme, fontStyle, transparent ->
+                    save(appWidgetId, theme, fontStyle, transparent)
+                },
             )
         }
     }
 
     // 選んだ内容を保存し、ウィジェットを描き直してから画面を閉じる
-    private fun save(appWidgetId: Int, theme: AppTheme, transparent: Boolean) {
+    private fun save(appWidgetId: Int, theme: AppTheme, fontStyle: WidgetFontStyle, transparent: Boolean) {
         lifecycleScope.launch {
             val glanceId = GlanceAppWidgetManager(this@WidgetConfigActivity).getGlanceIdBy(appWidgetId)
             updateAppWidgetState(this@WidgetConfigActivity, glanceId) { prefs ->
                 prefs[WIDGET_THEME_KEY] = theme.name
+                prefs[WIDGET_FONT_STYLE_KEY] = fontStyle.name
                 prefs[WIDGET_TRANSPARENT_KEY] = transparent
             }
             TermAlarmWidget().update(this@WidgetConfigActivity, glanceId)
+            WidgetUpdateScheduler.scheduleNextTick(this@WidgetConfigActivity)
             setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId))
             finish()
         }
     }
 }
 
-// 配色と背景を選ぶ画面。アプリ本体とは別に選べるようにするため、ここで完結させる
+// 配色、書体、背景を選ぶ画面。アプリ本体とは別に選べるようにするため、ここで完結させる
 @Composable
-private fun ConfigScreen(onDecide: (AppTheme, Boolean) -> Unit) {
+private fun ConfigScreen(onDecide: (AppTheme, WidgetFontStyle, Boolean) -> Unit) {
     var theme by remember { mutableStateOf(AppTheme.NAVY) }
+    var fontStyle by remember { mutableStateOf(WidgetFontStyle.STANDARD) }
     var transparent by remember { mutableStateOf(false) }
 
     Column(
@@ -115,6 +122,30 @@ private fun ConfigScreen(onDecide: (AppTheme, Boolean) -> Unit) {
             ColorChoice(NavySurface, theme == AppTheme.NAVY) { theme = AppTheme.NAVY }
             ColorChoice(LightSurface, theme == AppTheme.LIGHT) { theme = AppTheme.LIGHT }
             ColorChoice(BlackSurface, theme == AppTheme.BLACK) { theme = AppTheme.BLACK }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                DynamicColorChoice(selected = theme == AppTheme.DYNAMIC) { theme = AppTheme.DYNAMIC }
+            }
+        }
+
+        Spacer(Modifier.height(28.dp))
+        SectionLabel(stringResource(R.string.widget_config_font))
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            ChoiceButton(
+                text = stringResource(R.string.widget_config_font_standard),
+                selected = fontStyle == WidgetFontStyle.STANDARD,
+                modifier = Modifier.weight(1f),
+            ) { fontStyle = WidgetFontStyle.STANDARD }
+            ChoiceButton(
+                text = stringResource(R.string.widget_config_font_monospace),
+                selected = fontStyle == WidgetFontStyle.MONOSPACE,
+                modifier = Modifier.weight(1f),
+            ) { fontStyle = WidgetFontStyle.MONOSPACE }
+            ChoiceButton(
+                text = stringResource(R.string.widget_config_font_serif),
+                selected = fontStyle == WidgetFontStyle.SERIF,
+                modifier = Modifier.weight(1f),
+            ) { fontStyle = WidgetFontStyle.SERIF }
         }
 
         Spacer(Modifier.height(28.dp))
@@ -131,7 +162,7 @@ private fun ConfigScreen(onDecide: (AppTheme, Boolean) -> Unit) {
                 .fillMaxWidth()
                 .height(52.dp)
                 .background(NavyPrimary, RoundedCornerShape(26.dp))
-                .clickable { onDecide(theme, transparent) },
+                .clickable { onDecide(theme, fontStyle, transparent) },
             contentAlignment = Alignment.Center,
         ) {
             Text(text = stringResource(R.string.widget_config_decide), color = NavySurface, fontSize = 15.sp)
@@ -157,7 +188,29 @@ private fun ColorChoice(color: Color, selected: Boolean, onClick: () -> Unit) {
     )
 }
 
-// 背景の選択肢。押せる高さを確保するため48dpとする
+/**
+ * 端末の色（ダイナミックカラー）を表す虹色グラデーションの選択肢。
+ * Android 12以降でのみ表示し、壁紙連動の配色を選択できるようにするために用いる。
+ */
+@Composable
+private fun DynamicColorChoice(selected: Boolean, onClick: () -> Unit) {
+    val gradient = Brush.linearGradient(
+        colors = listOf(
+            Color(0xFFB79CE8),
+            Color(0xFFE8A0B4),
+            Color(0xFFF0C48A),
+        ),
+    )
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .background(gradient, CircleShape)
+            .border(if (selected) 3.dp else 1.dp, if (selected) NavyPrimary else NavyOutline, CircleShape)
+            .clickable(onClick = onClick),
+    )
+}
+
+// 背景や書体の選択肢。押せる高さを確保するため48dpとする
 @Composable
 private fun ChoiceButton(text: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     Box(

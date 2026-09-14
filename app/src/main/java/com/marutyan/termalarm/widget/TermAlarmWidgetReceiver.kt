@@ -1,5 +1,7 @@
 package com.marutyan.termalarm.widget
 
+import android.appwidget.AppWidgetManager
+import android.content.Context
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 
@@ -9,4 +11,19 @@ import androidx.glance.appwidget.GlanceAppWidgetReceiver
  */
 class TermAlarmWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = TermAlarmWidget()
+
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        WidgetUpdateScheduler.scheduleNextTick(context)
+    }
+
+    override fun onDisabled(context: Context) {
+        super.onDisabled(context)
+        WidgetUpdateScheduler.cancelTick(context)
+    }
+
+    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        super.onUpdate(context, appWidgetManager, appWidgetIds)
+        WidgetUpdateScheduler.scheduleNextTick(context)
+    }
 }

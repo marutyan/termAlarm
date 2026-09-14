@@ -302,5 +302,9 @@
     <string name="widget_config_background">背景</string>
     <string name="widget_config_solid">無地</string>
     <string name="widget_config_transparent">透明</string>
+    <string name="widget_config_font">文字</string>
+    <string name="widget_config_font_standard">標準</string>
+    <string name="widget_config_font_monospace">等幅</string>
+    <string name="widget_config_font_serif">明朝</string>
     <string name="widget_config_decide">決定</string>
 </resources>

@@ -184,6 +184,25 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/term_alarm_widget_info" />
         </receiver>
+
+        <!-- ウィジェットの定期更新（1分タイマー）・鳴動終了・端末時刻変更を受け取るレシーバー -->
+        <receiver
+            android:name=".widget.WidgetUpdateReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.marutyan.termalarm.widget.action.WIDGET_TICK" />
+                <action android:name="com.marutyan.termalarm.alarm.action.RINGING_FINISHED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+        </receiver>
+
+        <!-- アプリ起動時にウィジェットのターム変更監視を初期化するProvider -->
+        <provider
+            android:name=".widget.WidgetInitProvider"
+            android:authorities="${applicationId}.widgetinitprovider"
+            android:exported="false" />
     </application>
 
 </manifest>
