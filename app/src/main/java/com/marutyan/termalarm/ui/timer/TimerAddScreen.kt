@@ -50,6 +50,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.marutyan.termalarm.ui.common.TOP_BAR_TOP_INSET
+import com.marutyan.termalarm.ui.common.TOP_BAR_CONTENT_GAP
+import com.marutyan.termalarm.ui.common.TermAlarmTopBar
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
 import com.marutyan.termalarm.ui.theme.pressScaleEffect
@@ -84,6 +87,9 @@ private val KEYPAD_ROW_MIN_HEIGHT = 67.9.dp
 fun TimerAddScreen(
     onStart: (hours: Int, minutes: Int, seconds: Int) -> Unit,
     onClose: (() -> Unit)?,
+    onOpenSettings: () -> Unit = {},
+    onOpenPrivacyPolicy: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     if (onClose != null) BackHandler(onBack = onClose)
@@ -100,10 +106,26 @@ fun TimerAddScreen(
     val isStartEnabled = inputDigits.isNotEmpty() && (hours > 0 || minutes > 0 || seconds > 0)
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.TopCenter,
-    ) {
+    Column(modifier = modifier.fillMaxSize()) {
+        // 他の画面と同じ帯。ここだけ無いと、タイマーが0件のときアプリ名が消えてしまう
+        Box(
+            modifier = Modifier.padding(
+                top = statusBarTop + TOP_BAR_TOP_INSET,
+                start = 20.dp,
+                end = 20.dp,
+            ),
+        ) {
+            TermAlarmTopBar(
+                onOpenSettings = onOpenSettings,
+                onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                onOpenAbout = onOpenAbout,
+            )
+        }
+
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter,
+        ) {
         Column(
             modifier = Modifier
                 .widthIn(max = CONTENT_MAX_WIDTH)
@@ -112,9 +134,7 @@ fun TimerAddScreen(
                 .padding(bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // 画面上端から大きな数字行上端(174.4dp)までの余白。ステータスバー高さも考慮して下限を担保する。
-            val topSpacerHeight = if (statusBarTop + 40.dp > 174.4.dp) statusBarTop + 40.dp else 174.4.dp
-            Spacer(modifier = Modifier.height(topSpacerHeight))
+            Spacer(modifier = Modifier.height(TOP_BAR_CONTENT_GAP))
 
             // 1. 大きな数字の行
             TimerBigDigitsRow(
@@ -180,7 +200,7 @@ fun TimerAddScreen(
                 onClearAll = { inputDigits = "" },
             )
         }
-
+        }
     }
 }
 

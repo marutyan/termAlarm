@@ -87,28 +87,45 @@ fun extendTimer(state: TimerState, extraMillis: Long, nowElapsedRealtime: Long, 
 }
 
 // 残り時間が尽きたときの遷移。鳴動中(FINISHED)として残り0秒に固定する
-fun finishTimer(state: TimerState, nowElapsedRealtime: Long, nowWallClockMillis: Long): TimerState = state.copy(
-    remainingMillisAtAnchor = 0L,
-    // 鳴り始めた時刻をここへ残す。純正はタイムアップの後も経過をマイナスで数え続けるため、
-    // その起点が要る。サービス側に覚えさせると、再起動やサービスの停止で失われる
-    anchorElapsedRealtime = nowElapsedRealtime,
-    anchorWallClockMillis = nowWallClockMillis,
-    runState = TimerRunState.FINISHED,
-)
+fun finishTimer(state: TimerState, nowElapsedRealtime: Long, nowWallClockMillis: Long): TimerState {
+    // 実際に0になった時刻を起点にする。サービスが気づくのは数秒遅れることがあり、
+    // 気づいた時刻を起点にすると、画面の数え上げがそのぶん巻き戻って見える
+    val overshoot = if (nowElapsedRealtime >= state.anchorElapsedRealtime) {
+        (nowElapsedRealtime - state.anchorElapsedRealtime - state.remainingMillisAtAnchor)
+            .coerceAtLeast(0L)
+    } else {
+        // elapsedRealtimeの逆行は再起動の合図。起点を今にする（遅れは測れない）
+        0L
+    }
+    return state.copy(
+        remainingMillisAtAnchor = 0L,
+        // 鳴り始めた時刻をここへ残す。純正はタイムアップの後も経過をマイナスで数え続けるため、
+        // その起点が要る。サービス側に覚えさせると、再起動やサービスの停止で失われる
+        anchorElapsedRealtime = nowElapsedRealtime - overshoot,
+        anchorWallClockMillis = nowWallClockMillis - overshoot,
+        runState = TimerRunState.FINISHED,
+    )
+}
 
 /**
- * 鳴り始めてから経過したミリ秒。鳴動中(FINISHED)でなければ0。
+ * 0になってから経過したミリ秒。まだ0になっていなければ0。
  * 純正のタイマーはタイムアップの後、残り時間の代わりに経過時間をマイナスで出し続ける。
+ *
+ * 動作中(RUNNING)でも、残りが尽きていればその経過を返す。
+ * 鳴動中(FINISHED)へ切り替わるのはサービスが気づいた後になるため、
+ * 切り替えを待つと画面が数秒固まって見えるためである。
  */
 fun overdueMillis(state: TimerState, nowElapsedRealtime: Long, nowWallClockMillis: Long): Long {
-    if (state.runState != TimerRunState.FINISHED) return 0L
+    if (state.runState == TimerRunState.PAUSED) return 0L
     val elapsed = if (nowElapsedRealtime >= state.anchorElapsedRealtime) {
         nowElapsedRealtime - state.anchorElapsedRealtime
     } else {
         // elapsedRealtimeの逆行は再起動の合図。壁時計へ切り替える(remainingMillisと同じ考え方)
         nowWallClockMillis - state.anchorWallClockMillis
     }
-    return elapsed.coerceAtLeast(0L)
+    // FINISHEDは基準時刻が0になった瞬間なので、そのまま経過になる。
+    // RUNNINGは残りを使い切ってからの超過ぶんを取り出す
+    return (elapsed - state.remainingMillisAtAnchor).coerceAtLeast(0L)
 }
 
 /**

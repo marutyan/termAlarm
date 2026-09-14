@@ -185,3 +185,57 @@ class TimerCalculatorTest {
         assertEquals(1000L, millisUntilNextSecondBoundary(emptyList(), 0L, 0L))
     }
 }
+
+/**
+ * 0になった瞬間から数え上げが始まることを確かめるテスト。
+ *
+ * 状態が鳴動中(FINISHED)へ変わるのはサービスが気づいた後で、数秒遅れることがある。
+ * その間も画面が数え上げられること、遅れて切り替わっても数字が巻き戻らないことを固定する。
+ */
+class TimerOverdueTest {
+
+    // 60秒のタイマーを、基準時刻1000で開始した状態
+    private val running = TimerState(
+        id = 1,
+        label = "",
+        totalMillis = 60_000L,
+        remainingMillisAtAnchor = 60_000L,
+        anchorElapsedRealtime = 1_000L,
+        anchorWallClockMillis = 500_000L,
+        runState = TimerRunState.RUNNING,
+    )
+
+    @Test
+    fun `動作中でも0になっていなければ経過は0`() {
+        assertEquals(0L, overdueMillis(running, 30_000L, 529_000L))
+    }
+
+    @Test
+    fun `動作中で0を過ぎたら超過ぶんを返す`() {
+        // 基準から62秒経過＝2秒の超過
+        assertEquals(2_000L, overdueMillis(running, 63_000L, 562_000L))
+    }
+
+    @Test
+    fun `一時停止中は経過を返さない`() {
+        val paused = running.copy(runState = TimerRunState.PAUSED, remainingMillisAtAnchor = 10_000L)
+        assertEquals(0L, overdueMillis(paused, 999_999L, 999_999L))
+    }
+
+    @Test
+    fun `気づくのが遅れても数え上げが巻き戻らない`() {
+        // 2秒遅れて鳴動中へ切り替わった
+        val finished = finishTimer(running, 63_000L, 562_000L)
+        // 切り替えた瞬間も、超過は2秒のまま
+        assertEquals(2_000L, overdueMillis(finished, 63_000L, 562_000L))
+        // その1秒後は3秒
+        assertEquals(3_000L, overdueMillis(finished, 64_000L, 563_000L))
+    }
+
+    @Test
+    fun `ちょうど0で切り替わったら経過も0から始まる`() {
+        val finished = finishTimer(running, 61_000L, 560_000L)
+        assertEquals(0L, overdueMillis(finished, 61_000L, 560_000L))
+        assertEquals(1_000L, overdueMillis(finished, 62_000L, 561_000L))
+    }
+}

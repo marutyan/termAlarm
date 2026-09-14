@@ -97,7 +97,9 @@ fun TimerScreen(
         sortTimers(timers, nowElapsed, nowWall)
     }
 
-    val showKeypad = showAddScreen
+    // タイマーが1件も無いときは、案内を出さずに数字を入れる画面をそのまま見せる。
+    // 押す先が同じ画面になるため、そのときは右下の追加ボタンも出さない
+    val showKeypad = showAddScreen || sortedTimers.isEmpty()
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -120,7 +122,11 @@ fun TimerScreen(
                         viewModel.start(h, m, s)
                         showAddScreen = false
                     },
-                    onClose = { showAddScreen = false },
+                    // 1件も無いときは戻る先が無いので、閉じる操作を用意しない
+                    onClose = if (sortedTimers.isEmpty()) null else ({ showAddScreen = false }),
+                    onOpenSettings = onOpenSettings,
+                    onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                    onOpenAbout = onOpenAbout,
                 )
             } else {
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -157,23 +163,8 @@ fun TimerScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        if (sortedTimers.isEmpty()) {
-                            // タイマーが1件も無いときの案内メッセージ
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                                    .padding(horizontal = 8.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.timer_empty_hint),
-                                    style = TextStyle(fontSize = 15.sp),
-                                    color = MaterialTheme.customColors.subtleText,
-                                )
-                            }
-                        } else {
-                            LazyColumn(
+                        // 1件も無いときはこの枝に来ない（数字を入れる画面をそのまま出すため）
+                        LazyColumn(
                                 contentPadding = PaddingValues(bottom = 96.dp),
                                 verticalArrangement = Arrangement.spacedBy(16.dp),
                                 modifier = Modifier.fillMaxSize(),
@@ -192,7 +183,6 @@ fun TimerScreen(
                                     )
                                 }
                             }
-                        }
                     }
 
                     // 右下に浮かせた「タイマーを追加」ボタン (60dp角、角丸20dp、主役の色)

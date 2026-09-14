@@ -195,8 +195,12 @@ fun TimerCard(
 ) {
     val context = LocalContext.current
     val reduceMotion = remember(context) { isReduceMotionEnabled(context) }
-    val isFinished = timer.runState == TimerRunState.FINISHED
-    val isRunning = timer.runState == TimerRunState.RUNNING
+    // 残りが尽きたら、状態が鳴動中へ変わるのを待たずに鳴り終わった見せ方へ移る。
+    // 状態が変わるのはサービスが気づいた後で数秒遅れることがあり、その間画面が固まって見えるため
+    val isDueNow = timer.runState == TimerRunState.RUNNING &&
+        remainingMillis(timer, nowElapsed, nowWall) <= 0L
+    val isFinished = timer.runState == TimerRunState.FINISHED || isDueNow
+    val isRunning = timer.runState == TimerRunState.RUNNING && !isDueNow
 
     val remaining = remainingMillis(timer, nowElapsed, nowWall)
     val progressState = rememberTimerProgress(
