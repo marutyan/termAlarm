@@ -114,7 +114,8 @@ class RingingActivity : ComponentActivity() {
         }
 
         setContent {
-            TermAlarmTheme {
+            // 鳴動画面も設定で選んだ配色に合わせる
+            TermAlarmTheme(appTheme = settings.theme) {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     RingingScreen(
                         alarmId = alarmId,

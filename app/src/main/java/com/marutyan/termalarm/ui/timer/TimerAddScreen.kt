@@ -428,7 +428,8 @@ private fun TimerActionRow(
                 colors = IconButtonDefaults.filledIconButtonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    // 明るい配色ではsurfaceContainerが白で、地より明るく浮いてしまう。一段持ち上げた面を使う
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
                 modifier = Modifier

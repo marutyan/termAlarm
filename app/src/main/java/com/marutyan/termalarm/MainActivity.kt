@@ -7,11 +7,17 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.view.WindowCompat
 import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.AlarmRepository
+import com.marutyan.termalarm.domain.AppSettings
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.marutyan.termalarm.timer.TimerActions
 import kotlinx.coroutines.launch
@@ -31,9 +37,20 @@ class MainActivity : ComponentActivity() {
         // 通知を消してしまっても、アプリを開けば戻るようにするため
         lifecycleScope.launch { TimerActions.refreshNotification(applicationContext) }
         setContent {
-            TermAlarmTheme {
+            val context = LocalContext.current
+            // 設定で選んだ配色を反映する。読み込みが終わるまでは既定値のまま描く
+            val settings by remember { Repositories.settings(context).observe() }
+                .collectAsStateWithLifecycle(initialValue = AppSettings())
+            TermAlarmTheme(appTheme = settings.theme) {
+                // 明るい配色のときは、状態表示の文字と記号を暗くしないと地に埋もれて読めない
+                val isLightSurface = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+                LaunchedEffect(isLightSurface) {
+                    WindowCompat.getInsetsController(window, window.decorView).apply {
+                        isAppearanceLightStatusBars = isLightSurface
+                        isAppearanceLightNavigationBars = isLightSurface
+                    }
+                }
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    val context = LocalContext.current
                     val repository = remember { Repositories.alarm(context) }
                     val hasShakeSensor = remember { hasShakeSensor(context) }
                     TermAlarmNavHost(repository = repository, hasShakeSensor = hasShakeSensor)
