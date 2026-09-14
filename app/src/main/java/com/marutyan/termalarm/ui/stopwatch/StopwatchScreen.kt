@@ -8,15 +8,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,7 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -51,16 +47,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.marutyan.termalarm.ui.common.SCREEN_HORIZONTAL_PADDING
 import com.marutyan.termalarm.ui.common.TOP_BAR_CONTENT_GAP
-import com.marutyan.termalarm.ui.common.TOP_BAR_TOP_INSET
 import com.marutyan.termalarm.R
-import com.marutyan.termalarm.domain.StopwatchLap
 import com.marutyan.termalarm.domain.StopwatchRunState
 import com.marutyan.termalarm.domain.elapsedMillis
 import com.marutyan.termalarm.ui.common.TermAlarmTopBar
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
 import com.marutyan.termalarm.ui.theme.customColors
 import com.marutyan.termalarm.ui.theme.pressScaleEffect
-import com.marutyan.termalarm.ui.theme.tabularNums
 
 /**
  * 動作中(RUNNING)の経過時間更新間隔(100ms = 10Hz)。

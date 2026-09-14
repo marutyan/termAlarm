@@ -6,7 +6,6 @@ import android.content.Intent
 import android.os.SystemClock
 import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.notification.runAsync
-import com.marutyan.termalarm.data.StopwatchRepository
 import com.marutyan.termalarm.domain.StopwatchRunState
 import com.marutyan.termalarm.domain.rebaseStopwatchAfterReboot
 

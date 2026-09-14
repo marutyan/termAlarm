@@ -1,6 +1,5 @@
 package com.marutyan.termalarm.data
 
-import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

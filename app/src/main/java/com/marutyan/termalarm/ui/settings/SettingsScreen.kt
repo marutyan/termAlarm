@@ -1,6 +1,5 @@
 package com.marutyan.termalarm.ui.settings
 
-import android.content.Context
 import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
@@ -53,6 +52,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -61,10 +65,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.marutyan.termalarm.ui.common.TOP_BAR_CONTENT_GAP
 import com.marutyan.termalarm.ui.common.TOP_BAR_TOP_INSET
 import com.marutyan.termalarm.R
-import com.marutyan.termalarm.domain.AppSettings
 import com.marutyan.termalarm.domain.AppTheme
 import com.marutyan.termalarm.ui.theme.BlackPrimary
 import com.marutyan.termalarm.ui.theme.BlackSurface
@@ -542,23 +544,27 @@ private fun SettingsThemeRow(
             ThemeCircle(
                 surfaceColor = NavySurface,
                 accentColor = NavyPrimary,
+                label = stringResource(R.string.settings_theme_navy),
                 isSelected = selectedTheme == AppTheme.NAVY,
                 onClick = { onSelectTheme(AppTheme.NAVY) },
             )
             ThemeCircle(
                 surfaceColor = BlackSurface,
                 accentColor = BlackPrimary,
+                label = stringResource(R.string.settings_theme_black),
                 isSelected = selectedTheme == AppTheme.BLACK,
                 onClick = { onSelectTheme(AppTheme.BLACK) },
             )
             ThemeCircle(
                 surfaceColor = LightSurface,
                 accentColor = LightPrimary,
+                label = stringResource(R.string.settings_theme_light),
                 isSelected = selectedTheme == AppTheme.LIGHT,
                 onClick = { onSelectTheme(AppTheme.LIGHT) },
             )
             if (isDynamicAvailable) {
                 DynamicThemeCircle(
+                    label = stringResource(R.string.settings_theme_dynamic),
                     isSelected = selectedTheme == AppTheme.DYNAMIC,
                     onClick = { onSelectTheme(AppTheme.DYNAMIC) },
                 )
@@ -584,6 +590,7 @@ private val THEME_CIRCLE_SIZE = 28.dp
 private fun ThemeCircle(
     surfaceColor: Color,
     accentColor: Color,
+    label: String,
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -603,6 +610,12 @@ private fun ThemeCircle(
     Box(
         modifier = modifier
             .size(THEME_CIRCLE_SIZE)
+            // 丸は色だけなので、読み上げには配色の名前と選ばれているかを渡す
+            .semantics {
+                contentDescription = label
+                role = Role.RadioButton
+                selected = isSelected
+            }
             .background(halfBrush, CircleShape)
             .border(
                 width = if (isSelected) 2.dp else 1.dp,
@@ -623,6 +636,7 @@ private fun ThemeCircle(
  */
 @Composable
 private fun DynamicThemeCircle(
+    label: String,
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -634,6 +648,11 @@ private fun DynamicThemeCircle(
     Box(
         modifier = modifier
             .size(THEME_CIRCLE_SIZE)
+            .semantics {
+                contentDescription = label
+                role = Role.RadioButton
+                selected = isSelected
+            }
             .background(dynamicBrush, CircleShape)
             .border(
                 width = if (isSelected) 2.dp else 1.dp,

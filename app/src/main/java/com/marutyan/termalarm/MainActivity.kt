@@ -16,7 +16,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowCompat
 import com.marutyan.termalarm.alarm.AlarmScheduler
 import com.marutyan.termalarm.data.Repositories
-import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.domain.AppSettings
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope

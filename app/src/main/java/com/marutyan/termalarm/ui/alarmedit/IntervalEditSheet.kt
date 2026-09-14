@@ -545,28 +545,3 @@ fun IntervalEditDialog(
     }
 }
 
-/**
- * 以前の呼び出しとの互換性を保つためのラッパー関数。
- */
-@Composable
-fun IntervalEditSheet(
-    startMinutes: Int,
-    endMinutes: Int,
-    initialIsVariable: Boolean,
-    initialStartInterval: Int,
-    initialEndInterval: Int,
-    onConfirm: (Boolean, Int, Int) -> Unit,
-    modifier: Modifier = Modifier,
-    onDismiss: () -> Unit = {},
-) {
-    IntervalEditDialog(
-        startMinutes = startMinutes,
-        endMinutes = endMinutes,
-        initialIsVariable = initialIsVariable,
-        initialStartInterval = initialStartInterval,
-        initialEndInterval = initialEndInterval,
-        onDismiss = onDismiss,
-        onConfirm = onConfirm,
-        modifier = modifier,
-    )
-}

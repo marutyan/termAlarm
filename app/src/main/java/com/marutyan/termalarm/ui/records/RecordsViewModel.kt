@@ -1,6 +1,5 @@
 package com.marutyan.termalarm.ui.records
 
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope

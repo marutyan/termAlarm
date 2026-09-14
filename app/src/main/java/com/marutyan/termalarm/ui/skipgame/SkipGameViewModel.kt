@@ -22,8 +22,6 @@ import com.marutyan.termalarm.ui.common.clockTimePattern
 import com.marutyan.termalarm.ui.common.formatRangeAndInterval
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale

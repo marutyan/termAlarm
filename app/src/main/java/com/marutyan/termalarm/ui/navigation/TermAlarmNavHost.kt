@@ -37,7 +37,6 @@ import com.marutyan.termalarm.ui.alarmedit.AlarmEditViewModelFactory
 import com.marutyan.termalarm.ui.alarms.AlarmsScreen
 import com.marutyan.termalarm.ui.alarms.AlarmsViewModel
 import com.marutyan.termalarm.ui.alarms.AlarmsViewModelFactory
-import com.marutyan.termalarm.ui.common.PlaceholderScreen
 import com.marutyan.termalarm.ui.home.HomeScreen
 import com.marutyan.termalarm.ui.home.HomeViewModel
 import com.marutyan.termalarm.ui.home.HomeViewModelFactory

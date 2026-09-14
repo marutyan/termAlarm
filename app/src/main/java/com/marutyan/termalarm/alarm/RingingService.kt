@@ -9,7 +9,6 @@ import android.content.pm.ServiceInfo
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
-import android.os.Build
 import android.os.IBinder
 import android.os.Vibrator
 import androidx.core.app.NotificationCompat
@@ -65,18 +64,12 @@ class RingingService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_STOP, ACTION_SNOOZE -> {
+            ACTION_STOP -> {
                 val method = intent.getStringExtra(EXTRA_STOP_METHOD)
                 val wasWakeCheck = currentIsWakeCheck
                 val stoppedOccurrence = occurrenceAt()
                 stopRinging(isTimeout = false, explicitStopMethod = method) { id ->
                     AlarmScheduler.onStopped(this, id, stoppedOccurrence, wasWakeCheck)
-                }
-            }
-            ACTION_SKIP -> {
-                val method = intent.getStringExtra(EXTRA_STOP_METHOD)
-                stopRinging(isTimeout = false, explicitStopMethod = method) { id ->
-                    AlarmScheduler.onSessionEnded(this, id, occurrenceAt())
                 }
             }
             else -> startRinging(intent)
@@ -340,8 +333,6 @@ class RingingService : Service() {
             DateTimeFormatter.ofPattern(clockTimePattern() + "（E）", Locale.getDefault())
 
         const val ACTION_STOP = "com.marutyan.termalarm.alarm.action.STOP"
-        const val ACTION_SNOOZE = "com.marutyan.termalarm.alarm.action.SNOOZE"
-        const val ACTION_SKIP = "com.marutyan.termalarm.alarm.action.SKIP"
         const val EXTRA_STOP_METHOD = "com.marutyan.termalarm.alarm.extra.STOP_METHOD"
 
         /**
@@ -355,9 +346,6 @@ class RingingService : Service() {
                     putExtra(EXTRA_STOP_METHOD, stopMethod.name)
                 }
             }
-
-        fun skipIntent(context: Context): Intent =
-            Intent(context, RingingService::class.java).setAction(ACTION_SKIP)
     }
 }
 
