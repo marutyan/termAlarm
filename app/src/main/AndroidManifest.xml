@@ -149,21 +149,25 @@
                 android:value="stopwatch" />
         </service>
 
-        <!-- 端末再起動後にストップウォッチの経過時間を復元する -->
+        <!-- 端末再起動後・アプリ更新後にストップウォッチの経過時間を復元する。
+             アプリを入れ替えるとサービスも通知も消えるため、更新後にも立て直す -->
         <receiver
             android:name=".stopwatch.StopwatchRescheduleReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 
-        <!-- 端末再起動後にタイマーの経過時間を復元する -->
+        <!-- 端末再起動後・アプリ更新後にタイマーの残り時間と完了予約を復元する。
+             アプリを入れ替えるとAlarmManagerの予約が消え、更新しただけで鳴らなくなるため -->
         <receiver
             android:name=".timer.TimerRescheduleReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 

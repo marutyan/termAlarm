@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.alarm.AlarmScheduler
 import com.marutyan.termalarm.alarm.ExactAlarmPermission
+import com.marutyan.termalarm.alarm.FullScreenIntentPermission
 import com.marutyan.termalarm.alarm.NotificationPermission
 import kotlinx.coroutines.launch
 
@@ -143,6 +144,38 @@ fun ExactAlarmPermissionBanner() {
             message = stringResource(R.string.exact_alarm_permission_banner),
             actionLabel = stringResource(R.string.open_settings),
             onAction = { context.startActivity(ExactAlarmPermission.settingsIntent(context)) },
+        )
+    }
+}
+
+/**
+ * 全画面通知が許可されていない場合に設定画面へ誘導するバナー。
+ *
+ * これが切られていると、画面が消えているときに鳴動画面が前面へ出ない。
+ * 音は鳴るが止めるための画面が出ないため、気づいても操作できない。
+ * Android 14以降は端末の設定から個別に切れるため、画面が再開するたびに確認する。
+ */
+@Composable
+fun FullScreenIntentPermissionBanner() {
+    val context = LocalContext.current
+    var allowed by remember { mutableStateOf(FullScreenIntentPermission.isGranted(context)) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                allowed = FullScreenIntentPermission.isGranted(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    if (!allowed) {
+        PermissionBanner(
+            message = stringResource(R.string.full_screen_intent_permission_banner),
+            actionLabel = stringResource(R.string.open_settings),
+            onAction = { context.startActivity(FullScreenIntentPermission.settingsIntent(context)) },
         )
     }
 }

@@ -94,6 +94,9 @@ class RingingService : Service() {
         currentTriggerAtMillis = intent?.getLongExtra(EXTRA_TRIGGER_AT_MILLIS, System.currentTimeMillis())
             ?: System.currentTimeMillis()
 
+        // startForegroundService()からは数秒以内にstartForeground()を呼ぶ必要がある。
+        // タームを読み終えるのを待つと間に合わないことがあるため、まず中身の無い通知で立つ
+        startForegroundPlaceholder()
         scope.launch {
             val schedule = repository().getById(id)
             if (schedule == null) {
@@ -253,6 +256,27 @@ class RingingService : Service() {
      * 鳴動中に出す通知。純正の時計アプリと同じく、タイトルにアラームの名前、本文に鳴っている時刻を出し、
      * 展開すると停止を押せるようにする。
      */
+    /**
+     * 鳴っているタームを読み終える前に、フォアグラウンドとして立つためだけに出す通知。
+     * 中身は[startForegroundNotification]がすぐ上書きする。
+     */
+    private fun startForegroundPlaceholder() {
+        val notification = NotificationCompat.Builder(this, ensureChannel())
+            .setSmallIcon(R.drawable.ic_stat_alarm)
+            .setContentTitle(getString(R.string.ringing_notification_title))
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setOngoing(true)
+            .setLocalOnly(true)
+            .setShowWhen(false)
+            .build()
+        ServiceCompat.startForeground(
+            this,
+            NOTIFICATION_ID,
+            notification,
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+        )
+    }
+
     private fun startForegroundNotification(schedule: AlarmSchedule) {
         val fullScreenIntent = RingingActivity.fullScreenPendingIntent(this, currentAlarmId, currentTriggerAtMillis, currentIsWakeCheck)
         val builder = NotificationCompat.Builder(this, ensureChannel())

@@ -9,7 +9,12 @@ import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.domain.rebaseTimerAfterReboot
 
 /**
- * 端末再起動後にタイマーを復元する（docs/SPEC.md「端末を再起動した場合は、経過時間を復元して続ける」）。
+ * 端末再起動後・アプリ更新後にタイマーを復元する
+ * （docs/SPEC.md「端末を再起動した場合は、経過時間を復元して続ける」）。
+ *
+ * アプリを入れ替えるとAlarmManagerの予約もサービスも消えるため、更新しただけで鳴らなくなる。
+ * 再起動と同じ手順で立て直す。elapsedRealtimeは更新では巻き戻らないので、
+ * 張り直しの計算は何度行っても結果が変わらない。
  * alarm/AlarmRescheduleReceiver.ktは書き込み範囲外のため既存のBOOT_COMPLETED受信口には相乗りせず、
  * timer専用の別Receiverとして新設した。RUNNING中だったタイマーだけSystemClock.elapsedRealtime()を
  * 現在値へ張り直し（起動直後はelapsedRealtimeが0から数え直されるため）、AlarmManager予約も引き直す。
@@ -19,8 +24,10 @@ import com.marutyan.termalarm.domain.rebaseTimerAfterReboot
 class TimerRescheduleReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         // 外部アプリから偽のIntentが送られた場合に意図しない復元処理が走るのを防ぐため、
-        // AndroidManifest.xmlのintent-filterで定義された想定通りのaction (BOOT_COMPLETED) であるか検証する。
-        if (intent.action != Intent.ACTION_BOOT_COMPLETED) {
+        // AndroidManifest.xmlのintent-filterで定義した想定どおりのactionかを検証する。
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED &&
+            intent.action != Intent.ACTION_MY_PACKAGE_REPLACED
+        ) {
             return
         }
 
@@ -35,12 +42,10 @@ class TimerRescheduleReceiver : BroadcastReceiver() {
                 repository.update(rebased)
                 TimerScheduler.reschedule(appContext, rebased.id)
             }
-            // 再起動をまたいで期限が過ぎていたタイマーは、ここで鳴動中へ移す
-            if (TimerActions.markDueTimersFinished(appContext)) {
-                TimerForegroundService.start(appContext)
-            } else {
-                TimerActions.refreshNotification(appContext)
-            }
+            // 止まっていた間に期限が過ぎていたタイマーは、ここで鳴動中へ移す
+            TimerActions.markDueTimersFinished(appContext)
+            // 通知の出し直しと、数字が進むタイマーがある場合のサービス起動をまとめて行う
+            TimerActions.afterChange(appContext)
         }
     }
 }

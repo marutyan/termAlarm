@@ -91,7 +91,14 @@ class TimerForegroundService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // startForegroundService()からは数秒以内にstartForeground()を呼ぶ必要がある。
-        // 見回りの1周目を待つと間に合わないことがあるため、ここでも一度出す
+        // 中身を作るにはDBを読むため、待っていると間に合わないことがある。
+        // まず中身の無い通知で立ってから、読み終えた内容で出し直す
+        ServiceCompat.startForeground(
+            this,
+            TIMER_FOREGROUND_NOTIFICATION_ID,
+            TimerNotifications.buildStarting(this),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
+        )
         scope.launch { runTick() }
         return START_NOT_STICKY
     }

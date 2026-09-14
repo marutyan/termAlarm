@@ -76,6 +76,7 @@ import com.marutyan.termalarm.ui.common.clockTimePattern
 import com.marutyan.termalarm.ui.common.formatClockMinutes
 import com.marutyan.termalarm.ui.common.formatRangeAndInterval
 import com.marutyan.termalarm.ui.permission.ExactAlarmPermissionBanner
+import com.marutyan.termalarm.ui.permission.FullScreenIntentPermissionBanner
 import com.marutyan.termalarm.ui.permission.NotificationPermissionBanner
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
 import com.marutyan.termalarm.ui.theme.customColors
@@ -234,6 +235,7 @@ fun HomeScreen(
         // 権限バナー（通知権限・正確なアラーム権限）。足りないものがあれば縦に並べ、足りているときは余白も作らない
         NotificationPermissionBanner()
         ExactAlarmPermissionBanner()
+        FullScreenIntentPermissionBanner()
 
         // 3. 34dp空ける
         Spacer(modifier = Modifier.height(34.dp))

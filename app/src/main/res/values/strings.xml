@@ -126,6 +126,7 @@
     <!-- 権限 -->
     <string name="notification_permission_banner">通知を許可すると、アラームの通知を確実に受け取れます</string>
     <string name="exact_alarm_permission_banner">正確なアラームの権限が無効になっています。設定から許可してください</string>
+    <string name="full_screen_intent_permission_banner">画面が消えているときにアラームの画面を出せません。設定で「フルスクリーン通知」を許可してください。</string>
     <string name="notification_permission_action_request">許可する</string>
 
     <!-- ライセンス -->
