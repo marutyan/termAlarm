@@ -35,8 +35,9 @@ data class RingRecord(
  * セッション開始日、範囲開始時刻、各鳴動の記録列を保持し、セッション単位の起床実績集計に用いる。
  */
 data class SessionRecord(
+    val alarmId: Long, // どのタームの記録か。同じ日に複数のタームがあると、これが無いと見分けられない
     val sessionStart: LocalDate, // セッションの開始日
-    val rangeStartAt: ZonedDateTime, // 範囲の開始時刻
+    val rangeStartAt: ZonedDateTime, // 範囲の開始時刻。記録した時点の事実であり、後から設定を変えても動かない
     val rings: List<RingRecord>, // そのセッションの鳴動の記録。occurrenceIndex の昇順
 )
 

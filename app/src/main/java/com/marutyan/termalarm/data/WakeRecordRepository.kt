@@ -10,18 +10,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.ZoneId
 
 /**
  * 起床記録および鳴動実績の永続化と集計アクセスを担うリポジトリ。
  * RingRecordDaoを通じて鳴動実績の保存と期間指定読み出しを行い、domainのSessionRecordや集計指標へ変換して提供する。
  */
-class WakeRecordRepository(
-    private val ringRecordDao: RingRecordDao,
-    private val alarmDao: AlarmDao? = null,
-) {
+class WakeRecordRepository(private val ringRecordDao: RingRecordDao) {
 
     /**
      * 鳴動1回分の実績を保存する。
@@ -113,7 +108,7 @@ class WakeRecordRepository(
      * RingRecordEntityのリストを同一セッションごとにグループ化し、domainのSessionRecordのリストへ変換する。
      * 鳴動記録をセッション単位のまとまりに再構成するために用いる。
      */
-    private suspend fun toSessionRecords(
+    private fun toSessionRecords(
         entities: List<RingRecordEntity>,
         zoneId: ZoneId,
     ): List<SessionRecord> {
@@ -136,20 +131,20 @@ class WakeRecordRepository(
                     )
                 }
 
-            val schedule = alarmDao?.getById(alarmId)
-            val rangeStartAt = if (schedule != null) {
-                LocalDateTime.of(sessionDate, LocalTime.MIDNIGHT)
-                    .plusMinutes(schedule.startMinutes.toLong())
-                    .atZone(zoneId)
-            } else {
-                rings.firstOrNull()?.scheduledAt ?: sessionDate.atStartOfDay(zoneId)
-            }
+            // 範囲の開始時刻は、記録された1回目の鳴動時刻とする。タームの1回目は範囲の開始ちょうどに鳴る。
+            // いまのタームの設定から計算していたときは、開始時刻を後から変えると
+            // 過去の記録の「開始から何分で起きたか」まで遡って変わってしまっていた。
+            // 1回目が記録されていない場合は、残っている中でいちばん早い鳴動で代用する
+            val rangeStartAt = rings.firstOrNull { it.occurrenceIndex == 0 }?.scheduledAt
+                ?: rings.firstOrNull()?.scheduledAt
+                ?: sessionDate.atStartOfDay(zoneId)
 
             SessionRecord(
+                alarmId = alarmId,
                 sessionStart = sessionDate,
                 rangeStartAt = rangeStartAt,
                 rings = rings,
             )
-        }.sortedBy { it.sessionStart }
+        }.sortedWith(compareBy({ it.sessionStart }, { it.rangeStartAt }))
     }
 }
