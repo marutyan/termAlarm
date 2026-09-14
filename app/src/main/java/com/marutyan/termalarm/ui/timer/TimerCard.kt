@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -103,6 +104,12 @@ val TIMER_CARD_CLOSE_BUTTON_SIZE = 48.dp
 
 /** カード中央の一時停止・再開の印のサイズ(dp)。純正時計アプリの実測値27dpに基づく。 */
 val TIMER_ACTION_ICON_SIZE = 27.dp
+
+/**
+ * 一時停止・再開の印を、円の中心からどれだけ下へずらすか。
+ * 残り時間を中心に置いたうえで、その下へ重ならずに収まる位置とする。
+ */
+val TIMER_ACTION_ICON_CENTER_OFFSET = 44.dp
 
 /**
  * 端末の「アニメーションを減らす」または「アニメーションの無効化」が有効になっているかを判定する。
@@ -351,11 +358,11 @@ fun TimerCard(
                 }
                 val centerInteraction = remember { MutableInteractionSource() }
 
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.8.dp),
+                // 残り時間を円のちょうど中心へ置く。印はその下へ重ねて配置する
+                Box(
+                    contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .sizeIn(minWidth = 135.dp, minHeight = 108.dp)
+                        .size(TIMER_RING_SIZE)
                         .clickable(
                             interactionSource = centerInteraction,
                             indication = ripple(bounded = false, radius = 75.dp),
@@ -365,7 +372,7 @@ fun TimerCard(
                 ) {
                     val remainingDisplay = if (isFinished) {
                         val overdue = overdueMillis(timer, nowElapsed, nowWall)
-                        "−" + formatTimerRemaining(overdue)
+                        "−" + formatTimerElapsed(overdue)
                     } else {
                         formatTimerRemaining(remaining)
                     }
@@ -387,11 +394,13 @@ fun TimerCard(
                         maxLines = 1,
                         softWrap = false,
                         color = textColor,
+                        modifier = Modifier.padding(horizontal = TIMER_RING_STROKE_WIDTH * 2),
                     )
 
                     TimerActionIcon(
                         runState = timer.runState,
                         color = textColor,
+                        modifier = Modifier.offset(y = TIMER_ACTION_ICON_CENTER_OFFSET),
                     )
                 }
             }
@@ -567,7 +576,8 @@ fun TimerResetIcon(
 ) {
     Canvas(modifier = modifier.size(26.dp)) {
         val scale = size.width / 24f
-        val strokeWidth = 2.4.dp.toPx() * scale
+        // 24の座標系で2.0の太さ。dpへ直してから掛けると二重に拡大され、線が潰れる
+        val strokeWidth = 2.0f * scale
 
         // 円弧: 中心(12, 11)、半径9の円弧を時計回りに描画
         val arcRadius = 9f * scale
@@ -607,7 +617,25 @@ fun TimerResetIcon(
  * 動作中タイマーの残り時間表示用文字列を生成する。
  * design/Timer.dc.html に合わせ、1時間未満は「1:47」のようにM:SS、1時間以上は「H:MM:SS」とする。
  */
-private fun formatTimerRemaining(millis: Long): String {
+internal fun formatTimerRemaining(millis: Long): String {
+    // 切り上げる。切り捨てると、まだ1秒近く残っているのに0:00と出て、
+    // リングの残りや実際に鳴る時刻とずれて見える
+    val totalSeconds = ((millis + 999) / 1000).coerceAtLeast(0L)
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%d:%02d".format(minutes, seconds)
+    }
+}
+
+/**
+ * 鳴っている間に数え上げる経過時間の文字列を作る。
+ * 残り時間とは逆に切り捨てる。切り上げると、0を過ぎた直後に「1秒」と出てしまうため。
+ */
+internal fun formatTimerElapsed(millis: Long): String {
     val totalSeconds = (millis / 1000).coerceAtLeast(0L)
     val hours = totalSeconds / 3600
     val minutes = (totalSeconds % 3600) / 60

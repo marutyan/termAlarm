@@ -26,9 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -52,7 +50,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.marutyan.termalarm.ui.common.TOP_BAR_TOP_INSET
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
 import com.marutyan.termalarm.ui.theme.pressScaleEffect
@@ -74,12 +71,6 @@ private val START_BUTTON_MIN_HEIGHT = 89.9.dp
 
 /** テンキーの各行の最小高さ(dp)。純正時計アプリの行間隔の実測値67.9dpに基づく。 */
 private val KEYPAD_ROW_MIN_HEIGHT = 67.9.dp
-
-/** 右上の閉じるボタンのアイコンサイズ(dp)。純正レイアウトに合わせて18dpとする。 */
-private val CLOSE_ICON_SIZE = 18.dp
-
-/** 右上の閉じるボタンのタップ領域サイズ(dp)。アクセシビリティ確保のため48dp四方とする。 */
-private val CLOSE_BUTTON_SIZE = 48.dp
 
 /**
  * タイマー新規追加画面。Android純正時計アプリのレイアウトに基づき、
@@ -190,24 +181,6 @@ fun TimerAddScreen(
             )
         }
 
-        // 5. 画面右上の閉じるボタン（×）。他の画面の三点リーダーメニューと同じ高さに配置する。
-        if (onClose != null) {
-            IconButton(
-                onClick = onClose,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    // 他の画面の三点と同じ高さに揃える
-                    .padding(top = statusBarTop + TOP_BAR_TOP_INSET, end = 20.dp)
-                    .size(CLOSE_BUTTON_SIZE),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = stringResource(R.string.timer_cancel),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(CLOSE_ICON_SIZE),
-                )
-            }
-        }
     }
 }
 
