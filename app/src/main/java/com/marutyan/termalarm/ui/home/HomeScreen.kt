@@ -587,8 +587,8 @@ private fun TermCard(
                 text = timeRangeText,
                 style = TextStyle(
                     fontFamily = IbmPlexMono,
-                    fontSize = 24.sp,
-                    lineHeight = 22.sp,
+                    fontSize = 27.sp,
+                    lineHeight = 30.sp,
                     fontFeatureSettings = "tnum",
                     color = timeColor,
                 ),

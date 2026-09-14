@@ -1,16 +1,14 @@
 package com.marutyan.termalarm.ui.theme
 
-import android.graphics.Path
-import android.view.animation.PathInterpolator
+import androidx.activity.BackEventCompat
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -20,8 +18,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
@@ -32,26 +33,33 @@ import androidx.compose.ui.unit.dp
 // 薄く消えて薄く現れるだけなので短くてよい。長いと閉じたのに残っているように見える。
 const val TAB_TRANSITION_DURATION_MS = 150
 
-// 画面を開く・閉じるときの動き。端末が持つ既定のActivityアニメーション
-// (framework-resのanim/activity_open_enterなど)から、そのままの値を写している。
-// 純正の時計アプリは設定画面を別のActivityとして開くため、この動きがそのまま出る。
-//
-// 中身は「96dp分だけ横へ滑らせる」だけで、消える側・現れる側のどちらかが短くフェードする。
-const val SCREEN_SLIDE_DISTANCE_DP = 96
 /**
  * 下位の画面を出し入れする時間(ミリ秒)。
- * 純正の時計アプリを録画して測った、変化の始まりから完了までの長さ。
+ * Androidの予測型「戻る」が、指を離してから完了するまでに使う長さ。
  */
-const val SCREEN_TRANSITION_DURATION_MS = 140
+const val SCREEN_TRANSITION_DURATION_MS = 300
+
+/** 閉じていく画面が縮む先の倍率。Androidが公開している予測型「戻る」の設計値。 */
+const val SCREEN_EXIT_SCALE = 0.9f
 
 /**
- * 下位の画面が現れるときの、始めの大きさの倍率。
- * 純正は横へ滑らせず、その場で少し小さいところから実寸へ広げる。
+ * 現れる画面が始まるときの倍率。
+ * 戻るときは手前にいた画面が実寸まで縮んでくる形になるので、1.0より大きい。
  */
-const val SCREEN_TRANSITION_START_SCALE = 0.92f
+const val SCREEN_ENTER_START_SCALE = 1.1f
 
-// 端の引っ張りで戻すとき、閉じる画面が縮む倍率。純正を実機で測ると0.900だった
-const val PREDICTIVE_POP_SCALE = 0.9f
+/**
+ * 後ろで順番を待っている画面の濃さ。
+ * 純正を録画して測ると、指を動かしている間は暗いままで、離してから濃くなっていた。
+ */
+const val SCREEN_ENTER_DIM_ALPHA = 0.25f
+
+// 濃さが入れ替わり始める、変化全体のうちの位置。ここまでは濃さを変えない
+private const val SCREEN_FADE_THROUGH_START = 0.65f
+
+// 濃さの入れ替えを始めるまでの時間(ミリ秒)と、入れ替えにかける時間(ミリ秒)
+private val SCREEN_FADE_DELAY_MS = (SCREEN_TRANSITION_DURATION_MS * SCREEN_FADE_THROUGH_START).toInt()
+private val SCREEN_FADE_DURATION_MS = SCREEN_TRANSITION_DURATION_MS - SCREEN_FADE_DELAY_MS
 
 // タイマー新規追加画面の表示・非表示アニメーション時間(ミリ秒)。下からの出現と上への消去に合わせるために定義する。
 const val TIMER_ADD_TRANSITION_DURATION_MS = 300
@@ -97,65 +105,84 @@ fun tabFadeSpec(): TweenSpec<Float> = tween(
 )
 
 /**
- * 端末の`fast_out_extra_slow_in`と同じ曲線。最初に速く動いて長く減速する、
- * Androidが画面の出入りに使っている動き方。値はframework-resの定義そのまま。
- */
-val FastOutExtraSlowIn: Easing = PathInterpolator(
-    Path().apply {
-        moveTo(0f, 0f)
-        cubicTo(0.05f, 0f, 0.133333f, 0.06f, 0.166666f, 0.4f)
-        cubicTo(0.208333f, 0.82f, 0.25f, 1f, 1f, 1f)
-    },
-).let { interpolator -> Easing { fraction -> interpolator.getInterpolation(fraction) } }
-
-/**
- * 下位の画面を出し入れする動きの時間の取り方。
+ * 大きさと位置の変化の時間の取り方。
  *
- * 純正の時計アプリで設定から戻る様子を録画して測ると、横へは滑らせていなかった。
- * その場で薄く小さいところから実寸へ広げ、手前の画面は同じ場所で薄くなって消える。
- * 変化の始まりから完了までは約140msだった。
+ * 端の引っ張りでは指の進みがそのまま時間になるため、重み付けをすると
+ * 指の動きと画面の動きがずれる。Androidの実装例も進みへ直接掛けている。
  */
-private fun screenTransitionSpec(): TweenSpec<Float> = tween(
+private fun screenShapeSpec(): TweenSpec<Float> = tween(
     durationMillis = SCREEN_TRANSITION_DURATION_MS,
-    easing = FastOutSlowInEasing,
+    easing = LinearEasing,
 )
 
-/** 下位の画面が現れるとき。その場で少し広がりながら濃くなる */
-fun screenOpenEnter(slidePx: Int): EnterTransition =
-    fadeIn(animationSpec = screenTransitionSpec()) +
-        scaleIn(
-            animationSpec = screenTransitionSpec(),
-            initialScale = SCREEN_TRANSITION_START_SCALE,
-        )
+/** 位置の変化用。[screenShapeSpec]と同じ時間の取り方をIntOffsetへ当てる */
+private fun screenShiftSpec(): TweenSpec<IntOffset> = tween(
+    durationMillis = SCREEN_TRANSITION_DURATION_MS,
+    easing = LinearEasing,
+)
 
-/** 下位の画面を開くとき、下に隠れる側。その場で薄くなるだけ */
-fun screenOpenExit(slidePx: Int): ExitTransition =
-    fadeOut(animationSpec = screenTransitionSpec())
-
-/** 戻るとき、下から現れる側。開くときと同じく、その場で少し広がりながら濃くなる */
-fun screenCloseEnter(slidePx: Int): EnterTransition =
-    fadeIn(animationSpec = screenTransitionSpec()) +
-        scaleIn(
-            animationSpec = screenTransitionSpec(),
-            initialScale = SCREEN_TRANSITION_START_SCALE,
-        )
+// 濃さの入れ替えに使う曲線。Androidが画面の終了に使っているものと同じ
+private val ScreenFadeEasing: Easing = CubicBezierEasing(0.1f, 0.1f, 0f, 1f)
 
 /**
- * 端の引っ張りで戻すとき、閉じる側。指の進みに合わせて0.9倍まで縮む。
- *
- * 純正の設定画面は別のActivityなので、端末が画面ごと縮める仕組みがそのまま出る。
- * 実機で測ると縮小率は0.900で、Androidが推奨する値と同じだった。
- * こちらは同じ画面の中で切り替えるため、同じ見え方になるよう自分で縮める。
+ * 濃さの入れ替えの時間の取り方。
+ * 変化の終盤だけで入れ替えるため、[SCREEN_FADE_DELAY_MS]だけ待ってから動かす。
  */
-fun screenPredictivePopExit(): ExitTransition = scaleOut(
-    targetScale = PREDICTIVE_POP_SCALE,
-    transformOrigin = TransformOrigin(pivotFractionX = 0.5f, pivotFractionY = 0.5f),
+private fun screenFadeSpec(): TweenSpec<Float> = tween(
+    durationMillis = SCREEN_FADE_DURATION_MS,
+    delayMillis = SCREEN_FADE_DELAY_MS,
+    easing = ScreenFadeEasing,
 )
 
-/** 戻るとき、閉じる側。その場で薄くなって消える */
-fun screenCloseExit(slidePx: Int): ExitTransition =
-    fadeOut(animationSpec = screenTransitionSpec())
+/**
+ * 端の引っ張りで戻すとき、閉じる画面を指と反対側へずらす量(px)を求める。
+ *
+ * Androidの設計資料にある式で、画面幅の1/20から端に残す余白8dpを引く。
+ * 同じ式を複数箇所へ書かないよう、ここだけで計算する。
+ */
+@Composable
+fun rememberScreenBackShiftPx(): Int {
+    val density = LocalDensity.current
+    val containerWidth = LocalWindowInfo.current.containerSize.width
+    return remember(density, containerWidth) {
+        with(density) {
+            val widthDp = containerWidth.toDp().value
+            ((widthDp / 20f) - 8f).dp.roundToPx()
+        }
+    }
+}
 
+/** 下位の画面を開くとき、新しく現れる側。奥から手前へ来るように、少し小さいところから実寸へ広がる */
+fun screenOpenEnter(): EnterTransition =
+    scaleIn(animationSpec = screenShapeSpec(), initialScale = SCREEN_EXIT_SCALE) +
+        fadeIn(animationSpec = screenFadeSpec(), initialAlpha = SCREEN_ENTER_DIM_ALPHA)
+
+/** 下位の画面を開くとき、下に隠れる側。手前へ抜けるように少し広がりながら消える */
+fun screenOpenExit(): ExitTransition =
+    scaleOut(animationSpec = screenShapeSpec(), targetScale = SCREEN_ENTER_START_SCALE) +
+        fadeOut(animationSpec = screenFadeSpec())
+
+/** 戻るとき、現れる側。手前にいた画面が実寸まで縮んでくるので、実寸より大きいところから始める */
+fun screenCloseEnter(): EnterTransition =
+    scaleIn(animationSpec = screenShapeSpec(), initialScale = SCREEN_ENTER_START_SCALE) +
+        fadeIn(animationSpec = screenFadeSpec(), initialAlpha = SCREEN_ENTER_DIM_ALPHA)
+
+/** 戻るとき、閉じる側。奥へ下がるように縮みながら消える */
+fun screenCloseExit(): ExitTransition =
+    scaleOut(animationSpec = screenShapeSpec(), targetScale = SCREEN_EXIT_SCALE) +
+        fadeOut(animationSpec = screenFadeSpec())
+
+/**
+ * 端の引っ張りで戻している間の、閉じる側。
+ *
+ * [screenCloseExit]に、指と反対側への横ずらしを足したもの。
+ * どちらの端から引いたかで向きが変わるため、[swipeEdge]を見て符号を決める。
+ */
+fun screenPredictivePopExit(shiftPx: Int, swipeEdge: Int): ExitTransition {
+    val signedShift = if (swipeEdge == BackEventCompat.EDGE_RIGHT) -shiftPx else shiftPx
+    return screenCloseExit() +
+        slideOutHorizontally(animationSpec = screenShiftSpec()) { signedShift }
+}
 
 /**
  * タイマー追加画面の上下スライドを補間するAnimationSpecを生成する。

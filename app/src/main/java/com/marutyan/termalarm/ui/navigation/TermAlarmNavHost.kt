@@ -17,8 +17,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -57,7 +55,7 @@ import com.marutyan.termalarm.ui.skipgame.SkipGameViewModelFactory
 import com.marutyan.termalarm.ui.stopwatch.StopwatchScreen
 import com.marutyan.termalarm.ui.stopwatch.StopwatchViewModel
 import com.marutyan.termalarm.ui.stopwatch.StopwatchViewModelFactory
-import com.marutyan.termalarm.ui.theme.SCREEN_SLIDE_DISTANCE_DP
+import com.marutyan.termalarm.ui.theme.rememberScreenBackShiftPx
 import com.marutyan.termalarm.ui.theme.screenCloseEnter
 import com.marutyan.termalarm.ui.theme.screenCloseExit
 import com.marutyan.termalarm.ui.theme.screenOpenEnter
@@ -75,9 +73,10 @@ private const val ROUTE_PRIVACY = "privacy"
 
 /**
  * タブの上へ重ねて開く下位の画面。
- * これらから戻るときは、下にいた画面も滑り込ませて動きを対にするために用いる。
+ * これらから戻るときは、下にいた画面にも動きを付けて対にするために用いる。
  */
-private val SUB_SCREEN_ROUTES = setOf(ROUTE_GAME_LIST, ROUTE_ABOUT, ROUTE_PRIVACY)
+private val SUB_SCREEN_ROUTES =
+    setOf(NavItem.SETTINGS.route, ROUTE_GAME_LIST, ROUTE_ABOUT, ROUTE_PRIVACY)
 private const val ARG_ALARM_ID = "alarmId"
 
 // タームまたは通常アラームの編集シート対象。alarmIdがnullなら新規作成、値があれば該当IDの編集
@@ -140,7 +139,8 @@ fun TermAlarmNavHost(
         }
     }
 
-    val slidePx = with(LocalDensity.current) { SCREEN_SLIDE_DISTANCE_DP.dp.roundToPx() }
+    // 端の引っ張りで戻すとき、閉じる画面をずらす量
+    val backShiftPx = rememberScreenBackShiftPx()
 
     // 現在のバックスタックエントリからベースルートを判定し、下の帯を表示すべき主要画面かを特定する
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -169,19 +169,29 @@ fun TermAlarmNavHost(
                 startDestination = NavItem.TERMS.route,
                 enterTransition = { fadeIn(animationSpec = tabFadeSpec()) },
                 exitTransition = { fadeOut(animationSpec = tabFadeSpec()) },
-                // 下位の画面から戻るときだけ、下にいた画面も滑り込ませる。
+                // 下位の画面から戻るときだけ、下にいた画面も動かす。
                 // 出ていく側だけが動くと、戻る動きが途中で切れて見える。
                 // タブどうしの行き来はこれまでどおり動かさない
                 popEnterTransition = {
                     if (initialState.destination.route in SUB_SCREEN_ROUTES) {
-                        screenCloseEnter(slidePx)
+                        screenCloseEnter()
                     } else {
                         EnterTransition.None
                     }
                 },
                 popExitTransition = { ExitTransition.None },
-                predictivePopEnterTransition = { _ -> EnterTransition.None },
-                predictivePopExitTransition = { _ -> screenPredictivePopExit() },
+                // 端を引っ張っている間の見え方。閉じる画面が縮んで指と反対側へずれ、
+                // その後ろから、実寸より大きい戻り先の画面が縮みながら濃くなってくる
+                predictivePopEnterTransition = { _ ->
+                    if (initialState.destination.route in SUB_SCREEN_ROUTES) {
+                        screenCloseEnter()
+                    } else {
+                        EnterTransition.None
+                    }
+                },
+                predictivePopExitTransition = { swipeEdge ->
+                    screenPredictivePopExit(shiftPx = backShiftPx, swipeEdge = swipeEdge)
+                },
             ) {
                 // 1. ターム（ホーム画面）
                 composable(NavItem.TERMS.route) {
@@ -342,8 +352,15 @@ fun TermAlarmNavHost(
                     )
                 }
 
-                // 6. 設定
-                composable(NavItem.SETTINGS.route) {
+                // 6. 設定。タブではなく上へ重ねて開く下位の画面なので、
+                // 出し入れの動きは他の下位の画面と同じにする
+                composable(
+                    NavItem.SETTINGS.route,
+                    enterTransition = { screenOpenEnter() },
+                    exitTransition = { screenOpenExit() },
+                    popEnterTransition = { screenCloseEnter() },
+                    popExitTransition = { screenCloseExit() },
+                ) {
                     val settingsRepository = remember { Repositories.settings(context) }
                     val viewModel: SettingsViewModel = viewModel(
                         factory = SettingsViewModelFactory(settingsRepository),
@@ -364,10 +381,10 @@ fun TermAlarmNavHost(
                 // ミニゲーム選択画面
                 composable(
                     ROUTE_GAME_LIST,
-                    enterTransition = { screenOpenEnter(slidePx) },
-                    exitTransition = { screenOpenExit(slidePx) },
-                    popEnterTransition = { screenCloseEnter(slidePx) },
-                    popExitTransition = { screenCloseExit(slidePx) },
+                    enterTransition = { screenOpenEnter() },
+                    exitTransition = { screenOpenExit() },
+                    popEnterTransition = { screenCloseEnter() },
+                    popExitTransition = { screenCloseExit() },
                 ) {
                     val settingsRepository = remember { Repositories.settings(context) }
                     val viewModel: SettingsViewModel = viewModel(
@@ -384,10 +401,10 @@ fun TermAlarmNavHost(
                 composable(
                     route = "$ROUTE_END_TODAY_GAME/{$ARG_ALARM_ID}",
                     arguments = listOf(navArgument(ARG_ALARM_ID) { type = NavType.LongType }),
-                    enterTransition = { screenOpenEnter(slidePx) },
-                    exitTransition = { screenOpenExit(slidePx) },
-                    popEnterTransition = { screenCloseEnter(slidePx) },
-                    popExitTransition = { screenCloseExit(slidePx) },
+                    enterTransition = { screenOpenEnter() },
+                    exitTransition = { screenOpenExit() },
+                    popEnterTransition = { screenCloseEnter() },
+                    popExitTransition = { screenCloseExit() },
                 ) { backStackEntry ->
                     val alarmId = backStackEntry.arguments?.getLong(ARG_ALARM_ID) ?: return@composable
                     val viewModel: SkipGameViewModel = viewModel(factory = SkipGameViewModelFactory(repository, context, alarmId, hasShakeSensor))
@@ -397,10 +414,10 @@ fun TermAlarmNavHost(
                 // ライセンス情報画面
                 composable(
                     ROUTE_ABOUT,
-                    enterTransition = { screenOpenEnter(slidePx) },
-                    exitTransition = { screenOpenExit(slidePx) },
-                    popEnterTransition = { screenCloseEnter(slidePx) },
-                    popExitTransition = { screenCloseExit(slidePx) },
+                    enterTransition = { screenOpenEnter() },
+                    exitTransition = { screenOpenExit() },
+                    popEnterTransition = { screenCloseEnter() },
+                    popExitTransition = { screenCloseExit() },
                 ) {
                     AboutScreen(onBack = { navController.popBackStack() })
                 }
@@ -408,10 +425,10 @@ fun TermAlarmNavHost(
                 // プライバシーポリシー画面
                 composable(
                     ROUTE_PRIVACY,
-                    enterTransition = { screenOpenEnter(slidePx) },
-                    exitTransition = { screenOpenExit(slidePx) },
-                    popEnterTransition = { screenCloseEnter(slidePx) },
-                    popExitTransition = { screenCloseExit(slidePx) },
+                    enterTransition = { screenOpenEnter() },
+                    exitTransition = { screenOpenExit() },
+                    popEnterTransition = { screenCloseEnter() },
+                    popExitTransition = { screenCloseExit() },
                 ) {
                     PrivacyScreen(onBack = { navController.popBackStack() })
                 }
