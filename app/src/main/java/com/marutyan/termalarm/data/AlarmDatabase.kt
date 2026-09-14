@@ -17,6 +17,8 @@ import androidx.room.TypeConverters
  *
  * exportSchema = true にして app/schemas/ のJSONをコミットしている。次にスキーマを変えるときは、
  * 直前のバージョンのJSONと比べてMigrationを書く。
+ *
+ * 置き場所は端末保護ストレージ（device protected storage）にする。理由は[storageContext]にある。
  */
 @Database(
     entities = [
@@ -39,6 +41,9 @@ abstract class AlarmDatabase : RoomDatabase() {
     abstract fun ringRecordDao(): RingRecordDao
 
     companion object {
+        // データベースのファイル名。置き場所を移すときにも使うため、ここを唯一の出どころにする
+        private const val DATABASE_NAME = "termalarm.db"
+
         @Volatile
         private var instance: AlarmDatabase? = null
 
@@ -46,10 +51,31 @@ abstract class AlarmDatabase : RoomDatabase() {
         fun getInstance(context: Context): AlarmDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
-                    context.applicationContext,
+                    storageContext(context),
                     AlarmDatabase::class.java,
-                    "termalarm.db",
+                    DATABASE_NAME,
                 ).build().also { instance = it }
             }
+
+        /**
+         * データベースを置く場所を返す。端末のロックを解除する前でも読める
+         * 端末保護ストレージ（device protected storage）を使う。
+         *
+         * 通常のストレージはロックを解除するまで読めない。そこへ置いていると、端末を再起動した後、
+         * 解除するまでアラームの予約を入れ直せない。夜間に更新などで再起動されると朝に鳴らない。
+         *
+         * 以前の版が通常のストレージへ作ったファイルは、ここへ一度だけ移す。
+         * 移動はファイルを開く前でないとできないため、接続を作る直前に行う。
+         * 既に移動済み、または元のファイルが無ければ何も起きない。
+         *
+         * ロック解除に紐づく暗号化の保護からは外れるが、置くのはアラームの時刻と設定であり、
+         * 鳴らないほうが実害が大きいと判断した。
+         */
+        private fun storageContext(context: Context): Context {
+            val appContext = context.applicationContext
+            val deviceContext = appContext.createDeviceProtectedStorageContext()
+            deviceContext.moveDatabaseFrom(appContext, DATABASE_NAME)
+            return deviceContext
+        }
     }
 }

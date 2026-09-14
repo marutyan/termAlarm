@@ -9,6 +9,7 @@ import android.content.pm.ServiceInfo
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
+import android.provider.Settings
 import android.os.IBinder
 import android.os.Vibrator
 import androidx.core.app.NotificationCompat
@@ -240,12 +241,27 @@ class RingingService : Service() {
         )
     }
 
+    /**
+     * アラームの音を鳴らす。
+     *
+     * 選ばれている音で鳴らせなかったときは、端末の既定の音、さらに端末に組み込みの音、の順に試す。
+     * 選んだ音がロック解除しないと読めない場所にあると、再起動した直後に鳴らせない。
+     * 音が出ないと、画面が出ていても寝ている人は気づけないため、必ず何かを鳴らす。
+     */
     private fun playSound(soundUri: String?, fadeInSeconds: Int) {
-        val uri: Uri = soundUri?.let(Uri::parse)
-            ?: RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM)
-            ?: return
-        // 寝ている人を起こすため、設定「徐々に音量を上げる」の秒数(既定5秒)かけて音量を上げる
-        mediaPlayer = SoundFadeIn.startRinging(this, scope, uri, fadeInSeconds)
+        val candidates = listOfNotNull(
+            soundUri?.let(Uri::parse),
+            RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM),
+            Settings.System.DEFAULT_ALARM_ALERT_URI,
+        ).distinct()
+        for (uri in candidates) {
+            // 寝ている人を起こすため、設定「徐々に音量を上げる」の秒数(既定5秒)かけて音量を上げる
+            val player = SoundFadeIn.startRinging(this, scope, uri, fadeInSeconds)
+            if (player != null) {
+                mediaPlayer = player
+                return
+            }
+        }
     }
 
     private fun startVibration() {
