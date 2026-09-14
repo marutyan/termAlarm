@@ -26,7 +26,7 @@ object Repositories {
         SettingsRepository(db(context).appSettingsDao())
 
     fun wakeRecord(context: Context): WakeRecordRepository =
-        WakeRecordRepository(db(context).ringRecordDao(), db(context).alarmDao())
+        WakeRecordRepository(db(context).ringRecordDao())
 
     private fun db(context: Context): AlarmDatabase = AlarmDatabase.getInstance(context)
 }

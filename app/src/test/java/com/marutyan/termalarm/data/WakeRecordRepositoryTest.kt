@@ -126,4 +126,78 @@ class WakeRecordRepositoryTest {
         assertEquals(day3, flowFiltered[1].sessionStart)
         assertEquals(day4, flowFiltered[2].sessionStart)
     }
+
+    /**
+     * 範囲の開始時刻が、いまのタームの設定ではなく記録された事実から決まることを検証する。
+     * 以前はタームの開始時刻を後から変えると、過去の記録の「開始から何分で起きたか」まで
+     * 遡って変わってしまっていた。
+     */
+    @Test
+    fun `範囲の開始時刻は記録された1回目の鳴動時刻になること`() = runTest {
+        val dao = FakeRingRecordDao()
+        val repository = WakeRecordRepository(dao)
+
+        val sessionDate = LocalDate.of(2026, 9, 13)
+        val first = ZonedDateTime.of(sessionDate, java.time.LocalTime.of(7, 0), TOKYO)
+        val second = first.plusMinutes(5)
+
+        // 2回目を先に保存しても、1回目(occurrenceIndex=0)が範囲の開始になること
+        repository.record(
+            alarmId = 42L,
+            sessionStart = sessionDate.toEpochDay(),
+            scheduledAt = second.toInstant().toEpochMilli(),
+            stoppedAt = null,
+            stopMethod = StopMethod.AUTO_SILENCED.name,
+            occurrenceIndex = 1,
+        )
+        repository.record(
+            alarmId = 42L,
+            sessionStart = sessionDate.toEpochDay(),
+            scheduledAt = first.toInstant().toEpochMilli(),
+            stoppedAt = null,
+            stopMethod = StopMethod.AUTO_SILENCED.name,
+            occurrenceIndex = 0,
+        )
+
+        val session = repository.getAllSessions(TOKYO).single()
+        assertEquals(first, session.rangeStartAt)
+        assertEquals(42L, session.alarmId)
+    }
+
+    /**
+     * 同じ日に別のタームの記録があるとき、まとめられずに別のセッションとして返ることを検証する。
+     */
+    @Test
+    fun `同じ日でもタームが違えば別のセッションになること`() = runTest {
+        val dao = FakeRingRecordDao()
+        val repository = WakeRecordRepository(dao)
+
+        val sessionDate = LocalDate.of(2026, 9, 13)
+        val morning = ZonedDateTime.of(sessionDate, java.time.LocalTime.of(7, 0), TOKYO)
+        val night = ZonedDateTime.of(sessionDate, java.time.LocalTime.of(22, 0), TOKYO)
+
+        repository.record(
+            alarmId = 1L,
+            sessionStart = sessionDate.toEpochDay(),
+            scheduledAt = morning.toInstant().toEpochMilli(),
+            stoppedAt = morning.toInstant().toEpochMilli(),
+            stopMethod = StopMethod.TAP.name,
+            occurrenceIndex = 0,
+        )
+        repository.record(
+            alarmId = 2L,
+            sessionStart = sessionDate.toEpochDay(),
+            scheduledAt = night.toInstant().toEpochMilli(),
+            stoppedAt = night.toInstant().toEpochMilli(),
+            stopMethod = StopMethod.TAP.name,
+            occurrenceIndex = 0,
+        )
+
+        val sessions = repository.getAllSessions(TOKYO)
+        assertEquals(2, sessions.size)
+        // 同じ日のときは範囲の開始が早い方を先に並べる
+        assertEquals(listOf(1L, 2L), sessions.map { it.alarmId })
+        assertEquals(morning, sessions[0].rangeStartAt)
+        assertEquals(night, sessions[1].rangeStartAt)
+    }
 }

@@ -16,6 +16,7 @@ class WakeRecordTest {
         val today = LocalDate.of(2026, 9, 13)
         val rangeStart = ZonedDateTime.of(today, java.time.LocalTime.of(7, 0), TOKYO)
         val session = SessionRecord(
+            alarmId = 1L,
             sessionStart = today,
             rangeStartAt = rangeStart,
             rings = listOf(
@@ -43,6 +44,7 @@ class WakeRecordTest {
         val today = LocalDate.of(2026, 9, 13)
         val rangeStart = ZonedDateTime.of(today, java.time.LocalTime.of(7, 0), TOKYO)
         val session = SessionRecord(
+            alarmId = 1L,
             sessionStart = today,
             rangeStartAt = rangeStart,
             rings = listOf(
@@ -87,6 +89,7 @@ class WakeRecordTest {
         val today = LocalDate.of(2026, 9, 13)
         val rangeStart = ZonedDateTime.of(today, java.time.LocalTime.of(7, 0), TOKYO)
         val emptySession = SessionRecord(
+            alarmId = 1L,
             sessionStart = today,
             rangeStartAt = rangeStart,
             rings = emptyList(),
@@ -95,6 +98,7 @@ class WakeRecordTest {
 
         // 複数セッションにわたる計算のケース
         val session1 = SessionRecord(
+            alarmId = 1L,
             sessionStart = today,
             rangeStartAt = rangeStart,
             rings = listOf(
@@ -104,6 +108,7 @@ class WakeRecordTest {
             ),
         )
         val session2 = SessionRecord(
+            alarmId = 1L,
             sessionStart = today.plusDays(1),
             rangeStartAt = rangeStart.plusDays(1),
             rings = listOf(
@@ -123,6 +128,7 @@ class WakeRecordTest {
 
         // セッション1: 2回目で起床、所要10分
         val session1 = SessionRecord(
+            alarmId = 1L,
             sessionStart = today,
             rangeStartAt = rangeStart,
             rings = listOf(
@@ -133,6 +139,7 @@ class WakeRecordTest {
 
         // セッション2: 4回目で起床、所要20分
         val session2 = SessionRecord(
+            alarmId = 1L,
             sessionStart = today.plusDays(1),
             rangeStartAt = rangeStart.plusDays(1),
             rings = listOf(
@@ -145,6 +152,7 @@ class WakeRecordTest {
 
         // セッション3: 全部 AUTO_SILENCED（起床とみなした回なし -> 平均から除外されるべき）
         val session3 = SessionRecord(
+            alarmId = 1L,
             sessionStart = today.plusDays(2),
             rangeStartAt = rangeStart.plusDays(2),
             rings = listOf(
@@ -155,6 +163,7 @@ class WakeRecordTest {
 
         // セッション4: 鳴動記録0件（除外されるべき）
         val session4 = SessionRecord(
+            alarmId = 1L,
             sessionStart = today.plusDays(3),
             rangeStartAt = rangeStart.plusDays(3),
             rings = emptyList(),
