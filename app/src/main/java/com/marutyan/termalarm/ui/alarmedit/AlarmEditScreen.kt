@@ -28,6 +28,7 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -318,7 +319,12 @@ fun AlarmEditScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
-                            TermTagIcon(color = MaterialTheme.customColors.subtleText)
+                            Icon(
+                                imageVector = TermTagIcon,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.customColors.subtleText,
+                            )
                             Text(
                                 text = stringResource(R.string.label_title),
                                 fontSize = 15.sp,
@@ -332,7 +338,12 @@ fun AlarmEditScreen(
                                     color = MaterialTheme.customColors.subtleText,
                                 )
                             }
-                            TermChevronRightIcon(color = MaterialTheme.customColors.subtleText)
+                            Icon(
+                                imageVector = TermChevronRightIcon,
+                                contentDescription = null,
+                                modifier = Modifier.size(17.dp),
+                                tint = MaterialTheme.customColors.subtleText,
+                            )
                         }
 
                         // 区切り線
@@ -370,7 +381,12 @@ fun AlarmEditScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                             ) {
-                                TermIntervalBarsIcon(color = MaterialTheme.customColors.subtleText)
+                                Icon(
+                                    imageVector = TermIntervalBarsIcon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.customColors.subtleText,
+                                )
                                 Text(
                                     text = stringResource(R.string.term_edit_interval_label),
                                     fontSize = 15.sp,
@@ -383,7 +399,12 @@ fun AlarmEditScreen(
                                     fontFamily = ibmPlexMonoFontFamily(400),
                                     color = MaterialTheme.customColors.subtleText,
                                 )
-                                TermChevronRightIcon(color = MaterialTheme.customColors.subtleText)
+                                Icon(
+                                    imageVector = TermChevronRightIcon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(17.dp),
+                                    tint = MaterialTheme.customColors.subtleText,
+                                )
                             }
 
                             // 区切り線
@@ -430,7 +451,12 @@ fun AlarmEditScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
-                            TermQuestionCircleIcon(color = MaterialTheme.customColors.subtleText)
+                            Icon(
+                                imageVector = TermQuestionCircleIcon,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.customColors.subtleText,
+                            )
                             Text(
                                 text = stringResource(R.string.term_edit_challenge_label),
                                 fontSize = 15.sp,
@@ -442,7 +468,12 @@ fun AlarmEditScreen(
                                 fontSize = 14.sp,
                                 color = MaterialTheme.customColors.subtleText,
                             )
-                            TermChevronRightIcon(color = MaterialTheme.customColors.subtleText)
+                            Icon(
+                                imageVector = TermChevronRightIcon,
+                                contentDescription = null,
+                                modifier = Modifier.size(17.dp),
+                                tint = MaterialTheme.customColors.subtleText,
+                            )
                         }
                     }
                 }
@@ -463,7 +494,12 @@ fun AlarmEditScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        TermWakeCheckIcon(color = MaterialTheme.customColors.subtleText)
+                        Icon(
+                            imageVector = TermWakeCheckIcon,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.customColors.subtleText,
+                        )
                         Column(
                             modifier = Modifier.weight(1f),
                             verticalArrangement = Arrangement.spacedBy(2.dp),

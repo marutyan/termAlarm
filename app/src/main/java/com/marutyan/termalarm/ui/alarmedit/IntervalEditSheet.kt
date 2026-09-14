@@ -17,6 +17,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -131,9 +132,11 @@ fun IntervalEditDialog(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.padding(horizontal = 22.dp),
                     ) {
-                        TermIntervalBarsIcon(
+                        Icon(
+                            imageVector = TermIntervalBarsIcon,
+                            contentDescription = null,
                             modifier = Modifier.size(20.dp),
-                            color = MaterialTheme.customColors.subtleText,
+                            tint = MaterialTheme.customColors.subtleText,
                         )
                         Text(
                             text = stringResource(R.string.term_edit_interval_label),
@@ -281,9 +284,11 @@ fun IntervalEditDialog(
                                         modifier = Modifier.padding(bottom = 10.dp),
                                         contentAlignment = Alignment.Center,
                                     ) {
-                                        TermArrowRightIcon(
-                                            modifier = Modifier.size(18.dp),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        Icon(
+                                            imageVector = TermArrowRightIcon,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
 

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -239,9 +240,11 @@ internal fun RingingEndTermCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            TermEndIcon(
+            Icon(
+                imageVector = TermEndIcon,
+                contentDescription = null,
                 modifier = Modifier.size(20.dp),
-                color = MaterialTheme.customColors.subtleText,
+                tint = MaterialTheme.customColors.subtleText,
             )
 
             Text(
@@ -253,9 +256,11 @@ internal fun RingingEndTermCard(
                 modifier = Modifier.weight(1f),
             )
 
-            TermChevronRightIcon(
+            Icon(
+                imageVector = TermChevronRightIcon,
+                contentDescription = null,
                 modifier = Modifier.size(17.dp),
-                color = MaterialTheme.customColors.subtleText,
+                tint = MaterialTheme.customColors.subtleText,
             )
         }
     }

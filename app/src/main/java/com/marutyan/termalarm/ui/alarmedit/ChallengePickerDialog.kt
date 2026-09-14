@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -104,7 +105,12 @@ fun ChallengePickerDialog(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.padding(start = 22.dp, end = 22.dp, bottom = 16.dp),
                     ) {
-                        TermQuestionCircleIcon(color = MaterialTheme.customColors.subtleText)
+                        Icon(
+                            imageVector = TermQuestionCircleIcon,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.customColors.subtleText,
+                        )
                         Text(
                             text = stringResource(R.string.term_edit_challenge_label),
                             fontSize = 18.sp,

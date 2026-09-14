@@ -9,6 +9,85 @@ import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
 
 /**
+ * 24x24dp（viewport 24x24）のアイコン用ImageVectorビルダーを初期化して返す共通関数。
+ * 線画パスや塗りつぶし、円など複数の描画要素を組み合わせて複雑なベクターアイコンを構築するために用いる。
+ */
+fun buildVectorIconBuilder(
+    name: String,
+): ImageVector.Builder = ImageVector.Builder(
+    name = name,
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f,
+)
+
+/**
+ * 指定された中心座標と半径の正円を表すSVGパス文字列を生成する補助関数。
+ * ベクターアイコンの内部で円の線画や塗りつぶしを定義するために用いる。
+ */
+fun circlePathData(centerX: Float, centerY: Float, radius: Float): String =
+    "M ${centerX - radius},$centerY a $radius,$radius 0 1,0 ${2 * radius},0 a $radius,$radius 0 1,0 ${-2 * radius},0"
+
+/**
+ * SVGパス文字列から線画（stroke）要素をImageVectorに追加する拡張関数。
+ * 複数の異なる太さや形状を持つ線画パスを同一アイコンビルダーに逐次追加するために用いる。
+ */
+fun ImageVector.Builder.addStrokePath(
+    pathString: String,
+    strokeWidth: Float = 1.6f,
+    strokeCap: StrokeCap = StrokeCap.Round,
+    strokeJoin: StrokeJoin = StrokeJoin.Round,
+): ImageVector.Builder = addPath(
+    pathData = PathParser().parsePathString(pathString).toNodes(),
+    stroke = SolidColor(Color.White),
+    strokeLineWidth = strokeWidth,
+    strokeLineCap = strokeCap,
+    strokeLineJoin = strokeJoin,
+)
+
+/**
+ * SVGパス文字列から塗りつぶし（fill）要素をImageVectorに追加する拡張関数。
+ * 閉じたパスで囲まれた領域をアイコン内で白（tint適用対象）で塗りつぶすために用いる。
+ */
+fun ImageVector.Builder.addFillPath(
+    pathString: String,
+): ImageVector.Builder = addPath(
+    pathData = PathParser().parsePathString(pathString).toNodes(),
+    fill = SolidColor(Color.White),
+)
+
+/**
+ * 指定された中心座標と半径の円（線画）をImageVectorに追加する拡張関数。
+ * 丸囲みアイコンなどの外周円を正確な線幅で描くために用いる。
+ */
+fun ImageVector.Builder.addCircleStroke(
+    centerX: Float,
+    centerY: Float,
+    radius: Float,
+    strokeWidth: Float = 1.6f,
+    strokeCap: StrokeCap = StrokeCap.Round,
+    strokeJoin: StrokeJoin = StrokeJoin.Round,
+): ImageVector.Builder = addStrokePath(
+    pathString = circlePathData(centerX, centerY, radius),
+    strokeWidth = strokeWidth,
+    strokeCap = strokeCap,
+    strokeJoin = strokeJoin,
+)
+
+/**
+ * 指定された中心座標と半径の塗りつぶし円（点）をImageVectorに追加する拡張関数。
+ * タグの穴や疑問符の下部の点など、小さな円形ドットを忠実に再現するために用いる。
+ */
+fun ImageVector.Builder.addCircleFill(
+    centerX: Float,
+    centerY: Float,
+    radius: Float,
+): ImageVector.Builder = addFillPath(
+    pathString = circlePathData(centerX, centerY, radius),
+)
+
+/**
  * SVGパス文字列から線画スタイルのImageVectorを動的に構築する共通関数。
  * アプリのアイコンを外部画像に依存せず、インラインのベクターデータとして描画するために用いる。
  */
@@ -18,19 +97,10 @@ fun buildVectorIcon(
     strokeWidth: Float = 1.6f,
     strokeCap: StrokeCap = StrokeCap.Round,
     strokeJoin: StrokeJoin = StrokeJoin.Round,
-): ImageVector = ImageVector.Builder(
-    name = name,
-    defaultWidth = 24.dp,
-    defaultHeight = 24.dp,
-    viewportWidth = 24f,
-    viewportHeight = 24f,
-).addPath(
-    pathData = PathParser().parsePathString(pathString).toNodes(),
-    stroke = SolidColor(Color.White),
-    strokeLineWidth = strokeWidth,
-    strokeLineCap = strokeCap,
-    strokeLineJoin = strokeJoin,
-).build()
+): ImageVector = buildVectorIconBuilder(name)
+    .addStrokePath(pathString, strokeWidth, strokeCap, strokeJoin)
+    .build()
+
 
 /**
  * ターム（ホーム）を表す目覚まし時計アイコン。
