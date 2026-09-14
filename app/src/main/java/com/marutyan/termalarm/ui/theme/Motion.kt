@@ -1,15 +1,14 @@
 package com.marutyan.termalarm.ui.theme
 
-import android.graphics.Path
-import android.view.animation.PathInterpolator
+import androidx.activity.BackEventCompat
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -19,30 +18,55 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 
 // 画面が入れ替わるときの時間(ミリ秒)。
 // 薄く消えて薄く現れるだけなので短くてよい。長いと閉じたのに残っているように見える。
 const val TAB_TRANSITION_DURATION_MS = 150
 
-// 画面を開く・閉じるときの動き。端末が持つ既定のActivityアニメーション
-// (framework-resのanim/activity_open_enterなど)から、そのままの値を写している。
-// 純正の時計アプリは設定画面を別のActivityとして開くため、この動きがそのまま出る。
-//
-// 中身は「96dp分だけ横へ滑らせる」だけで、消える側・現れる側のどちらかが短くフェードする。
-const val SCREEN_SLIDE_DISTANCE_DP = 96
-const val SCREEN_SLIDE_DURATION_MS = 450
-const val SCREEN_FADE_DURATION_MS = 83
-const val SCREEN_OPEN_FADE_DELAY_MS = 50
-const val SCREEN_CLOSE_FADE_DELAY_MS = 35
+/**
+ * 下位の画面を出し入れする時間(ミリ秒)。
+ *
+ * 純正は指を離してから約400msかけるが、それでは遅く感じるため短くしている。
+ * 開くときと戻るときで同じ長さにして、行き来の手触りを揃える。
+ */
+const val SCREEN_TRANSITION_DURATION_MS = 110
 
-// 端の引っ張りで戻すとき、閉じる画面が縮む倍率。純正を実機で測ると0.900だった
-const val PREDICTIVE_POP_SCALE = 0.9f
+/**
+ * 閉じていく画面が縮む先の倍率。
+ * 純正時計アプリの戻る操作を録画し、画面の横幅が1080pxから926pxになるのを測って決めた。
+ */
+const val SCREEN_EXIT_SCALE = 0.86f
+
+/**
+ * 現れる画面が始まるときの倍率。
+ *
+ * [SCREEN_EXIT_SCALE]の逆数にあたる1.16だと、戻り先の画面が動いていることが分かりにくい。
+ * 戻っていることが伝わる強さを優先して、そこから少し広げている。
+ */
+const val SCREEN_ENTER_START_SCALE = 1.25f
+
+/**
+ * 後ろで順番を待っている画面の濃さ。
+ * 純正は端を引っ張っている間、戻り先の画面を暗いまま見せて、離してから濃くする。
+ */
+const val SCREEN_ENTER_DIM_ALPHA = 0.25f
+
+// 端を引っ張っている間に濃さを入れ替え始める位置。ここまでは濃さを変えない
+private const val PREDICTIVE_FADE_START = 0.7f
+
+// 端の引っ張りで、濃さの入れ替えを始めるまでの時間(ミリ秒)と、入れ替えにかける時間(ミリ秒)
+private val PREDICTIVE_FADE_DELAY_MS = (SCREEN_TRANSITION_DURATION_MS * PREDICTIVE_FADE_START).toInt()
+private val PREDICTIVE_FADE_DURATION_MS = SCREEN_TRANSITION_DURATION_MS - PREDICTIVE_FADE_DELAY_MS
 
 // タイマー新規追加画面の表示・非表示アニメーション時間(ミリ秒)。下からの出現と上への消去に合わせるために定義する。
 const val TIMER_ADD_TRANSITION_DURATION_MS = 300
@@ -56,14 +80,27 @@ const val BUTTON_PRESS_SCALE = 0.92f
 // ボタンを押下した際と離した際のアニメーション時間(ミリ秒)。機敏なフィードバックを返すために定義する。
 const val BUTTON_PRESS_DURATION_MS = 100
 
-// タイマーの輪の進捗角度を補間する時間(ミリ秒)。1秒間隔の更新を滑らかな連続移動にするために定義する。
-const val TIMER_PROGRESS_DURATION_MS = 1000
+// タイマーカードの状態切り替え時に色を遷移させる時間(ミリ秒)。急激な明度や色の変化を和らげるために定義する。
+const val TIMER_COLOR_TRANSITION_DURATION_MS = 200
 
 // 時計のアナログ・デジタル表示を切り替えるアニメーション時間(ミリ秒)。自然な拡大縮小フェードにするために定義する。
 const val CLOCK_MODE_TRANSITION_DURATION_MS = 300
 
 // アラーム一覧のスイッチ切り替え時に時刻等の色を遷移させる時間(ミリ秒)。急激な明度変化を和らげるために定義する。
 const val ALARM_COLOR_TRANSITION_DURATION_MS = 250
+
+// ホーム画面の「次の鳴動」セクションの開閉アニメーション時間(ミリ秒)。
+// 出現・消滅に合わせて下の一覧が滑らかに追従するよう定義する。
+const val HOME_NEXT_TRIGGER_TRANSITION_DURATION_MS = 300
+
+/**
+ * ホーム画面の「次の鳴動」セクションの垂直展開・縮小を補間するAnimationSpecを生成する。
+ * 上からの展開と上への縮小時に滑らかな加減速を適用するために用いる。
+ */
+fun homeNextTriggerExpandSpec(): TweenSpec<IntSize> = tween(
+    durationMillis = HOME_NEXT_TRIGGER_TRANSITION_DURATION_MS,
+    easing = FastOutSlowInEasing,
+)
 
 /**
  * タブ切り替え時のフェードイン・フェードアウトを補間するAnimationSpecを生成する。
@@ -74,64 +111,100 @@ fun tabFadeSpec(): TweenSpec<Float> = tween(
     easing = LinearEasing,
 )
 
+// 画面の出し入れに使う曲線。最初に速く動いて長く減速する、Androidが画面の終了に使っているもの
+private val ScreenEasing: Easing = CubicBezierEasing(0.1f, 0.1f, 0f, 1f)
+
+/** 押して開く・戻るときの時間の取り方。大きさも濃さもこれ1つで動かす */
+private fun screenSpec(): TweenSpec<Float> = tween(
+    durationMillis = SCREEN_TRANSITION_DURATION_MS,
+    easing = ScreenEasing,
+)
+
 /**
- * 端末の`fast_out_extra_slow_in`と同じ曲線。最初に速く動いて長く減速する、
- * Androidが画面の出入りに使っている動き方。値はframework-resの定義そのまま。
+ * 端を引っ張っている間の、大きさと位置の時間の取り方。
+ * 指の進みがそのまま時間になるため、重み付けをすると指と画面の動きがずれる。
  */
-val FastOutExtraSlowIn: Easing = PathInterpolator(
-    Path().apply {
-        moveTo(0f, 0f)
-        cubicTo(0.05f, 0f, 0.133333f, 0.06f, 0.166666f, 0.4f)
-        cubicTo(0.208333f, 0.82f, 0.25f, 1f, 1f, 1f)
-    },
-).let { interpolator -> Easing { fraction -> interpolator.getInterpolation(fraction) } }
+private fun screenSeekSpec(): TweenSpec<Float> = tween(
+    durationMillis = SCREEN_TRANSITION_DURATION_MS,
+    easing = LinearEasing,
+)
 
-/** 画面を開くとき、現れる側。右から96dp滑り込みながら、少し遅れて短くフェードインする */
-fun screenOpenEnter(slidePx: Int): EnterTransition =
-    slideInHorizontally(animationSpec = screenSlideSpec()) { slidePx } +
-        fadeIn(
-            animationSpec = tween(
-                durationMillis = SCREEN_FADE_DURATION_MS,
-                delayMillis = SCREEN_OPEN_FADE_DELAY_MS,
-                easing = LinearEasing,
-            ),
-        )
-
-/** 画面を開くとき、隠れる側。左へ96dp滑るだけで、透明度は変えない */
-fun screenOpenExit(slidePx: Int): ExitTransition =
-    slideOutHorizontally(animationSpec = screenSlideSpec()) { -slidePx }
-
-/** 戻るとき、戻り先。左から96dp滑って戻るだけで、透明度は変えない */
-fun screenCloseEnter(slidePx: Int): EnterTransition =
-    slideInHorizontally(animationSpec = screenSlideSpec()) { -slidePx }
+/** [screenSeekSpec]と同じ時間の取り方を、位置(IntOffset)へ当てたもの */
+private fun screenSeekShiftSpec(): TweenSpec<IntOffset> = tween(
+    durationMillis = SCREEN_TRANSITION_DURATION_MS,
+    easing = LinearEasing,
+)
 
 /**
- * 端の引っ張りで戻すとき、閉じる側。指の進みに合わせて0.9倍まで縮む。
+ * 端を引っ張っている間の、濃さの時間の取り方。
+ * 引いている途中で消えたり濃くなったりしないよう、終盤まで待ってから入れ替える。
+ */
+private fun screenSeekFadeSpec(): TweenSpec<Float> = tween(
+    durationMillis = PREDICTIVE_FADE_DURATION_MS,
+    delayMillis = PREDICTIVE_FADE_DELAY_MS,
+    easing = ScreenEasing,
+)
+
+/**
+ * 端の引っ張りで戻すとき、閉じる画面を指と反対側へずらす量(px)を求める。
  *
- * 純正の設定画面は別のActivityなので、端末が画面ごと縮める仕組みがそのまま出る。
- * 実機で測ると縮小率は0.900で、Androidが推奨する値と同じだった。
- * こちらは同じ画面の中で切り替えるため、同じ見え方になるよう自分で縮める。
+ * Androidの設計資料にある式で、画面幅の1/20から端に残す余白8dpを引く。
+ * 同じ式を複数箇所へ書かないよう、ここだけで計算する。
  */
-fun screenPredictivePopExit(): ExitTransition = scaleOut(
-    targetScale = PREDICTIVE_POP_SCALE,
-    transformOrigin = TransformOrigin(pivotFractionX = 0.5f, pivotFractionY = 0.5f),
-)
+@Composable
+fun rememberScreenBackShiftPx(): Int {
+    val density = LocalDensity.current
+    val containerWidth = LocalWindowInfo.current.containerSize.width
+    return remember(density, containerWidth) {
+        with(density) {
+            val widthDp = containerWidth.toDp().value
+            ((widthDp / 20f) - 8f).dp.roundToPx()
+        }
+    }
+}
 
-/** 戻るとき、閉じる側。右へ96dp滑りながら、少し遅れて短くフェードアウトする */
-fun screenCloseExit(slidePx: Int): ExitTransition =
-    slideOutHorizontally(animationSpec = screenSlideSpec()) { slidePx } +
-        fadeOut(
-            animationSpec = tween(
-                durationMillis = SCREEN_FADE_DURATION_MS,
-                delayMillis = SCREEN_CLOSE_FADE_DELAY_MS,
-                easing = LinearEasing,
-            ),
-        )
+/** 下位の画面を開くとき、新しく現れる側。奥から手前へ来るように、小さいところから実寸へ広がる */
+fun screenOpenEnter(): EnterTransition =
+    scaleIn(animationSpec = screenSpec(), initialScale = SCREEN_EXIT_SCALE) +
+        fadeIn(animationSpec = screenSpec(), initialAlpha = SCREEN_ENTER_DIM_ALPHA)
 
-private fun screenSlideSpec(): TweenSpec<IntOffset> = tween(
-    durationMillis = SCREEN_SLIDE_DURATION_MS,
-    easing = FastOutExtraSlowIn,
-)
+/** 下位の画面を開くとき、下に隠れる側。手前へ抜けるように広がりながら消える */
+fun screenOpenExit(): ExitTransition =
+    scaleOut(animationSpec = screenSpec(), targetScale = SCREEN_ENTER_START_SCALE) +
+        fadeOut(animationSpec = screenSpec())
+
+/** 戻るとき、現れる側。手前にいた画面が実寸まで縮んでくるので、実寸より大きいところから始める */
+fun screenCloseEnter(): EnterTransition =
+    scaleIn(animationSpec = screenSpec(), initialScale = SCREEN_ENTER_START_SCALE) +
+        fadeIn(animationSpec = screenSpec(), initialAlpha = SCREEN_ENTER_DIM_ALPHA)
+
+/** 戻るとき、閉じる側。奥へ下がるように縮みながら消える */
+fun screenCloseExit(): ExitTransition =
+    scaleOut(animationSpec = screenSpec(), targetScale = SCREEN_EXIT_SCALE) +
+        fadeOut(animationSpec = screenSpec())
+
+/**
+ * 端を引っ張って戻している間の、現れる側。
+ *
+ * 大きさは指の進みへ直に追従させ、濃さは離すまで暗いままにする。
+ * [screenCloseEnter]と分けているのは、引いている途中で濃くなると純正と違って見えるため。
+ */
+fun screenPredictivePopEnter(): EnterTransition =
+    scaleIn(animationSpec = screenSeekSpec(), initialScale = SCREEN_ENTER_START_SCALE) +
+        fadeIn(animationSpec = screenSeekFadeSpec(), initialAlpha = SCREEN_ENTER_DIM_ALPHA)
+
+/**
+ * 端を引っ張って戻している間の、閉じる側。
+ *
+ * 縮みながら、指と反対側へずれる。どちらの端から引いたかで向きが変わるため、
+ * [swipeEdge]を見て符号を決める。濃さは離すまで変えない。
+ */
+fun screenPredictivePopExit(shiftPx: Int, swipeEdge: Int): ExitTransition {
+    val signedShift = if (swipeEdge == BackEventCompat.EDGE_RIGHT) -shiftPx else shiftPx
+    return scaleOut(animationSpec = screenSeekSpec(), targetScale = SCREEN_EXIT_SCALE) +
+        fadeOut(animationSpec = screenSeekFadeSpec()) +
+        slideOutHorizontally(animationSpec = screenSeekShiftSpec()) { signedShift }
+}
 
 /**
  * タイマー追加画面の上下スライドを補間するAnimationSpecを生成する。
@@ -161,12 +234,12 @@ fun buttonPressAnimationSpec(): TweenSpec<Float> = tween(
 )
 
 /**
- * タイマーの円形プログレス角度を補間するAnimationSpecを生成する。
- * 1秒かけて等速(LinearEasing)で次の角度へ直進させ、針が飛ぶ現象を解消する。
+ * タイマーカードの色切り替えを補間するAnimationSpecを生成する。
+ * 200msかけて状態に応じた色へ自然に遷移させる。
  */
-fun timerProgressAnimationSpec(): TweenSpec<Float> = tween(
-    durationMillis = TIMER_PROGRESS_DURATION_MS,
-    easing = LinearEasing,
+fun timerColorAnimationSpec(): TweenSpec<Color> = tween(
+    durationMillis = TIMER_COLOR_TRANSITION_DURATION_MS,
+    easing = FastOutSlowInEasing,
 )
 
 /**

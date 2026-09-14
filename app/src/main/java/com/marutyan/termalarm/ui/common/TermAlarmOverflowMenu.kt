@@ -2,6 +2,7 @@ package com.marutyan.termalarm.ui.common
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
@@ -10,6 +11,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -21,10 +23,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.marutyan.termalarm.R
+import com.marutyan.termalarm.ui.theme.customColors
 
 /**
- * 各タブ共通の「⋮」メニュー。純正時計アプリに合わせた構成で「設定」「プライバシー ポリシー」「ライセンス」の3項目とアイコンを表示する。
- * 各タブ画面のTopAppBarのアクション領域に配置され、選択された画面への遷移イベントを親へ通知する。
+ * 画面上部の帯に配置されるオーバーフローメニュー。「設定」「プライバシー」「このアプリについて」の3項目を表示する。
+ * 三点アイコンのタップでドロップダウンを展開し、選択された画面への遷移イベントを親へ通知するために用いる。
  */
 @Composable
 fun TermAlarmOverflowMenu(
@@ -36,8 +39,16 @@ fun TermAlarmOverflowMenu(
     var expanded by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = modifier) {
-        IconButton(onClick = { expanded = true }) {
-            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.menu_more))
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier.size(44.dp),
+        ) {
+            Icon(
+                Icons.Filled.MoreVert,
+                contentDescription = stringResource(R.string.menu_more),
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.customColors.subtleText,
+            )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
@@ -50,7 +61,7 @@ fun TermAlarmOverflowMenu(
                 modifier = Modifier.defaultMinSize(minHeight = 48.dp),
             )
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.menu_privacy_policy)) },
+                text = { Text(stringResource(R.string.menu_privacy)) },
                 leadingIcon = { Icon(painterResource(R.drawable.ic_shield), contentDescription = null) },
                 onClick = {
                     expanded = false
@@ -59,7 +70,7 @@ fun TermAlarmOverflowMenu(
                 modifier = Modifier.defaultMinSize(minHeight = 48.dp),
             )
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.menu_license)) },
+                text = { Text(stringResource(R.string.menu_about)) },
                 leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
                 onClick = {
                     expanded = false

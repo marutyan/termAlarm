@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@200;300;400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+    a { color: #8CDDC2; } a:hover { color: #A9D1F5; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #0B1530; color: #E8EEF9; box-sizing: border-box; padding: 70px 18px 0; display: flex; flex-direction: column; gap: 14px;">
+
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8AA0C9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    <div style="font-size: 24px; font-weight: 300;">ミニゲーム</div>
+  </div>
+
+  <div style="font-size: 12.5px; color: #8AA0C9; line-height: 1.6;">選択した種類からランダムに出題されます。</div>
+
+  <div style="background: #142449; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column;">
+    <sc-for list="{{games}}" as="game" hint-placeholder-count="10">
+      <div style="display: flex; align-items: center; gap: 13px; height: 54px; padding: 0 15px; border-bottom: {{game.border}};">
+        <div style="width: 22px; height: 22px; border-radius: 6px; background: {{game.boxBg}}; border: {{game.boxBorder}}; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{game.check}}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <div style="flex-grow: 1; font-size: 14.5px; color: {{game.fg}};">{{game.name}}</div>
+        <div style="font-size: 11.5px; color: #8AA0C9;">{{game.note}}</div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="flex-grow: 1;"></div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const data = [
+      { name: '計算', note: '四則演算', on: true },
+      { name: '順にタップ', note: '1から12を昇順', on: true },
+      { name: '書き写し', note: '英数字8文字', on: true },
+      { name: '鏡文字', note: '左右反転した文字列', on: true },
+      { name: '光った順を再現', note: '順番を記憶', on: true },
+      { name: '神経衰弱', note: '3×4', on: true },
+      { name: '図形を数える', note: '指定した図形の数', on: true },
+      { name: '色と文字', note: '文字の色を回答', on: true },
+      { name: '端末を振る', note: '軽い', on: false },
+      { name: '歩く', note: '30歩', on: true },
+    ];
+    const games = data.map((d, i) => ({
+      name: d.name,
+      note: d.note,
+      on: d.on,
+      boxBg: d.on ? '#8CDDC2' : 'transparent',
+      boxBorder: d.on ? '1px solid #8CDDC2' : '2px solid #3C5484',
+      check: d.on ? '#0B1530' : 'transparent',
+      fg: d.on ? '#E8EEF9' : '#8AA0C9',
+      border: i === data.length - 1 ? 'none' : '1px solid #0B1530',
+    }));
+    return { games };
+  }
+}
+</script>
+</body>
+</html>

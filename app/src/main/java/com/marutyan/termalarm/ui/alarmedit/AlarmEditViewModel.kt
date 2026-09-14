@@ -8,209 +8,315 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.marutyan.termalarm.alarm.AlarmScheduler
-import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.AlarmRepository
-import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
-import com.marutyan.termalarm.domain.WeekStart
+import com.marutyan.termalarm.domain.ChallengeLevel
+import com.marutyan.termalarm.domain.ChallengeTiming
 import com.marutyan.termalarm.domain.occurrenceCount
 import java.time.DayOfWeek
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import java.time.LocalDate
 import kotlinx.coroutines.launch
 
-// 間隔選択チップに並べる既定値。これ以外の値は「その他」を選んだ扱いにする。
-// 1分は実用の場面が乏しいうえ、鳴り止んですぐ次が鳴るため候補から外している
-val INTERVAL_PRESETS_MINUTES = listOf(3, 5, 10, 15, 30)
+/** 間隔選択チップに並べる既定値。これ以外の値は「他」から任意指定する。 */
+val INTERVAL_PRESETS_MINUTES = listOf(1, 3, 5, 10, 15)
 
-// 「その他」で指定できる間隔の最小値(1分)。0分以下のアラーム鳴動を防ぐために必要
+/** 任意指定できる間隔の最小値(1分)。0分以下のアラーム鳴動を防ぐために必要。 */
 const val CUSTOM_INTERVAL_MIN = 1
 
-// 「その他」で指定できる間隔の最大値(120分)。極端に長い間隔による計算不正を防ぐために必要
+/** 任意指定できる間隔の最大値(120分)。極端に長い間隔による計算不正を防ぐために必要。 */
 const val CUSTOM_INTERVAL_MAX = 120
 
-/** 保存を妨げる入力エラーの種類。文言はComposable側でstringResourceへ変換する(ViewModelに文字列を持たせない)。 */
-enum class AlarmEditValidationError { INTERVAL_NOT_POSITIVE, INTERVAL_TOO_LARGE, CUSTOM_INTERVAL_INVALID, SNOOZE_OUT_OF_RANGE }
-
-// スヌーズ分数として許す範囲(1分〜60分)。0や負値、極端に長い値を保存できないようにする
-const val SNOOZE_MINUTES_MIN = 1
-const val SNOOZE_MINUTES_MAX = 60
-
-// スヌーズを有効にしたときの初期値を決める。既存アラームに保存済みの値があればそれを使い、
-// 新規作成(null)なら設定画面「スヌーズの長さ」の既定値を使う
-internal fun resolveSnoozeMinutes(scheduleSnoozeMinutes: Int?, defaultSnoozeMinutes: Int): Int =
-    scheduleSnoozeMinutes ?: defaultSnoozeMinutes
+/** 保存を妨げる入力エラーの種類。ViewModelに文字列を持たせずUI側で解決するために用いる。 */
+enum class AlarmEditValidationError {
+    /** 間隔が正の値でない */
+    INTERVAL_NOT_POSITIVE,
+    /** 間隔が範囲に対して大きすぎて2回以上鳴らない */
+    INTERVAL_TOO_LARGE,
+    /** 不正なカスタム間隔 */
+    CUSTOM_INTERVAL_INVALID,
+}
 
 /**
- * アラーム編集画面の入力状態。新規作成(id=null)と既存編集(id!=null)の両方をこの1つの形で表す。
- * skipRequiresApp/skipGame/snoozeMinutesはdocs/SPEC.md「誤操作の防止と当日終了」で追加された3設定。
+ * ターム編集画面の入力状態を表すデータクラス。
+ * 新規作成(id=null)と既存編集(id!=null)の両方を保持し、加速間隔や二度寝チェックなどの全設定を管理する。
  */
 data class AlarmEditUiState(
     val id: Long? = null,
     val startMinutes: Int = 7 * 60,
     val endMinutes: Int = 9 * 60,
-    val intervalMinutes: Int = 5,
-    val useCustomInterval: Boolean = false,
-    val customIntervalText: String = "5",
+    val isSingleAlarm: Boolean = false,
+    val isVariableInterval: Boolean = false,
+    val startIntervalMinutes: Int = 5,
+    val endIntervalMinutes: Int = 5,
     val repeatDays: Set<DayOfWeek> = emptySet(),
     val label: String = "",
-    val soundUri: String? = null,
-    val vibrate: Boolean = true,
     val enabled: Boolean = true,
-    val skipRequiresApp: Boolean = true,
-    val skipGame: Boolean = false,
-    val snoozeEnabled: Boolean = false,
-    val snoozeMinutes: Int = 10,
+    val challengeTiming: ChallengeTiming = ChallengeTiming.NEVER,
+    val challenge: ChallengeLevel = ChallengeLevel.EASY,
+    val wakeCheck: Boolean = false,
     val isLoading: Boolean = false,
     val validationError: AlarmEditValidationError? = null,
     val isSaved: Boolean = false,
     val isDeleted: Boolean = false,
 ) {
-    // プレビュー・保存に使うAlarmSchedule。skippedSessionStartは編集画面から変更しないため既存値をそのまま保つ
-    fun toSchedule(existingSkippedSessionStart: java.time.LocalDate?): AlarmSchedule = AlarmSchedule(
-        id = id ?: 0L,
+    /** 互換用プロパティ。等間隔時や開始間隔を取得するために用いる。 */
+    val intervalMinutes: Int get() = startIntervalMinutes
+
+    /** 互換用セカンダリコンストラクタ。単一の間隔指定からUI状態を構築するために用いる。 */
+    constructor(
+        id: Long? = null,
+        startMinutes: Int = 7 * 60,
+        endMinutes: Int = 9 * 60,
+        intervalMinutes: Int,
+        repeatDays: Set<DayOfWeek> = emptySet(),
+        label: String = "",
+        enabled: Boolean = true,
+        challengeTiming: ChallengeTiming = ChallengeTiming.NEVER,
+        challenge: ChallengeLevel = ChallengeLevel.EASY,
+        wakeCheck: Boolean = false,
+        isLoading: Boolean = false,
+        validationError: AlarmEditValidationError? = null,
+        isSaved: Boolean = false,
+        isDeleted: Boolean = false,
+        isSingleAlarm: Boolean = false,
+    ) : this(
+        id = id,
         startMinutes = startMinutes,
         endMinutes = endMinutes,
+        isSingleAlarm = isSingleAlarm,
+        isVariableInterval = false,
         startIntervalMinutes = intervalMinutes,
         endIntervalMinutes = intervalMinutes,
         repeatDays = repeatDays,
         label = label,
-        soundUri = soundUri,
-        vibrate = vibrate,
+        enabled = enabled,
+        challengeTiming = challengeTiming,
+        challenge = challenge,
+        wakeCheck = wakeCheck,
+        isLoading = isLoading,
+        validationError = validationError,
+        isSaved = isSaved,
+        isDeleted = isDeleted,
+    )
+
+    /**
+     * UI状態を永続化・計算用のAlarmScheduleへ変換する。
+     * skippedSessionStartは編集画面から変更しないため既存値をそのまま保持する。
+     */
+    fun toSchedule(existingSkippedSessionStart: LocalDate?): AlarmSchedule = AlarmSchedule(
+        id = id ?: 0L,
+        startMinutes = startMinutes,
+        endMinutes = endMinutes,
+        startIntervalMinutes = startIntervalMinutes,
+        endIntervalMinutes = if (isVariableInterval) endIntervalMinutes else startIntervalMinutes,
+        repeatDays = repeatDays,
+        label = label,
         enabled = enabled,
         skippedSessionStart = existingSkippedSessionStart,
-        skipRequiresApp = skipRequiresApp,
-        skipGame = skipRequiresApp && skipGame, // skipRequiresAppがfalseならskipGameは無視する(SPEC)
-        snoozeMinutes = if (snoozeEnabled) snoozeMinutes else null,
+        challengeTiming = challengeTiming,
+        challenge = challenge,
+        wakeCheck = wakeCheck,
     )
 }
 
 /**
- * アラーム追加・編集画面のViewModel。既存アラームの読込、入力検証、保存・削除を担う。
- * 依存注入フレームワークは使わず、コンストラクタ引数とファクトリで組み立てる。
+ * ターム追加・編集画面のViewModel。
+ * スケジュールの読み込み、各入力値の更新、入力検証、保存および削除処理を担う。
  */
 class AlarmEditViewModel(
     private val repository: AlarmRepository,
     context: Context,
     alarmId: Long?,
+    isSingleAlarm: Boolean = false,
 ) : ViewModel() {
 
-    // PendingIntent発行やRoomアクセスにはApplication Contextで十分なため、生成時点で切り替えて保持する
     private val appContext: Context = context.applicationContext
 
-    // 全体設定の読み出し用。新規アラームのスヌーズ初期値(defaultSnoozeMinutes)と
-    // 曜日チップの並び順(weekStart)に使う。NavHostを変更せずに済むよう、ここでcontextから組み立てる
-    private val settingsRepository = Repositories.settings(appContext)
-
-    var uiState by mutableStateOf(AlarmEditUiState(id = alarmId, isLoading = alarmId != null))
+    var uiState by mutableStateOf(
+        AlarmEditUiState(
+            id = alarmId,
+            isLoading = alarmId != null,
+            isSingleAlarm = isSingleAlarm,
+            endMinutes = if (isSingleAlarm && alarmId == null) 7 * 60 else 9 * 60,
+        ),
+    )
         private set
 
-    // 曜日チップの並び順に使う。この画面はアラームごとに作り直されるため、都度DBを見に行かず1回読みで足りる
-    val weekStart: StateFlow<WeekStart> = settingsRepository.observe().map { it.weekStart }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeekStart.SUNDAY)
-
-    // 保存時にskippedSessionStartを保つため、読み込んだ既存スケジュールを保持しておく
-    private var loadedSkippedSessionStart: java.time.LocalDate? = null
+    private var loadedSkippedSessionStart: LocalDate? = null
 
     init {
         val id = alarmId
-        viewModelScope.launch {
-            // スヌーズの初期値は新規・既存どちらの読み込みにも使うため、先にまとめて読んでおく
-            val defaultSnoozeMinutes = settingsRepository.observe().first().defaultSnoozeMinutes
-            val schedule = id?.let { repository.getById(it) }
-            uiState = when {
-                id == null -> uiState.copy(snoozeMinutes = defaultSnoozeMinutes)
-                schedule != null -> {
+        if (id == null) {
+            uiState = uiState.copy(isLoading = false)
+        } else {
+            viewModelScope.launch {
+                val schedule = repository.getById(id)
+                uiState = if (schedule != null) {
                     loadedSkippedSessionStart = schedule.skippedSessionStart
+                    val isVariable = schedule.startIntervalMinutes != schedule.endIntervalMinutes
+                    val single = isSingleAlarm || (schedule.startMinutes == schedule.endMinutes)
                     AlarmEditUiState(
                         id = schedule.id,
                         startMinutes = schedule.startMinutes,
-                        endMinutes = schedule.endMinutes,
-                        intervalMinutes = schedule.startIntervalMinutes,
-                        useCustomInterval = schedule.startIntervalMinutes !in INTERVAL_PRESETS_MINUTES,
-                        customIntervalText = schedule.startIntervalMinutes.toString(),
+                        endMinutes = if (single) schedule.startMinutes else schedule.endMinutes,
+                        isSingleAlarm = single,
+                        isVariableInterval = isVariable,
+                        startIntervalMinutes = schedule.startIntervalMinutes,
+                        endIntervalMinutes = schedule.endIntervalMinutes,
                         repeatDays = schedule.repeatDays,
                         label = schedule.label,
-                        soundUri = schedule.soundUri,
-                        vibrate = schedule.vibrate,
                         enabled = schedule.enabled,
-                        skipRequiresApp = schedule.skipRequiresApp,
-                        skipGame = schedule.skipGame,
-                        snoozeEnabled = schedule.snoozeMinutes != null,
-                        snoozeMinutes = resolveSnoozeMinutes(schedule.snoozeMinutes, defaultSnoozeMinutes),
+                        challengeTiming = schedule.challengeTiming,
+                        challenge = schedule.challenge,
+                        wakeCheck = schedule.wakeCheck,
                         isLoading = false,
                     )
+                } else {
+                    uiState.copy(isLoading = false)
                 }
-                else -> uiState.copy(isLoading = false)
             }
         }
     }
 
-    fun setStartMinutes(minutes: Int) { uiState = revalidate(uiState.copy(startMinutes = minutes)) }
-    fun setEndMinutes(minutes: Int) { uiState = revalidate(uiState.copy(endMinutes = minutes)) }
-
-    fun selectPresetInterval(minutes: Int) {
-        uiState = revalidate(uiState.copy(intervalMinutes = minutes, useCustomInterval = false, customIntervalText = minutes.toString()))
+    /**
+     * 通常アラーム用の単一時刻(0..1439分)を設定する。
+     * 開始時刻と終了時刻に同じ値を設定し、1回のみ鳴動するアラームとして整合性を保つために用いる。
+     */
+    fun setSingleMinutes(minutes: Int) {
+        uiState = revalidate(uiState.copy(startMinutes = minutes, endMinutes = minutes))
     }
 
-    fun selectCustomInterval() {
-        val clamped = uiState.intervalMinutes.coerceIn(CUSTOM_INTERVAL_MIN, CUSTOM_INTERVAL_MAX)
-        uiState = revalidate(uiState.copy(useCustomInterval = true, intervalMinutes = clamped, customIntervalText = clamped.toString()))
+    /** 開始時刻(0..1439分)を設定する。 */
+    fun setStartMinutes(minutes: Int) {
+        uiState = revalidate(uiState.copy(startMinutes = minutes))
     }
 
-    // 「その他」で選択したカスタム間隔(1〜120分)を反映する。範囲外の値が来ないよう1..120に収める
-    fun setCustomInterval(minutes: Int) {
+    /** 終了時刻(0..1439分)を設定する。 */
+    fun setEndMinutes(minutes: Int) {
+        uiState = revalidate(uiState.copy(endMinutes = minutes))
+    }
+
+    /** 等間隔(単一間隔)を設定する。 */
+    fun setConstantInterval(minutes: Int) {
         val clamped = minutes.coerceIn(CUSTOM_INTERVAL_MIN, CUSTOM_INTERVAL_MAX)
-        uiState = revalidate(uiState.copy(intervalMinutes = clamped, customIntervalText = clamped.toString()))
+        uiState = revalidate(
+            uiState.copy(
+                isVariableInterval = false,
+                startIntervalMinutes = clamped,
+                endIntervalMinutes = clamped,
+            ),
+        )
     }
 
+    /** カスタム間隔を設定する(setConstantIntervalの別名)。 */
+    fun setCustomInterval(minutes: Int) {
+        setConstantInterval(minutes)
+    }
+
+    /** プリセット間隔を選択する。 */
+    fun selectPresetInterval(minutes: Int) {
+        setConstantInterval(minutes)
+    }
+
+    /** 加速間隔(開始・終了間隔)を設定する。 */
+    fun setVariableInterval(startInterval: Int, endInterval: Int) {
+        val clampedStart = startInterval.coerceIn(CUSTOM_INTERVAL_MIN, CUSTOM_INTERVAL_MAX)
+        val clampedEnd = endInterval.coerceIn(CUSTOM_INTERVAL_MIN, CUSTOM_INTERVAL_MAX)
+        uiState = revalidate(
+            uiState.copy(
+                isVariableInterval = true,
+                startIntervalMinutes = clampedStart,
+                endIntervalMinutes = clampedEnd,
+            ),
+        )
+    }
+
+    /** 間隔の種別(等間隔/加速)と値を一括設定する。 */
+    fun setInterval(isVariable: Boolean, startInterval: Int, endInterval: Int) {
+        val clampedStart = startInterval.coerceIn(CUSTOM_INTERVAL_MIN, CUSTOM_INTERVAL_MAX)
+        val clampedEnd = endInterval.coerceIn(CUSTOM_INTERVAL_MIN, CUSTOM_INTERVAL_MAX)
+        uiState = revalidate(
+            uiState.copy(
+                isVariableInterval = isVariable,
+                startIntervalMinutes = clampedStart,
+                endIntervalMinutes = if (isVariable) clampedEnd else clampedStart,
+            ),
+        )
+    }
+
+    /** 曜日の有効・無効をトグルする。 */
     fun toggleDay(day: DayOfWeek) {
-        val days = uiState.repeatDays.toMutableSet().apply { if (!add(day)) remove(day) }
+        val days = uiState.repeatDays.toMutableSet().apply {
+            if (!add(day)) remove(day)
+        }
         uiState = uiState.copy(repeatDays = days)
     }
 
-    fun setLabel(label: String) { uiState = uiState.copy(label = label) }
-    fun setSoundUri(uri: String?) { uiState = uiState.copy(soundUri = uri) }
-    fun setVibrate(vibrate: Boolean) { uiState = uiState.copy(vibrate = vibrate) }
-
-    fun setSkipRequiresApp(value: Boolean) {
-        // オフにするとskipGameは選べなくなるため、あわせてfalseへ戻す(SPEC「skipRequiresAppがオフのときはskipGameを選べない」)
-        uiState = uiState.copy(skipRequiresApp = value, skipGame = if (value) uiState.skipGame else false)
+    /** タームの有効・無効を切り替える。 */
+    fun setEnabled(enabled: Boolean) {
+        uiState = uiState.copy(enabled = enabled)
     }
 
-    fun setSkipGame(value: Boolean) { uiState = uiState.copy(skipGame = value) }
-    fun setSnoozeEnabled(value: Boolean) { uiState = revalidate(uiState.copy(snoozeEnabled = value)) }
-    fun setSnoozeMinutes(minutes: Int) { uiState = revalidate(uiState.copy(snoozeMinutes = minutes)) }
+    /** タームのラベルを設定する。 */
+    fun setLabel(label: String) {
+        uiState = uiState.copy(label = label)
+    }
 
-    // 保存前の入力検証。UI側で計算式を再実装しないよう、判定にはdomain.occurrenceCountを使う(SPEC「要約はdomainの関数を使う」の精神を検証にも適用)
+    /** 解除チャレンジのタイミングと難易度を設定する。 */
+    fun setChallenge(timing: ChallengeTiming, level: ChallengeLevel) {
+        uiState = uiState.copy(challengeTiming = timing, challenge = level)
+    }
+
+    /** 解除チャレンジの出題タイミングを設定する。 */
+    fun setChallengeTiming(timing: ChallengeTiming) {
+        uiState = uiState.copy(challengeTiming = timing)
+    }
+
+    /** 解除チャレンジの難易度を設定する。 */
+    fun setChallenge(level: ChallengeLevel) {
+        uiState = uiState.copy(challenge = level)
+    }
+
+    /** 二度寝チェックの有無を設定する。 */
+    fun setWakeCheck(wakeCheck: Boolean) {
+        uiState = uiState.copy(wakeCheck = wakeCheck)
+    }
+
+    /**
+     * 保存前の入力検証を行う。
+     * domain.occurrenceCountを用いて、鳴動回数が1回以上存在するかを確かめる。
+     */
     private fun revalidate(state: AlarmEditUiState): AlarmEditUiState {
         val error = when {
-            state.intervalMinutes <= 0 -> AlarmEditValidationError.INTERVAL_NOT_POSITIVE
+            state.startIntervalMinutes <= 0 || (state.isVariableInterval && state.endIntervalMinutes <= 0) ->
+                AlarmEditValidationError.INTERVAL_NOT_POSITIVE
             state.startMinutes != state.endMinutes && occurrenceCount(state.toSchedule(null)) <= 1 ->
                 AlarmEditValidationError.INTERVAL_TOO_LARGE
-            state.snoozeEnabled && state.snoozeMinutes !in SNOOZE_MINUTES_MIN..SNOOZE_MINUTES_MAX ->
-                AlarmEditValidationError.SNOOZE_OUT_OF_RANGE
             else -> null
         }
         return state.copy(validationError = error)
     }
 
+    /** タームの変更または新規登録を保存する。 */
     fun save() {
         val validated = revalidate(uiState)
         uiState = validated
         if (validated.validationError != null) return
         viewModelScope.launch {
             val schedule = validated.toSchedule(loadedSkippedSessionStart)
-            // 新規保存はadd()が採番したidを使う。保存前のid(null)のままではAlarmManagerへ登録できない
-            val savedId = if (validated.id == null) repository.add(schedule) else { repository.update(schedule); validated.id }
+            val savedId = if (validated.id == null) {
+                repository.add(schedule)
+            } else {
+                repository.update(schedule)
+                validated.id
+            }
             AlarmScheduler.reschedule(appContext, savedId)
-            uiState = uiState.copy(isSaved = true)
+            // 登録したidを持たせる。持たせないと、続けてもう一度押したときにもう1件できてしまう
+            uiState = uiState.copy(id = savedId, isSaved = true)
         }
     }
 
+    /** タームを削除する。 */
     fun delete() {
         val id = uiState.id ?: return
         viewModelScope.launch {
@@ -221,12 +327,14 @@ class AlarmEditViewModel(
     }
 }
 
-// 依存注入フレームワークを使わないための手作りファクトリ
+/** 依存注入を用いずにViewModelを生成するファクトリクラス。通常アラームとしての起動フラグを保持する。 */
 class AlarmEditViewModelFactory(
     private val repository: AlarmRepository,
     private val context: Context,
     private val alarmId: Long?,
+    private val isSingleAlarm: Boolean = false,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T = AlarmEditViewModel(repository, context, alarmId) as T
+    override fun <T : ViewModel> create(modelClass: Class<T>): T =
+        AlarmEditViewModel(repository, context, alarmId, isSingleAlarm) as T
 }

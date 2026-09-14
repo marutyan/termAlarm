@@ -1,5 +1,6 @@
 package com.marutyan.termalarm.ui.permission
 
+import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -16,7 +17,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,29 +36,75 @@ import com.marutyan.termalarm.alarm.ExactAlarmPermission
 import com.marutyan.termalarm.alarm.NotificationPermission
 import kotlinx.coroutines.launch
 
+/** 通知権限の設定状態を永続化するためのSharedPreferences名 */
+private const val PERMISSION_PREFS_NAME = "permission_prefs"
+
+/** 通知権限を一度でもユーザーに要求したかどうかを記録するキー */
+private const val KEY_NOTIFICATION_PERMISSION_REQUESTED = "notification_permission_requested"
+
 /**
- * 通知権限(POST_NOTIFICATIONS)の実行時権限を初回起動時に要求する。API33未満では権限自体が無いため常に許可扱い。
- * 拒否されている間はアラーム通知が出せない旨をアラーム一覧の上に案内する(docs/SPEC.md「権限」)。
- * 判定自体はalarm.NotificationPermission(担当C実装)を使い、UI固有のダイアログ要求とバナー表示だけをここで行う。
+ * 通知権限の要求ダイアログを過去に一度でも表示したかを確認する。
+ * アプリ起動直後に不意に権限を求めないようにし、一度断られた後は設定画面への案内に切り替えるために用いる。
+ */
+fun isNotificationPermissionRequested(context: Context): Boolean =
+    context.getSharedPreferences(PERMISSION_PREFS_NAME, Context.MODE_PRIVATE)
+        .getBoolean(KEY_NOTIFICATION_PERMISSION_REQUESTED, false)
+
+/**
+ * 通知権限の要求ダイアログを表示したことを記録する。
+ * ユーザーに勝手に繰り返し権限要求ダイアログを出さないようにするために用いる。
+ */
+fun setNotificationPermissionRequested(context: Context) {
+    context.getSharedPreferences(PERMISSION_PREFS_NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putBoolean(KEY_NOTIFICATION_PERMISSION_REQUESTED, true)
+        .apply()
+}
+
+/**
+ * 通知権限（POST_NOTIFICATIONS）が未許可の場合にホーム画面上部で案内するバナー。
+ * アプリ起動直後に勝手に要求せず、バナーのボタン操作時に要求する。一度断られた後は設定画面へ案内する。
  */
 @Composable
 fun NotificationPermissionBanner() {
     val context = LocalContext.current
     var granted by remember { mutableStateOf(NotificationPermission.isGranted(context)) }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted -> granted = isGranted }
+    var hasRequested by remember { mutableStateOf(isNotificationPermissionRequested(context)) }
 
-    // 初回表示時に1度だけ要求する。既に許可済み・拒否済み(表示不可)の場合はOSが即座に結果を返すため実質no-op
-    LaunchedEffect(Unit) {
-        if (!granted && NotificationPermission.isRuntimeRequestRequired()) {
-            launcher.launch(NotificationPermission.PERMISSION)
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        granted = isGranted
+        hasRequested = true
+        setNotificationPermissionRequested(context)
+    }
+
+    // 設定画面などから戻ってきたときに最新の許可状態を反映できるよう、画面が再開するたびに確認する
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                granted = NotificationPermission.isGranted(context)
+            }
         }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     if (!granted) {
+        val actionLabel = if (!hasRequested) {
+            stringResource(R.string.notification_permission_action_request)
+        } else {
+            stringResource(R.string.open_settings)
+        }
         PermissionBanner(
             message = stringResource(R.string.notification_permission_banner),
-            actionLabel = stringResource(R.string.open_settings),
-            onAction = { context.startActivity(appSettingsIntent(context.packageName)) },
+            actionLabel = actionLabel,
+            onAction = {
+                if (!hasRequested && NotificationPermission.isRuntimeRequestRequired()) {
+                    launcher.launch(NotificationPermission.PERMISSION)
+                } else {
+                    context.startActivity(appSettingsIntent(context.packageName))
+                }
+            },
         )
     }
 }

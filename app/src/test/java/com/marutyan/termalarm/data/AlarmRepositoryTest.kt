@@ -1,6 +1,8 @@
 package com.marutyan.termalarm.data
 
 import com.marutyan.termalarm.domain.AlarmSchedule
+import com.marutyan.termalarm.domain.ChallengeTiming
+import com.marutyan.termalarm.domain.ChallengeLevel
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -25,8 +27,6 @@ private fun schedule(
     endIntervalMinutes = 5,
     repeatDays = emptySet(),
     label = "test",
-    soundUri = null,
-    vibrate = true,
     enabled = true,
     skippedSessionStart = skippedSessionStart,
 )
@@ -34,14 +34,91 @@ private fun schedule(
 class AlarmRepositoryTest {
 
     @Test
-    fun `新規追加した3項目の既定値が保存と読み出しで保たれる`() = runTest {
+    fun `新規追加した項目の既定値が保存と読み出しで保たれる`() = runTest {
         val repository = AlarmRepository(FakeAlarmDao())
         val id = repository.add(schedule(startMinutes = 7 * 60, endMinutes = 9 * 60))
 
         val loaded = repository.getById(id)
-        assertEquals(true, loaded?.skipRequiresApp)
-        assertEquals(false, loaded?.skipGame)
-        assertNull(loaded?.snoozeMinutes)
+        assertEquals(false, loaded?.wakeCheck)
+        assertEquals(ChallengeTiming.NEVER, loaded?.challengeTiming)
+        assertEquals(ChallengeLevel.EASY, loaded?.challenge)
+    }
+
+    /**
+     * 開始間隔と終了間隔が異なる可変間隔アラームを保存し、読み直しても両方の値が正しく保たれることを検証する。
+     * 単一のintervalMinutesに縮約して終了間隔を捨てていた暫定処置が解消されたことを保証するために必要。
+     */
+    @Test
+    fun `開始間隔10分終了間隔3分のアラームを保存して読み直すと両方の値が保たれる`() = runTest {
+        val repository = AlarmRepository(FakeAlarmDao())
+        val original = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 9 * 60,
+        ).copy(
+            startIntervalMinutes = 10,
+            endIntervalMinutes = 3,
+        )
+        val id = repository.add(original)
+
+        val loaded = repository.getById(id)
+        assertEquals(10, loaded?.startIntervalMinutes)
+        assertEquals(3, loaded?.endIntervalMinutes)
+    }
+
+    /**
+     * チャレンジ、二度寝チェックの各設定値が保存・読み出しで正しく保たれることを検証する。
+     */
+    @Test
+    fun `チャレンジと二度寝チェックが保存して読み直しても保たれる`() = runTest {
+        val repository = AlarmRepository(FakeAlarmDao())
+        val original = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 9 * 60,
+        ).copy(
+            challenge = ChallengeLevel.HARD,
+            wakeCheck = true,
+        )
+        val id = repository.add(original)
+
+        val loaded = repository.getById(id)
+        assertEquals(ChallengeLevel.HARD, loaded?.challenge)
+        assertEquals(true, loaded?.wakeCheck)
+    }
+
+    /**
+     * 解除チャレンジの出題タイミングが正しく保存され復元されることを検証する。
+     * 出題タイミング設定がDBに永続化され、設定変更後も意図したタイミングで出題されることを保証するために必要。
+     */
+    @Test
+    fun `challengeTimingが保存して読み直しても保たれる`() = runTest {
+        val repository = AlarmRepository(FakeAlarmDao())
+        val original = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 9 * 60,
+        ).copy(
+            challengeTiming = ChallengeTiming.END_ONLY,
+            challenge = ChallengeLevel.HARD,
+        )
+        val id = repository.add(original)
+
+        val loaded = repository.getById(id)
+        assertEquals(ChallengeTiming.END_ONLY, loaded?.challengeTiming)
+        assertEquals(ChallengeLevel.HARD, loaded?.challenge)
+    }
+
+    @Test
+    fun `二度寝チェックがfalseのまま保たれる`() = runTest {
+        val repository = AlarmRepository(FakeAlarmDao())
+        val original = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 9 * 60,
+        ).copy(
+            wakeCheck = false,
+        )
+        val id = repository.add(original)
+
+        val loaded = repository.getById(id)
+        assertEquals(false, loaded?.wakeCheck)
     }
 
     @Test

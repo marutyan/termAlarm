@@ -15,7 +15,6 @@ import com.marutyan.termalarm.domain.StopwatchLap
 import com.marutyan.termalarm.domain.StopwatchRunState
 import com.marutyan.termalarm.domain.StopwatchState
 import com.marutyan.termalarm.domain.elapsedMillis
-import com.marutyan.termalarm.stopwatch.formatElapsed
 import com.marutyan.termalarm.ui.stopwatch.StopwatchScreen
 import com.marutyan.termalarm.ui.stopwatch.StopwatchViewModel
 import kotlinx.coroutines.runBlocking
@@ -28,13 +27,10 @@ import org.junit.Test
 
 /**
  * ストップウォッチタブ(StopwatchScreen)を「画面から操作する経路」で保証する(TimerScreenTestと同じ方針)。
+ * design/Stopwatch.dc.html に基づく新デザインに合わせて検証する。
  *
- * 経過時間・時差の計算そのものはStopwatchCalculatorTest(JVM単体テスト)が固定した時刻で検証済みのため、
- * ここでは「操作した結果、画面の表示やRepositoryに保存された状態が正しく変わるか」までを見る。
- * RUNNING中は実機の時計が進む速さと100msごとの再描画タイミングに依存し表示が絶えず変わるため、
- * RUNNING中の表示は「初期値(0:00.00)から動き出したか」「ボタンが切り替わったか」だけを見て、
- * 具体的な経過時間の桁は検証しない。PAUSED/IDLEやラップ済みの値は時間経過の影響を受けない
- * (記録された瞬間の値のまま変わらない)ため、そこだけは表示文字列も確定的に検証する。
+ * 経過時間の分秒(66sp)・小数部(34sp)、等幅の3操作ボタン(リセット、ラップ、停止/開始)、
+ * およびラップ一覧カードの表示と状態遷移を検証する。
  */
 @OptIn(ExperimentalTestApi::class)
 class StopwatchScreenTest {
@@ -57,10 +53,7 @@ class StopwatchScreenTest {
 
     /**
      * テスト終了後の後始末。
-     *
-     * インメモリDBは閉じない。画面が持つViewModelは、テストが終わった後も
-     * 保存の処理を続けていることがあり、閉じた先へ書きに行って落ちるため。
-     * テストごとに新しいインスタンスを作っているので、閉じなくても値は混ざらない。
+     * インメモリDBは閉じない。画面が持つViewModelが保存処理を継続している場合があるため。
      */
     @After
     fun tearDown() {
@@ -70,24 +63,52 @@ class StopwatchScreenTest {
 
     private fun setScreen() {
         composeTestRule.setContent {
-            StopwatchScreen(viewModel = remember { StopwatchViewModel(repository, testAppContext()) }, bottomBar = {})
+            StopwatchScreen(viewModel = remember { StopwatchViewModel(repository, testAppContext()) })
         }
     }
 
-    // 何も操作していない(IDLE)とき、経過時間は00:00.00のまま、操作は「開始」だけであることを保証する。
-    // 純正と同じで、押せないリセットやラップを並べない
+    private fun formatMain(millis: Long): Pair<String, String> {
+        val clamped = millis.coerceAtLeast(0L)
+        val hours = clamped / 3_600_000L
+        val minutes = (clamped % 3_600_000L) / 60_000L
+        val seconds = (clamped % 60_000L) / 1000L
+        val centis = (clamped % 1000L) / 10L
+        val mainPart = if (hours > 0) {
+            "%d:%02d:%02d".format(hours, minutes, seconds)
+        } else {
+            "%d:%02d".format(minutes, seconds)
+        }
+        val centisPart = ".%02d".format(centis)
+        return mainPart to centisPart
+    }
+
+    private fun formatLap(millis: Long): String {
+        val clamped = millis.coerceAtLeast(0L)
+        val hours = clamped / 3_600_000L
+        val minutes = (clamped % 3_600_000L) / 60_000L
+        val seconds = (clamped % 60_000L) / 1000L
+        val centis = (clamped % 1000L) / 10L
+        return if (hours > 0) {
+            "%d:%02d:%02d.%02d".format(hours, minutes, seconds, centis)
+        } else {
+            "%d:%02d.%02d".format(minutes, seconds, centis)
+        }
+    }
+
+    // 何も操作していない(IDLE)とき、経過時間は0:00と.00、操作ボタン3つ(リセット、ラップ、開始)が並ぶことを保証する
     @Test
     fun 何もしていないときの表示() {
         setScreen()
-        composeTestRule.onNodeWithText(formatElapsed(0L, includeCentiseconds = true)).assertExists()
+        composeTestRule.onNodeWithText("0:00").assertExists()
+        composeTestRule.onNodeWithText(".00").assertExists()
         composeTestRule.onNodeWithText(string(R.string.stopwatch_start)).assertExists()
-        composeTestRule.onNodeWithText(string(R.string.stopwatch_reset)).assertDoesNotExist()
-        composeTestRule.onNodeWithText(string(R.string.stopwatch_lap)).assertDoesNotExist()
+        composeTestRule.onNodeWithText(string(R.string.stopwatch_reset)).assertExists()
+        composeTestRule.onNodeWithText(string(R.string.stopwatch_lap)).assertExists()
         composeTestRule.onNodeWithText(string(R.string.stopwatch_pause)).assertDoesNotExist()
     }
 
-    // 「開始」を押すとRepositoryの状態がRUNNINGになり、ボタンが一時停止・ラップへ切り替わり、
-    // 表示が初期値(0:00.00)のまま止まっていないことを保証する
+    // 「開始」を押すとRepositoryの状態がRUNNINGになり、ボタンが「停止」へ切り替わり、
+    // 小数部が初期値(.00)から動き出すことを保証する
     @Test
     fun 開始すると計測が始まる() {
         setScreen()
@@ -98,9 +119,9 @@ class StopwatchScreenTest {
         composeTestRule.onNodeWithText(string(R.string.stopwatch_lap)).assertExists()
         composeTestRule.onNodeWithText(string(R.string.stopwatch_start)).assertDoesNotExist()
 
-        // RUNNING中は100msごとに再描画されるため、初期値の表示がいずれ消えることで「動き出した」ことを確認する
+        // RUNNING中は100msごとに再描画されるため、初期値(.00)の表示がいずれ消えることで動き出したことを確認する
         composeTestRule.waitUntil(2_000) {
-            composeTestRule.onAllNodesWithText(formatElapsed(0L, includeCentiseconds = true)).fetchSemanticsNodes().isEmpty()
+            composeTestRule.onAllNodesWithText(".00").fetchSemanticsNodes().isEmpty()
         }
     }
 
@@ -116,12 +137,15 @@ class StopwatchScreenTest {
         composeTestRule.waitUntil(5_000) { runBlocking { repository.getStateOnce().runState == StopwatchRunState.PAUSED } }
 
         val frozen = runBlocking { repository.getStateOnce().accumulatedMillis }
-        composeTestRule.onNodeWithText(formatElapsed(frozen, includeCentiseconds = true)).assertExists()
+        val (mainPart, centisPart) = formatMain(frozen)
+        composeTestRule.onNodeWithText(mainPart).assertExists()
+        composeTestRule.onNodeWithText(centisPart).assertExists()
 
         SystemClock.sleep(300) // 一時停止中に時間が経っても値が変わらないことを確認するための待機
         val stillFrozen = runBlocking { repository.getStateOnce().accumulatedMillis }
         assertEquals(frozen, stillFrozen)
-        composeTestRule.onNodeWithText(formatElapsed(frozen, includeCentiseconds = true)).assertExists()
+        composeTestRule.onNodeWithText(mainPart).assertExists()
+        composeTestRule.onNodeWithText(centisPart).assertExists()
     }
 
     // PAUSED状態から再開すると、Repository上の経過時間(elapsedMillis)が再び進むことを保証する
@@ -138,7 +162,9 @@ class StopwatchScreenTest {
             )
         }
         setScreen()
-        composeTestRule.onNodeWithText(formatElapsed(5_000L, includeCentiseconds = true)).assertExists()
+        val (mainPart, centisPart) = formatMain(5_000L)
+        composeTestRule.onNodeWithText(mainPart).assertExists()
+        composeTestRule.onNodeWithText(centisPart).assertExists()
         composeTestRule.onNodeWithText(string(R.string.stopwatch_start)).performClick()
 
         composeTestRule.waitUntil(5_000) { runBlocking { repository.getStateOnce().runState == StopwatchRunState.RUNNING } }
@@ -150,8 +176,7 @@ class StopwatchScreenTest {
         assertTrue(nowElapsed > 5_000L)
     }
 
-    // ラップを2回刻むと一覧に2件現れ、各ラップの時間とその時点の合計が表示されることを保証する
-    // (記録済みのラップの値は時間経過で変わらないため、桁まで確定的に検証できる)
+    // ラップを2回刻むと一覧カードに2件現れ、番号・そのラップの時間・その時点の合計が表示されることを保証する
     @Test
     fun ラップを刻むと一覧に現れる() {
         setScreen()
@@ -166,13 +191,9 @@ class StopwatchScreenTest {
         val laps = runBlocking { repository.getLapsOnce() }
         assertEquals(2, laps.size)
         laps.forEach { lap: StopwatchLap ->
-            val numberText = composeTestRule.activity.getString(R.string.stopwatch_lap_number, lap.lapNumber)
-            val totalText = composeTestRule.activity.getString(
-                R.string.stopwatch_lap_total,
-                formatElapsed(lap.totalMillis, includeCentiseconds = true),
-            )
-            val lapTimeText = formatElapsed(lap.lapMillis, includeCentiseconds = true)
-            // メイン表示とラップ時間・合計時間が偶然同じ文字列になっても壊れないよう、単一ノード前提のonNodeWithTextは使わない
+            val numberText = lap.lapNumber.toString()
+            val totalText = formatLap(lap.totalMillis)
+            val lapTimeText = formatLap(lap.lapMillis)
             assertTrue(composeTestRule.onAllNodesWithText(numberText).fetchSemanticsNodes().isNotEmpty())
             assertTrue(composeTestRule.onAllNodesWithText(totalText).fetchSemanticsNodes().isNotEmpty())
             assertTrue(composeTestRule.onAllNodesWithText(lapTimeText).fetchSemanticsNodes().isNotEmpty())
@@ -194,13 +215,9 @@ class StopwatchScreenTest {
             repository.addLap(StopwatchLap(lapNumber = 1, lapMillis = 12_345L, totalMillis = 12_345L))
         }
         setScreen()
-        // 1件目のラップはlapMillis==totalMillisになり、合計時間も接頭辞なく表示されるため、
-        // メイン表示・ラップ行のラップ時間・合計時間の3箇所が同じ文字列になる
-        // (単一ノード前提のonNodeWithTextは使わない)
-        assertTrue(
-            composeTestRule.onAllNodesWithText("00:12.34")
-                .fetchSemanticsNodes().size == 3,
-        )
+        val (initMain, initCentis) = formatMain(12_345L)
+        composeTestRule.onNodeWithText(initMain).assertExists()
+        composeTestRule.onNodeWithText(initCentis).assertExists()
 
         composeTestRule.onNodeWithText(string(R.string.stopwatch_reset)).performClick()
 
@@ -212,7 +229,8 @@ class StopwatchScreenTest {
         }
         val lapsAfterReset = runBlocking { repository.getLapsOnce() }
         assertTrue(lapsAfterReset.isEmpty())
-        composeTestRule.onNodeWithText("00:00.00").assertExists()
+        composeTestRule.onNodeWithText("0:00").assertExists()
+        composeTestRule.onNodeWithText(".00").assertExists()
         composeTestRule.onNodeWithText(string(R.string.stopwatch_start)).assertExists()
     }
 }

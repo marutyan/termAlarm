@@ -1,99 +1,57 @@
 package com.marutyan.termalarm.ui.timer
 
 import android.content.Context
-import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.marutyan.termalarm.data.TimerRepository
 import com.marutyan.termalarm.domain.TimerState
-import com.marutyan.termalarm.domain.extendTimer
-import com.marutyan.termalarm.domain.pauseTimer
-import com.marutyan.termalarm.domain.resetTimer
-import com.marutyan.termalarm.domain.resumeTimer
-import com.marutyan.termalarm.domain.startTimer
 import com.marutyan.termalarm.timer.TimerActions
-import com.marutyan.termalarm.timer.TimerScheduler
-import com.marutyan.termalarm.timer.formatDuration
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-// 「延長」ボタン1回あたりの延長幅。docs/SPEC.md「動作中に1分単位で延長できる」に合わせ固定値とする
-private const val EXTEND_STEP_MILLIS = 60_000L
-
 /**
  * タイマータブの状態を持つViewModel。RepositoryのFlowをそのままUI状態として公開し、
- * 開始・一時停止・再開・延長・リセット・削除の各操作を仲介する。
- * Repositoryを変更した直後は必ずTimerScheduler.rescheduleとTimerActions.refreshNotificationを
- * 呼び直す契約とする(alarm/AlarmListViewModelと同じ方針)。
+ * 開始・一時停止・再開・延長・リセット・削除の各操作はTimerActionsへ渡すだけにする。
+ * 保存・予約の入れ直し・通知の出し直し・サービスの起動停止が必ず揃うようにするため、
+ * 画面側に手順を書き写さない。
  */
 class TimerViewModel(private val repository: TimerRepository, context: Context) : ViewModel() {
 
     // PendingIntent発行やサービス起動にはApplication Contextで十分なため、生成時点で切り替えて保持する
     private val appContext: Context = context.applicationContext
 
-    // DBの変更が自動的に反映される一覧。残り時間そのものは画面側でtick(1秒ごと)ごとに再計算する
-    val timers: StateFlow<List<TimerState>> = repository.observeAll()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    // DBの変更が自動的に反映される一覧。残り時間そのものは画面側でtick(1秒ごと)ごとに再計算する。
+    // 読み込みが終わるまではnullを流す。先に空リストを流すと、画面が「0件」と判断して
+    // 新規作成の画面を一瞬出してしまうため、「まだ分からない」を空と区別できるようにしている
+    val timers: StateFlow<List<TimerState>?> = repository.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     // 指定した時分秒で新規タイマーを開始する。合計0秒は呼び出し側(画面)がボタンを無効化して防ぐ
     fun start(hours: Int, minutes: Int, seconds: Int) {
         val durationMillis = ((hours * 3600L) + (minutes * 60L) + seconds) * 1000L
         if (durationMillis <= 0L) return
-        viewModelScope.launch {
-            val now = SystemClock.elapsedRealtime()
-            val nowWall = System.currentTimeMillis()
-            // ラベルは開始時に指定した時間の表示("5:00"など)をそのまま使う。複数タイマーを見分けられれば十分で、
-            // 個別のラベル入力欄は今回のSPECの要求に無いため作らない
-            val label = formatDuration(durationMillis)
-            val state = startTimer(
-                id = 0L,
-                label = label,
-                durationMillis = durationMillis,
-                nowElapsedRealtime = now,
-                nowWallClockMillis = nowWall,
-            )
-            val id = repository.add(state)
-            afterMutation(id)
-        }
+        viewModelScope.launch { TimerActions.start(appContext, durationMillis) }
     }
 
-    fun pause(id: Long) = mutate(id, ::pauseTimer)
-    fun resume(id: Long) = mutate(id, ::resumeTimer)
-    fun reset(id: Long) = mutate(id, ::resetTimer)
-
-    fun extendOneMinute(id: Long) = mutate(id) { state, now, nowWall ->
-        extendTimer(state, EXTEND_STEP_MILLIS, now, nowWall)
-    }
+    fun pause(id: Long) = run { TimerActions.pause(appContext, id) }
+    fun resume(id: Long) = run { TimerActions.resume(appContext, id) }
+    fun reset(id: Long) = run { TimerActions.stop(appContext, id) }
+    fun extendOneMinute(id: Long) = run { TimerActions.extendOneMinute(appContext, id) }
 
     // 削除。FINISHED(鳴動中)の「停止」ボタンも同じ操作として扱う
     // (domain/TimerState.ktの「停止するとタイマー自体を削除する想定」)
     fun delete(id: Long) {
-        viewModelScope.launch {
-            repository.delete(id)
-            TimerScheduler.cancel(appContext, id)
-            // 通知はTimerActionsに任せる。削除そのものは、この画面が持つRepositoryへ行う
-            TimerActions.refreshNotification(appContext)
-        }
+        // 手順をここへ書き写さない。通知の側と同じ道を通す
+        viewModelScope.launch { TimerActions.delete(appContext, id) }
     }
 
-    private fun mutate(id: Long, transform: (TimerState, Long, Long) -> TimerState) {
-        viewModelScope.launch {
-            val state = repository.getById(id) ?: return@launch
-            val now = SystemClock.elapsedRealtime()
-            val nowWall = System.currentTimeMillis()
-            repository.update(transform(state, now, nowWall))
-            afterMutation(id)
-        }
-    }
-
-    // 状態を変えるたびに、完了時刻の予約と通知を合わせ直す。
-    // 動作中はサービスを持たないため、通知の出し直しはここが担う
-    private suspend fun afterMutation(id: Long) {
-        TimerScheduler.reschedule(appContext, id)
-        TimerActions.refreshNotification(appContext)
+    // 画面からの操作も、通知のボタンと同じ道(TimerActions)を通す。
+    // 保存・予約の入れ直し・通知の出し直し・サービスの起動停止を、画面側へ書き写さないため
+    private fun run(action: suspend () -> Unit) {
+        viewModelScope.launch { action() }
     }
 }
 

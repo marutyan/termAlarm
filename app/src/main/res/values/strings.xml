@@ -7,16 +7,21 @@
     <string name="ringing_notification_title">アラーム</string>
     <!-- 鳴動画面: 停止ボタン -->
     <string name="ringing_stop">停止</string>
-    <!-- 鳴動画面: スヌーズボタン(snoozeMinutesが設定されているときだけ表示) -->
-    <string name="ringing_snooze">スヌーズ</string>
-    <!-- 鳴動画面: 今日はもう止めるボタン(skipRequiresAppがfalseのときだけ表示) -->
     <string name="ringing_skip_today">このタームを終了</string>
-    <!-- 鳴動画面: skipRequiresAppがtrue(既定)のとき、当日終了の導線の代わりに出す1行の案内文 -->
-    <string name="ringing_skip_requires_app_notice">このタームを終了するにはアプリを開いてください</string>
     <!-- 鳴動画面: 残り鳴動回数の表示。現在鳴っている回は含めない(docs/SPEC.md「追記」参照) -->
-    <string name="ringing_remaining_count">この時間帯であと %1$d 回鳴ります</string>
     <!-- 鳴動画面: 次回の鳴動時刻の表示 -->
-    <string name="ringing_next_time">次は %1$s</string>
+    <!-- 鳴動画面刷新用文字列 -->
+    <string name="ringing_occurrence_label">%1$d回目 / %2$d回</string>
+    <string name="ringing_wake_check_label">二度寝チェック</string>
+    <string name="ringing_range_and_interval">%1$s – %2$s · %3$s</string>
+    <string name="ringing_interval_constant">%1$d分ごと</string>
+    <string name="ringing_volume_label">音量</string>
+    <string name="ringing_remaining_until_end">%1$sまで 残り%2$d回</string>
+    <string name="ringing_remaining_last">%1$s 最後の鳴動</string>
+    <string name="ringing_stop_action">ストップ</string>
+    <string name="ringing_next_occurrence">次は %1$s</string>
+    <string name="ringing_next_none">この回で終了</string>
+    <string name="ringing_end_term">タームを終了</string>
     <!-- 鳴動中の通知本文。「7:05（日）・あと24回」のように、鳴っている時刻とタームの残り回数を並べる -->
     <string name="ringing_notification_text_with_remaining">%1$s・あと%2$d回</string>
 
@@ -31,69 +36,105 @@
     <string name="back">戻る</string>
     <string name="cancel">キャンセル</string>
     <string name="ok">OK</string>
-    <string name="close">閉じる</string>
     <string name="save">保存</string>
     <string name="decide">決定</string>
     <string name="open_settings">設定を開く</string>
-    <string name="default_alarm_label">アラーム</string>
 
     <!-- アラーム一覧画面。「今日はもう止める」の文言はringing_skip_todayを共用する -->
-    <string name="alarm_list_title">アラーム</string>
-    <string name="alarm_list_empty">アラームがありません。右下の+から追加してください</string>
-    <string name="add_alarm">アラームを追加</string>
     <string name="menu_more">その他のメニュー</string>
-    <string name="end_today_session_confirm">今日は止める</string>
-    <string name="end_today_session_confirm_message">「%1$s」の今日の鳴動(最大%2$d回)をすべて止めます。次回は通常どおり鳴ります。</string>
+
+    <!-- ナビゲーション項目 -->
+    <string name="nav_terms">ターム</string>
+    <string name="nav_standard_alarm">アラーム</string>
+    <string name="nav_record">記録</string>
+    <string name="nav_timer">タイマー</string>
+    <string name="nav_stopwatch">ストップウォッチ</string>
+    <string name="nav_settings">設定</string>
+
+    <!-- ホーム画面 -->
+    <string name="home_next_trigger_label">次の鳴動</string>
+    <string name="home_remaining_count">残り%1$d回</string>
+    <string name="home_end_term">このタームを終了</string>
+    <string name="home_section_terms">ターム</string>
+    <string name="home_add_term">タームを追加</string>
+    <string name="home_term_switch_description">%1$sのタームの有効無効切り替え</string>
+    <string name="home_term_day_description">%1$s曜日の繰り返しを切り替え</string>
+    <string name="day_monday_short">月</string>
+    <string name="day_tuesday_short">火</string>
+    <string name="day_wednesday_short">水</string>
+    <string name="day_thursday_short">木</string>
+    <string name="day_friday_short">金</string>
+    <string name="day_saturday_short">土</string>
+    <string name="day_sunday_short">日</string>
+
+    <!-- 通常アラーム画面 (design/Alarms.dc.html) -->
+    <string name="alarms_title">アラーム</string>
+    <string name="alarms_subtitle">指定した時刻に1回だけ鳴ります</string>
+    <string name="alarms_add_alarm">アラームを追加</string>
+    <string name="alarms_repeat_today_only">きょうだけ</string>
+    <string name="alarms_switch_description">%1$sのアラームの有効無効切り替え</string>
+
+    <!-- プレースホルダ画面 -->
+    <string name="placeholder_coming_soon">準備中</string>
 
     <!-- 下部ナビ -->
-    <string name="tab_alarm">アラーム</string>
-    <string name="tab_clock">時計</string>
     <string name="tab_timer">タイマー</string>
     <string name="tab_stopwatch">ストップウォッチ</string>
-    <string name="tab_coming_soon">今後対応予定</string>
 
     <!-- アラーム追加・編集画面 -->
-    <string name="edit_title_new">アラームを追加</string>
-    <string name="edit_title_existing">アラームを編集</string>
-    <string name="start_time">開始</string>
-    <string name="end_time">終了</string>
-    <string name="interval_section_title">鳴らす間隔</string>
-    <string name="interval_minutes_label">%1$d分</string>
-    <string name="interval_custom_label">その他</string>
     <string name="unit_minutes">分</string>
-    <string name="preview_range">%1$s から %2$s まで %3$d回 鳴ります</string>
-    <string name="preview_single">%1$s に 1回 鳴ります</string>
-    <string name="error_interval_not_positive">間隔は1分以上にしてください</string>
-    <string name="error_interval_too_large">間隔が範囲に対して大きすぎます。間隔を短くするか終了時刻を後にしてください</string>
-    <string name="error_custom_interval_invalid">間隔には数字を入力してください</string>
-    <string name="error_snooze_out_of_range">スヌーズは1分から60分の間で指定してください</string>
-    <string name="repeat_section_title">繰り返し</string>
     <string name="label_title">ラベル</string>
-    <string name="label_placeholder">なし</string>
-    <string name="sound_title">アラーム音</string>
     <string name="sound_default">既定の音</string>
     <string name="vibration_title">バイブレーション</string>
-    <string name="difficulty_section_title">止めにくさ</string>
-    <string name="skip_requires_app_title">タームの終了はアプリからのみ</string>
-    <string name="skip_requires_app_subtitle">寝ぼけて止めてしまうのを防ぎます</string>
-    <string name="skip_game_title">停止時にゲームを出題</string>
-    <string name="skip_game_subtitle">6種類からランダムに1問</string>
-    <string name="skip_game_disabled_reason">「タームの終了はアプリからのみ」がオフのときは選べません</string>
-    <string name="snooze_title">スヌーズ</string>
-    <string name="snooze_subtitle">間隔が長めのときに使えます。短い間隔では次の鳴動がスヌーズの役割を果たすため既定はオフです</string>
-    <string name="snooze_minutes_label">スヌーズ間隔(分)</string>
     <string name="delete_alarm">このアラームを削除</string>
     <string name="delete_alarm_confirm_message">このアラームを削除します。この操作は元に戻せません。</string>
+
+    <!-- 新ターム編集画面 -->
+    <string name="term_edit_interval_label">間隔</string>
+    <string name="term_edit_challenge_label">ミッション</string>
+    <string name="term_edit_wake_check_label">二度寝チェック</string>
+    <string name="term_edit_wake_check_desc">ターム終了の%1$d分後に再度鳴動</string>
+    <string name="term_edit_delete">削除</string>
+    <string name="term_edit_interval_constant">等間隔</string>
+    <string name="term_edit_interval_accelerate">加速</string>
+    <string name="term_edit_interval_start">開始</string>
+    <string name="term_edit_interval_end">終了</string>
+    <string name="term_edit_interval_other">他</string>
+    <string name="term_edit_interval_accelerate_summary">加速 %1$d→%2$d分</string>
+    <string name="term_edit_interval_constant_summary">等間隔 %1$d分</string>
+    <string name="term_edit_interval_accelerate_note">全%1$d回。終了時刻には必ず鳴動します</string>
+    <string name="term_edit_interval_constant_note">全%1$d回</string>
+    <string name="term_edit_custom_interval_title">間隔を入力</string>
+
+    <!-- ミッション選択ダイアログ -->
+    <string name="challenge_timing_never">なし</string>
+    <string name="challenge_timing_never_desc">押すだけで停止します</string>
+    <string name="challenge_timing_end_only">ターム終了時だけ</string>
+    <string name="challenge_timing_end_only_desc">最後の1回だけミッションを出します。途中は押すだけで停止します</string>
+    <string name="challenge_timing_every_time">毎回</string>
+    <string name="challenge_timing_every_time_desc">鳴動のたびにミッションを出します</string>
+    <string name="challenge_difficulty">難易度</string>
+    <string name="challenge_level_easy">Easy</string>
+    <string name="challenge_level_hard">Hard</string>
+    <string name="challenge_hard_note">Hardは終了に近づくほどミッションが増えます</string>
+    <string name="challenge_summary_format">%1$s · %2$s</string>
+
+    <!-- ターム終了ダイアログ -->
+    <string name="term_end_title">タームを終了する</string>
+    <string name="term_end_remaining_note">本日の残り%1$d回は鳴動しません</string>
+    <string name="term_end_description">本日分のみ終了します。明日以降は通常どおり鳴動します。\n二度寝チェックも行いません。</string>
+    <string name="term_end_cancel">やめる</string>
+    <string name="term_end_confirm">終了する</string>
 
     <!-- 権限 -->
     <string name="notification_permission_banner">通知を許可すると、アラームの通知を確実に受け取れます</string>
     <string name="exact_alarm_permission_banner">正確なアラームの権限が無効になっています。設定から許可してください</string>
+    <string name="notification_permission_action_request">許可する</string>
 
     <!-- ライセンス -->
     <string name="about_title">ライセンス情報</string>
 
     <!-- 当日終了ゲーム -->
-    <string name="skip_game_banner">正解すると、%1$s の今日の鳴動(最大%2$d回)を止めます</string>
     <string name="skip_game_wrong_answer">不正解です。もう一度どうぞ</string>
     <string name="game_kind_arithmetic">計算</string>
     <string name="game_kind_sequential_tap">順にタップ</string>
@@ -101,17 +142,38 @@
     <string name="game_kind_shake_device">端末を振る</string>
     <string name="game_kind_count_shapes">図形を数える</string>
     <string name="game_kind_color_word">色と文字</string>
+    <string name="game_kind_mirror_text">鏡文字</string>
+    <string name="game_kind_sequence_recall">光った順を再現</string>
+    <string name="game_kind_memory_pairs">神経衰弱</string>
+    <string name="game_kind_walk">歩く</string>
+    <string name="game_challenge_stop_alarm_hint">正解するとアラームが停止します</string>
+    <string name="game_challenge_end_term_hint">正解するとタームが終了します</string>
+    <string name="game_question_progress">%1$d問中%2$d問目</string>
+    <string name="sequential_tap_prompt">1から12を昇順に押す</string>
+    <string name="transcribe_prompt">表示された英数字を入力してください</string>
+    <string name="mirror_text_prompt">左右反転した英数字を入力してください</string>
+    <string name="sequence_recall_prompt_wait">光る順序を覚えてください</string>
+    <string name="sequence_recall_prompt_input">光った順にタップしてください</string>
+    <string name="memory_pairs_prompt">ペアをそろえてください</string>
+    <string name="memory_pairs_progress">%1$d / %2$d ペア</string>
+    <string name="shake_device_prompt">端末を振ってください</string>
+    <string name="walk_prompt">端末を持って歩いてください</string>
+    <string name="walk_progress">%1$d / %2$d 歩</string>
+    <string name="game_give_up">やめる</string>
     <string name="count_shapes_prompt">%1$s はいくつありますか</string>
-    <string name="sequential_tap_next">次にタップ: %1$d</string>
     <string name="shake_device_progress">%1$d / %2$d 回</string>
     <string name="color_word_prompt">この文字の「色」を選んでください</string>
 
     <string name="timer_start">開始</string>
     <!-- タイマー追加画面: テンキー入力 -->
     <string name="timer_time_description">%1$d時間%2$d分%3$d秒</string>
-    <string name="timer_unit_hours">h</string>
-    <string name="timer_unit_minutes">m</string>
-    <string name="timer_unit_seconds">s</string>
+    <string name="timer_unit_hours">時間</string>
+    <string name="timer_unit_minutes">分</string>
+    <string name="timer_unit_seconds">秒</string>
+    <string name="timer_quick_1m">1分</string>
+    <string name="timer_quick_5m">5分</string>
+    <string name="timer_quick_10m">10分</string>
+    <string name="timer_quick_15m">15分</string>
     <string name="timer_key_1">1</string>
     <string name="timer_key_2">2</string>
     <string name="timer_key_3">3</string>
@@ -131,38 +193,30 @@
     <string name="timer_pause">一時停止</string>
     <string name="timer_resume">再開</string>
     <string name="timer_reset">リセット</string>
-    <string name="timer_extend_one_minute">+1分</string>
-    <string name="timer_extend_one_minute_button">+1:00</string>
+    <string name="timer_extend_one_minute">＋1分</string>
+    <string name="timer_extend_one_minute_button">＋1:00</string>
     <string name="timer_delete">削除</string>
     <!-- タイマー画面: 完了(鳴動中)のタイマーを止めるボタン。停止するとそのタイマー自体を削除する -->
     <string name="timer_stop">停止</string>
     <!-- タイマー画面: 右下のFAB(新規追加)。押すと時分秒を入力する別画面を開く。同じ文言を追加画面のタイトルにも使う -->
     <string name="timer_add">タイマーを追加</string>
     <!-- タイマー画面: カード左上のラベル。%1$sには開始時に指定した時間("5:00"等)が入る -->
-    <string name="timer_card_title">%1$s</string>
-    <string name="timer_card_title_unnamed">タイマー</string>
     <!-- タイマー画面: 元の時間の日本語表記用単位 -->
     <string name="timer_duration_hours">%1$d時間</string>
     <string name="timer_duration_minutes">%1$d分</string>
     <string name="timer_duration_seconds">%1$d秒</string>
     <!-- タイマー画面: 名前のないタイマーのカード見出し（例: タイマー（7秒）） -->
-    <string name="timer_card_title_unnamed_with_duration">タイマー（%1$s）</string>
 
     <!-- タイマーのフォアグラウンド通知 -->
     <string name="timer_notification_channel_name">タイマー</string>
     <string name="timer_firing_notification_channel_name">タイマーの通知音</string>
-    <string name="timer_notification_title">タイマー動作中</string>
+    <string name="timer_notification_title">タイマー</string>
     <string name="timer_notification_summary">%1$d件のタイマー</string>
     <string name="timer_notification_finished">タイムアップ</string>
     <string name="timer_notification_paused">一時停止中</string>
     <string name="timer_notification_running">動作中</string>
     <!-- タイムアップ時にステータスバーのチップへ出す短い文字（setShortCriticalText用） -->
-    <string name="timer_notification_short_finished">タイムアップ</string>
     <!-- 一覧画面: 次のアラームまでの残り時間(有効なアラームのみ表示) -->
-    <string name="remaining_time_less_than_minute">あと1分未満</string>
-    <string name="remaining_time_minutes">あと%1$d分</string>
-    <string name="remaining_time_hours_minutes">あと%1$d時間%2$d分</string>
-    <string name="remaining_time_days">あと%1$d日</string>
 
     <!-- ストップウォッチタブ -->
     <string name="stopwatch_start">開始</string>
@@ -170,11 +224,7 @@
     <string name="stopwatch_reset">リセット</string>
     <string name="stopwatch_lap">ラップ</string>
     <!-- ラップ一覧の行: ラップ番号とその時点の合計 -->
-    <string name="stopwatch_lap_number">%1$d</string>
-    <string name="stopwatch_lap_total">%1$s</string>
     <!-- ラップ一覧(横並びカード)の左右送りボタン -->
-    <string name="stopwatch_lap_scroll_previous">前のラップへ</string>
-    <string name="stopwatch_lap_scroll_next">次のラップへ</string>
     <!-- 動作中(RUNNING)の間だけ表示するフォアグラウンド通知 -->
     <string name="stopwatch_notification_channel_name">ストップウォッチ計測中</string>
     <string name="stopwatch_notification_title">ストップウォッチ</string>
@@ -187,38 +237,80 @@
     <string name="menu_settings">設定</string>
     <string name="settings_title">設定</string>
     <string name="settings_section_alarm">アラーム</string>
-    <string name="settings_section_clock">時計</string>
-    <string name="settings_section_timer">タイマー</string>
 
     <!-- アラーム -->
-    <string name="settings_dismiss_method_title">アラーム解除の操作</string>
-    <string name="settings_dismiss_method_tap">タップ</string>
     <!-- スワイプでの解除は未実装のため、選択肢に添える注記(SettingsScreen.ktのDISMISS_METHODダイアログ専用) -->
-    <string name="settings_dismiss_method_swipe_unavailable">スワイプ（未対応）</string>
-    <string name="settings_auto_stop_title">消音までの時間</string>
-    <string name="settings_snooze_length_title">スヌーズの長さ</string>
-    <string name="settings_volume_title">アラームの音量</string>
     <string name="settings_fade_in_title">徐々に音量を上げる</string>
     <string name="settings_seconds_format">%1$s秒</string>
     <string name="settings_fade_in_off">なし</string>
-    <string name="settings_volume_button_title">アラーム時の音量ボタン</string>
-    <string name="settings_volume_button_adjust">音量の調整</string>
-    <string name="settings_volume_button_snooze">スヌーズ</string>
-    <string name="settings_volume_button_dismiss">アラームを止める</string>
-    <string name="settings_week_start_title">週の始まり</string>
-    <string name="settings_week_start_sunday">日曜日</string>
-    <string name="settings_week_start_monday">月曜日</string>
 
     <!-- 時計 -->
-    <string name="settings_clock_style_title">スタイル</string>
-    <string name="settings_show_seconds_title">時刻に秒を表示</string>
-    <string name="settings_date_time_title">日付と時刻の変更</string>
 
     <!-- タイマー -->
-    <string name="settings_timer_sound_title">タイマーの音</string>
-    <string name="settings_timer_vibration_title">タイマーのバイブレーション</string>
     <!-- メニュー: プライバシー ポリシーとライセンス -->
+    <string name="menu_privacy">プライバシー</string>
+    <string name="menu_about">このアプリについて</string>
     <string name="menu_privacy_policy">プライバシー ポリシー</string>
     <string name="menu_license">ライセンス</string>
     <string name="privacy_policy_title">プライバシー ポリシー</string>
+
+    <!-- 記録画面 (design/Records.dc.html) -->
+    <string name="records_title">記録</string>
+    <string name="records_tab_this_week">今週</string>
+    <string name="records_tab_last_30_days">直近30日</string>
+    <string name="records_metric_average">平均</string>
+    <string name="records_metric_wake_occurrence_suffix">回目で起床</string>
+    <string name="records_metric_duration_suffix">分</string>
+    <string name="records_metric_duration_caption">開始から</string>
+    <string name="records_metric_auto_silenced">放置</string>
+    <string name="records_metric_percent_suffix">%</string>
+    <string name="records_metric_auto_silenced_caption">止めずに終わった回</string>
+    <string name="records_chart_title">何回目で起きたか</string>
+    <string name="records_list_title">1日ごと</string>
+    <string name="records_empty">記録がありません</string>
+
+    <!-- 新設定画面 (design/Settings.dc.html) -->
+    <string name="settings_section_appearance">見た目</string>
+    <string name="settings_section_about_app">このアプリ</string>
+    <string name="settings_sound_item_title">音</string>
+    <string name="settings_silence_after_item_title">消音までの時間</string>
+    <string name="settings_wake_check_item_title">二度寝チェックまで</string>
+    <string name="settings_mini_games_item_title">ミッション</string>
+    <string name="settings_mini_games_count_format">%1$d種類</string>
+    <string name="settings_theme_item_title">配色</string>
+    <string name="settings_theme_navy">紺</string>
+    <string name="settings_theme_light">明るい</string>
+    <string name="settings_theme_black">黒</string>
+    <string name="settings_theme_dynamic">端末の色</string>
+    <string name="settings_privacy_item_title">プライバシー</string>
+    <string name="settings_about_item_title">このアプリについて</string>
+    <string name="settings_app_version_value">1.0</string>
+    <string name="settings_picker_none">なし</string>
+    <string name="settings_minutes_format">%1$d分</string>
+
+    <!-- 使うミッションを選ぶ画面 (design/GameList.dc.html) -->
+    <string name="game_list_title">ミッション</string>
+    <string name="game_list_subtitle">選択した種類からランダムにミッションが出されます。</string>
+    <string name="game_note_arithmetic">四則演算</string>
+    <string name="game_note_sequential_tap">1から12を昇順</string>
+    <string name="game_note_transcribe">英数字8文字</string>
+    <string name="game_note_mirror_text">左右反転した文字列</string>
+    <string name="game_note_sequence_recall">順番を記憶</string>
+    <string name="game_note_memory_pairs">3×4</string>
+    <string name="game_note_count_shapes">指定した図形の数</string>
+    <string name="game_note_color_word">文字の色を回答</string>
+    <string name="game_note_shake_device">軽い</string>
+    <string name="game_note_walk">30歩</string>
+    <!-- ウィジェット -->
+    <string name="widget_description">時刻と次の鳴動を出す時計</string>
+    <string name="widget_config_title">ウィジェットの見た目</string>
+    <string name="widget_config_color">色</string>
+    <string name="widget_config_background">背景</string>
+    <string name="widget_config_solid">無地</string>
+    <string name="widget_config_transparent">透明</string>
+    <string name="widget_config_font">文字</string>
+    <string name="widget_config_font_standard">標準</string>
+    <string name="widget_config_font_monospace">等幅</string>
+    <string name="widget_config_font_serif">明朝</string>
+    <string name="widget_config_decide">決定</string>
 </resources>

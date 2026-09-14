@@ -21,14 +21,14 @@ class WakeRecordTest {
             rings = listOf(
                 RingRecord(
                     scheduledAt = rangeStart,
-                    dismissedAt = null,
-                    dismissMethod = DismissMethod.AUTO_SILENCED,
+                    stoppedAt = null,
+                    stopMethod = StopMethod.AUTO_SILENCED,
                     occurrenceIndex = 0,
                 ),
                 RingRecord(
                     scheduledAt = rangeStart.plusMinutes(5),
-                    dismissedAt = null,
-                    dismissMethod = DismissMethod.AUTO_SILENCED,
+                    stoppedAt = null,
+                    stopMethod = StopMethod.AUTO_SILENCED,
                     occurrenceIndex = 1,
                 ),
             ),
@@ -48,26 +48,26 @@ class WakeRecordTest {
             rings = listOf(
                 RingRecord(
                     scheduledAt = rangeStart,
-                    dismissedAt = rangeStart.plusMinutes(1),
-                    dismissMethod = DismissMethod.CHALLENGE,
+                    stoppedAt = rangeStart.plusMinutes(1),
+                    stopMethod = StopMethod.CHALLENGE,
                     occurrenceIndex = 0,
                 ),
                 RingRecord(
                     scheduledAt = rangeStart.plusMinutes(5),
-                    dismissedAt = rangeStart.plusMinutes(6),
-                    dismissMethod = DismissMethod.LONG_PRESS,
+                    stoppedAt = rangeStart.plusMinutes(6),
+                    stopMethod = StopMethod.TAP,
                     occurrenceIndex = 1,
                 ),
                 RingRecord(
                     scheduledAt = rangeStart.plusMinutes(10),
-                    dismissedAt = null,
-                    dismissMethod = DismissMethod.AUTO_SILENCED,
+                    stoppedAt = null,
+                    stopMethod = StopMethod.AUTO_SILENCED,
                     occurrenceIndex = 2,
                 ),
                 RingRecord(
                     scheduledAt = rangeStart.plusMinutes(15),
-                    dismissedAt = null,
-                    dismissMethod = DismissMethod.AUTO_SILENCED,
+                    stoppedAt = null,
+                    stopMethod = StopMethod.AUTO_SILENCED,
                     occurrenceIndex = 3,
                 ),
             ),
@@ -80,9 +80,9 @@ class WakeRecordTest {
     }
 
     @Test
-    fun `長押し緊急停止の割合が正しく求まり鳴動が0件なら0_0になる`() {
+    fun `autoSilencedRatioが正しく求まり鳴動が0件なら0_0になる`() {
         // 鳴動が0件のケース
-        assertEquals(0.0, longPressDismissRatio(emptyList()), 0.0001)
+        assertEquals(0.0, autoSilencedRatio(emptyList()), 0.0001)
 
         val today = LocalDate.of(2026, 9, 13)
         val rangeStart = ZonedDateTime.of(today, java.time.LocalTime.of(7, 0), TOKYO)
@@ -91,30 +91,29 @@ class WakeRecordTest {
             rangeStartAt = rangeStart,
             rings = emptyList(),
         )
-        assertEquals(0.0, longPressDismissRatio(listOf(emptySession)), 0.0001)
+        assertEquals(0.0, autoSilencedRatio(listOf(emptySession)), 0.0001)
 
         // 複数セッションにわたる計算のケース
         val session1 = SessionRecord(
             sessionStart = today,
             rangeStartAt = rangeStart,
             rings = listOf(
-                RingRecord(rangeStart, rangeStart.plusMinutes(1), DismissMethod.CHALLENGE, 0),
-                RingRecord(rangeStart.plusMinutes(5), rangeStart.plusMinutes(6), DismissMethod.LONG_PRESS, 1),
-                RingRecord(rangeStart.plusMinutes(10), null, DismissMethod.AUTO_SILENCED, 2),
+                RingRecord(rangeStart, rangeStart.plusMinutes(1), StopMethod.CHALLENGE, 0),
+                RingRecord(rangeStart.plusMinutes(5), rangeStart.plusMinutes(6), StopMethod.TAP, 1),
+                RingRecord(rangeStart.plusMinutes(10), null, StopMethod.AUTO_SILENCED, 2),
             ),
         )
         val session2 = SessionRecord(
             sessionStart = today.plusDays(1),
             rangeStartAt = rangeStart.plusDays(1),
             rings = listOf(
-                RingRecord(rangeStart.plusDays(1), rangeStart.plusDays(1).plusMinutes(1), DismissMethod.LONG_PRESS, 0),
-                RingRecord(rangeStart.plusDays(1).plusMinutes(5), rangeStart.plusDays(1).plusMinutes(6), DismissMethod.CHALLENGE, 1),
+                RingRecord(rangeStart.plusDays(1), null, StopMethod.AUTO_SILENCED, 0),
+                RingRecord(rangeStart.plusDays(1).plusMinutes(5), rangeStart.plusDays(1).plusMinutes(6), StopMethod.CHALLENGE, 1),
             ),
         )
 
-        // 全5回の鳴動のうち LONG_PRESS は 2回。手計算: 2 / 5 = 0.4
-        assertEquals(0.4, longPressDismissRatio(listOf(session1, session2)), 0.0001)
-        assertEquals(0.4, longPressRate(listOf(session1, session2)), 0.0001)
+        // 全5回の鳴動のうち AUTO_SILENCED は 2回。手計算: 2 / 5 = 0.4
+        assertEquals(0.4, autoSilencedRatio(listOf(session1, session2)), 0.0001)
     }
 
     @Test
@@ -127,8 +126,8 @@ class WakeRecordTest {
             sessionStart = today,
             rangeStartAt = rangeStart,
             rings = listOf(
-                RingRecord(rangeStart, rangeStart.plusMinutes(1), DismissMethod.CHALLENGE, 0),
-                RingRecord(rangeStart.plusMinutes(5), rangeStart.plusMinutes(10), DismissMethod.CHALLENGE, 1),
+                RingRecord(rangeStart, rangeStart.plusMinutes(1), StopMethod.CHALLENGE, 0),
+                RingRecord(rangeStart.plusMinutes(5), rangeStart.plusMinutes(10), StopMethod.CHALLENGE, 1),
             ),
         )
 
@@ -137,10 +136,10 @@ class WakeRecordTest {
             sessionStart = today.plusDays(1),
             rangeStartAt = rangeStart.plusDays(1),
             rings = listOf(
-                RingRecord(rangeStart.plusDays(1), rangeStart.plusDays(1).plusMinutes(1), DismissMethod.CHALLENGE, 0),
-                RingRecord(rangeStart.plusDays(1).plusMinutes(5), rangeStart.plusDays(1).plusMinutes(6), DismissMethod.CHALLENGE, 1),
-                RingRecord(rangeStart.plusDays(1).plusMinutes(10), rangeStart.plusDays(1).plusMinutes(11), DismissMethod.CHALLENGE, 2),
-                RingRecord(rangeStart.plusDays(1).plusMinutes(15), rangeStart.plusDays(1).plusMinutes(20), DismissMethod.LONG_PRESS, 3),
+                RingRecord(rangeStart.plusDays(1), rangeStart.plusDays(1).plusMinutes(1), StopMethod.CHALLENGE, 0),
+                RingRecord(rangeStart.plusDays(1).plusMinutes(5), rangeStart.plusDays(1).plusMinutes(6), StopMethod.CHALLENGE, 1),
+                RingRecord(rangeStart.plusDays(1).plusMinutes(10), rangeStart.plusDays(1).plusMinutes(11), StopMethod.CHALLENGE, 2),
+                RingRecord(rangeStart.plusDays(1).plusMinutes(15), rangeStart.plusDays(1).plusMinutes(20), StopMethod.TAP, 3),
             ),
         )
 
@@ -149,8 +148,8 @@ class WakeRecordTest {
             sessionStart = today.plusDays(2),
             rangeStartAt = rangeStart.plusDays(2),
             rings = listOf(
-                RingRecord(rangeStart.plusDays(2), null, DismissMethod.AUTO_SILENCED, 0),
-                RingRecord(rangeStart.plusDays(2).plusMinutes(5), null, DismissMethod.AUTO_SILENCED, 1),
+                RingRecord(rangeStart.plusDays(2), null, StopMethod.AUTO_SILENCED, 0),
+                RingRecord(rangeStart.plusDays(2).plusMinutes(5), null, StopMethod.AUTO_SILENCED, 1),
             ),
         )
 

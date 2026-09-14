@@ -8,6 +8,10 @@ import com.marutyan.termalarm.MainActivity
 import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
+import com.marutyan.termalarm.domain.isOneShotSessionFinished
+import com.marutyan.termalarm.domain.remainingOccurrenceCount
+import com.marutyan.termalarm.domain.shouldPerformWakeCheck
+import com.marutyan.termalarm.domain.wakeCheckTime
 import com.marutyan.termalarm.domain.nextTrigger
 import kotlinx.coroutines.flow.first
 import java.time.Duration
@@ -16,7 +20,13 @@ import java.time.ZonedDateTime
 /**
  * AlarmManagerへの予約登録・解除をすべて担う。1件のAlarmScheduleにつき常に「次の1回」だけを
  * setAlarmClock()で登録し、全回を一括登録しない（docs/SPEC.md「予約の方式」）。
- * ui層はRepositoryを追加・変更・削除・有効切替した直後、必ず reschedule/rescheduleAll を呼び直す契約とする。
+ *
+ * **鳴る時刻を変える保存は、必ずこの object を通すこと。**
+ * 「保存する」と「予約を入れ直す」を呼び出し側それぞれに任せると、片方だけ呼ぶ経路が必ず生まれる。
+ * 実際に、一覧の切り替えとタームの終了で予約の入れ直しが漏れ、切り替えても鳴らない・
+ * 終了させても次の1回が鳴る、という不具合が起きた。
+ * そのため保存と予約をここで対にし、[setEnabled] [updateSchedule] [endSession] を入口とする。
+ * 呼び出し側から Repository の書き込みを直接行わないこと。
  */
 object AlarmScheduler {
 
@@ -34,55 +44,167 @@ object AlarmScheduler {
         }
     }
 
+    /**
+     * 鳴り始める直前に、次の1回だけを予約する。
+     *
+     * 停止したときに予約していると、記録の書き込みで失敗した・鳴動中にプロセスが落ちた・
+     * 強制停止された、といったときに鎖が切れ、そのタームが二度と鳴らなくなる。
+     * 事前通知はここでは触らない。鳴っている最中に「次のアラーム」を出し直すと、
+     * 鳴動側が消したものが後から復活して残ってしまう。
+     */
+    suspend fun scheduleNextBeforeRinging(context: Context, id: Long) {
+        val schedule = repository(context).getById(id) ?: return
+        val next = nextTrigger(schedule, ZonedDateTime.now()) ?: return
+        registerExact(context, id, next)
+    }
+
     // 全アラームの予約を再計算して登録し直す。BOOT_COMPLETED等のブロードキャスト契機で使う
     suspend fun rescheduleAll(context: Context) {
-        repository(context).observeAll().first().forEach { scheduleNextOccurrence(context, it) }
+        // 1件で失敗しても残りを止めない。1つの取りこぼしで他のアラームまで
+        // 鳴らなくなる方が被害が大きい
+        repository(context).observeAll().first().forEach { schedule ->
+            runCatching { scheduleNextOccurrence(context, schedule) }
+        }
     }
 
     // 指定idの予約を取り消す。鳴動の予約だけでなく、事前通知の予約と掲示中の通知も一緒に片付ける
     fun cancel(context: Context, id: Long) {
         alarmManager(context).cancel(operationPendingIntent(context, id))
         alarmManager(context).cancel(upcomingPendingIntent(context, id))
+        // 二度寝チェックも片付ける。切ったのに後から確認が鳴ると驚かせる
+        alarmManager(context).cancel(wakeCheckPendingIntent(context, id))
         AlarmNotifications.cancelUpcoming(context, id)
     }
 
-    // 鳴動画面の「停止」、および無操作タイムアウト時に呼ぶ。次の1回を予約する（結果は同じなのでrescheduleに委譲）
-    suspend fun onStopped(context: Context, id: Long) = reschedule(context, id)
+    /**
+     * 有効・無効を切り替え、予約もそれに合わせる。
+     * 保存だけだと、オンにしても鳴らず、オフにしても鳴り続ける。
+     */
+    suspend fun setEnabled(context: Context, id: Long, enabled: Boolean) {
+        repository(context).setEnabled(id, enabled)
+        if (enabled) reschedule(context, id) else cancel(context, id)
+    }
 
     /**
-     * 鳴動画面の「スヌーズ」。snoozeMinutes分後に再度鳴らすよう登録する。
-     * ただしそのスヌーズ時刻が次回の鳴動予定時刻以降になる場合は、スヌーズを行わず次回予定を優先する
-     * （docs/SPEC.md「スヌーズ」）。戻り値はスヌーズを実際に登録できたかどうか
+     * タームの内容を保存し、予約もそれに合わせる。
+     * 時刻・間隔・曜日のどれが変わっても、次に鳴る回は変わりうる。
      */
-    suspend fun onSnoozed(context: Context, id: Long, snoozeMinutes: Int): Boolean {
-        val schedule = repository(context).getById(id) ?: return false
-        val now = ZonedDateTime.now()
-        val snoozeAt = now.plusMinutes(snoozeMinutes.toLong())
-        val next = nextTrigger(schedule, now)
-        return if (next != null && !snoozeAt.isBefore(next)) {
-            // スヌーズ時刻が次回予定以降になるため、スヌーズはせず次回予定を優先する
-            scheduleNextOccurrence(context, schedule)
-            false
-        } else {
-            registerExact(context, id, snoozeAt)
-            true
+    suspend fun updateSchedule(context: Context, schedule: AlarmSchedule) {
+        repository(context).update(schedule)
+        if (schedule.enabled) reschedule(context, schedule.id) else cancel(context, schedule.id)
+    }
+
+    /**
+     * タームを新しく登録し、予約も入れる。登録したidを返す。
+     */
+    suspend fun addSchedule(context: Context, schedule: AlarmSchedule): Long {
+        val id = repository(context).add(schedule)
+        reschedule(context, id)
+        return id
+    }
+
+    /**
+     * タームを削除し、予約も取り消す。
+     */
+    suspend fun deleteSchedule(context: Context, schedule: AlarmSchedule) {
+        repository(context).delete(schedule)
+        cancel(context, schedule.id)
+    }
+
+    /**
+     * 鳴動画面の「停止」、および無操作タイムアウト時に呼ぶ。
+     * 曜日を指定していないタームはここで鳴り終わりを判定し、自分でオフにする。
+     * そうでなければ次の1回を予約し直す。
+     */
+    suspend fun onStopped(
+        context: Context,
+        id: Long,
+        occurrenceAt: ZonedDateTime = ZonedDateTime.now(),
+        isWakeCheck: Boolean = false,
+    ) {
+        val schedule = repository(context).getById(id)
+        if (!disableIfOneShotFinished(context, id)) {
+            reschedule(context, id)
+        }
+        // 二度寝チェックを止めたときは、もう一度チェックを入れない。そのセッションはここで終わる
+        if (schedule != null && !isWakeCheck) {
+            scheduleWakeCheckIfSessionDone(context, schedule, occurrenceAt)
         }
     }
 
     /**
-     * 当日のタームを終了する（skipRequiresApp==falseのときだけ現れる、鳴動画面と事前通知の導線から呼ばれる）。
+     * 範囲の最後の回を止めたときだけ、二度寝チェックを1回予約する。
+     *
+     * 範囲の中では間隔で鳴り続けるため、途中に確認を挟むと役目が重なる。
+     * だから範囲の外に1回だけ置く（docs/SPEC.md「二度寝チェック」）。
+     * 「タームを終了」で終わらせたセッションでは確認しない。その判定は
+     * [shouldPerformWakeCheck] が skippedSessionStart を見て行う。
+     */
+    private suspend fun scheduleWakeCheckIfSessionDone(
+        context: Context,
+        schedule: AlarmSchedule,
+        occurrenceAt: ZonedDateTime,
+    ) {
+        if (!shouldPerformWakeCheck(schedule, occurrenceAt)) return
+        // まだ範囲の中に鳴る回が残っているなら、最後の回ではない
+        if (remainingOccurrenceCount(schedule, occurrenceAt) > 0) return
+        val minutes = Repositories.settings(context).observe().first().wakeCheckMinutes
+        val at = wakeCheckTime(schedule, ZonedDateTime.now(), minutes) ?: return
+        registerWakeCheck(context, schedule.id, at)
+    }
+
+    // 二度寝チェックの予約。鳴らすので、通常の鳴動と同じく確実な方法で登録する
+    private fun registerWakeCheck(context: Context, id: Long, at: ZonedDateTime) {
+        if (!ExactAlarmPermission.isGranted(context)) return
+        val triggerAtMillis = at.toInstant().toEpochMilli()
+        val info = AlarmManager.AlarmClockInfo(triggerAtMillis, showPendingIntent(context, id))
+        alarmManager(context).setAlarmClock(info, wakeCheckPendingIntent(context, id, triggerAtMillis))
+    }
+
+    // 二度寝チェックの予約の宛先。鳴動用・事前通知用とはactionで区別される
+    private fun wakeCheckPendingIntent(context: Context, id: Long, triggerAtMillis: Long = 0L): PendingIntent {
+        val intent = Intent(context, AlarmTriggerReceiver::class.java)
+            .setAction(ACTION_WAKE_CHECK)
+            .putExtra(EXTRA_ALARM_ID, id)
+            .putExtra(EXTRA_TRIGGER_AT_MILLIS, triggerAtMillis)
+        return PendingIntent.getBroadcast(
+            context,
+            id.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    /**
+     * 曜日を指定していないタームのぶんが鳴り終わっていたら、オフにして予約を片付ける。
+     * オフにしたときだけtrueを返す。
+     */
+    private suspend fun disableIfOneShotFinished(context: Context, id: Long): Boolean {
+        val repo = repository(context)
+        val schedule = repo.getById(id) ?: return false
+        if (!isOneShotSessionFinished(schedule, ZonedDateTime.now())) return false
+        repo.setEnabled(id, false)
+        cancel(context, id)
+        return true
+    }
+
+    /**
+     * 当日のタームを終了する。
      * occurrenceAt からセッション開始日を求めて skippedSessionStart へ書き込み、次回を予約する。
      */
     suspend fun onSessionEnded(context: Context, id: Long, occurrenceAt: ZonedDateTime) {
         // 当日終了の永続化ルール自体はAlarmRepository.endTodaySession()に一本化する（担当Bの実装と重複させない）
         val repo = repository(context)
         repo.endTodaySession(id, occurrenceAt)
+        // 曜日を指定していないタームは、今日のぶんを終えたらもう鳴るものが無いのでオフにする
+        if (disableIfOneShotFinished(context, id)) return
         val schedule = repo.getById(id) ?: return
         scheduleNextOccurrence(context, schedule)
     }
 
     private fun scheduleNextOccurrence(context: Context, schedule: AlarmSchedule) {
         val now = ZonedDateTime.now()
+
         val next = nextTrigger(schedule, now)
         if (next == null) {
             cancel(context, schedule.id)

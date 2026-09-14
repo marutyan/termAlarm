@@ -1,559 +1,861 @@
 package com.marutyan.termalarm.ui.settings
 
-import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
-import android.database.ContentObserver
-import android.media.AudioManager
-import android.os.Build
-import android.os.Handler
-import android.os.Looper
-import android.os.SystemClock
-import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
-import android.provider.Settings as AndroidSettings
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.net.toUri
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.marutyan.termalarm.ui.theme.COMPACT_SCREEN_HEIGHT_THRESHOLD
+import com.marutyan.termalarm.ui.common.TOP_BAR_CONTENT_GAP
+import com.marutyan.termalarm.ui.common.TOP_BAR_TOP_INSET
 import com.marutyan.termalarm.R
-import com.marutyan.termalarm.alarm.SoundFadeIn
-import com.marutyan.termalarm.domain.AlarmDismissMethod
-import com.marutyan.termalarm.domain.ClockDisplayMode
-import com.marutyan.termalarm.domain.VolumeButtonAction
-import com.marutyan.termalarm.domain.WeekStart
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
-import java.util.concurrent.atomic.AtomicBoolean
+import com.marutyan.termalarm.domain.AppSettings
+import com.marutyan.termalarm.domain.AppTheme
+import com.marutyan.termalarm.ui.theme.BlackPrimary
+import com.marutyan.termalarm.ui.theme.BlackSurface
+import com.marutyan.termalarm.ui.theme.DynamicThemePreviewColors
+import com.marutyan.termalarm.ui.theme.IbmPlexMono
+import com.marutyan.termalarm.ui.theme.LightPrimary
+import com.marutyan.termalarm.ui.theme.LightSurface
+import com.marutyan.termalarm.ui.theme.NavyPrimary
+import com.marutyan.termalarm.ui.theme.NavySurface
+import com.marutyan.termalarm.ui.theme.customColors
 
-// 消音までの時間・スヌーズの長さで選べる分数の候補(AlarmEditScreenのスヌーズ入力(1〜60分)より粗い、
-// 設定画面としてよく使う値だけに絞ったプリセット)
-private val MINUTE_PRESETS = listOf(1, 3, 5, 10, 15, 20, 30)
-
-// アラームのフェードイン秒数の候補。0は「なし」を意味する
-private val ALARM_FADE_IN_PRESETS = listOf(0, 5, 10, 15, 20, 25, 30)
-
-// タイマーのフェードイン秒数の候補。既存の固定値(1.5秒)を含める
-private val TIMER_FADE_IN_PRESETS = listOf(0f, 1.5f, 3f, 5f, 10f)
-
-// 一度に1つしか開かないダイアログの種類。開いていなければnull
-private enum class SettingsDialog {
-    DISMISS_METHOD, AUTO_STOP, SNOOZE_LENGTH, ALARM_FADE_IN, VOLUME_BUTTON, WEEK_START,
-    CLOCK_STYLE, TIMER_FADE_IN,
+/**
+ * 設定画面で表示するポップアップピッカーの対象項目種別。
+ * 徐々に音量を上げる、消音までの時間、二度寝チェックまで、配色の選択に用いる。
+ */
+private enum class SettingsPickerType {
+    FADE_IN,
+    SILENCE_AFTER,
+    WAKE_CHECK,
 }
 
 /**
- * 設定画面。design/tabs/Settings.dc.htmlを再現する。アラーム/時計/タイマーの3セクションに分け、
- * 値を持つ行はタップでダイアログを開き、切り替えの行はSwitchを直接操作する。
- * 時計のスタイル(アナログ/デジタル)はSettingsViewModel経由で既存のclock_settingsテーブルを読み書きする。
+ * 設定画面。design/Settings.dc.htmlの設計に基づき、アイコン・項目名・値の行を配置し、
+ * アラーム・見た目・このアプリの3つのまとまりに整理して表示する。
+ * 各項目タップ時にdesign/SettingsPicker.dc.htmlに基づく中央ポップアップを開いて即時選択を提供する。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
+fun SettingsScreen(
+    viewModel: SettingsViewModel,
+    modifier: Modifier = Modifier,
+    onOpenGameList: () -> Unit = {},
+    onBack: () -> Unit = {},
+) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
-    val clockDisplayMode by viewModel.clockDisplayMode.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
-    var openDialog by rememberSaveable { mutableStateOf<SettingsDialog?>(null) }
-    fun closeDialog() { openDialog = null }
+    var currentPicker by rememberSaveable { mutableStateOf<SettingsPickerType?>(null) }
 
-    // システムの音選択(RingtoneManager)。AlarmEditScreenのアラーム音選択と同じ仕組みをタイマー用に持つ
-    // (RingingService/AlarmEditは書き込み範囲外のため、共通化せずここに独立して持つ)
-    val timerSoundPickerLauncher = rememberLauncherForActivityResult(
+    // システムのアラーム音選択ピッカー
+    val soundPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
-        val uri = result.data?.let {
-            androidx.core.content.IntentCompat.getParcelableExtra(it, RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
+        val uri = result.data?.let { intent ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            }
         }
-        viewModel.setTimerSoundUri(uri?.toString())
+        viewModel.setAlarmSoundUri(uri?.toString())
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineMedium) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(
+                top = statusBarTop + TOP_BAR_TOP_INSET,
+                start = 20.dp,
+                end = 20.dp,
+                bottom = 24.dp,
+            ),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        // 戻るボタンと見出し「設定」。下のナビから外れた画面なので、戻る道をここに置く
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(bottom = 6.dp),
+        ) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.size(44.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back),
+                    tint = MaterialTheme.customColors.subtleText,
+                )
+            }
+            Text(
+                text = stringResource(R.string.settings_title),
+                style = TextStyle(
+                    fontFamily = com.marutyan.termalarm.ui.theme.HeadlineStyle.fontFamily,
+                    fontWeight = FontWeight.W300,
+                    fontSize = 28.sp,
+                    letterSpacing = (-0.01).em,
+                    color = MaterialTheme.colorScheme.onSurface,
+                ),
+            )
+        }
+
+        // 1. アラーム セクション
+        SettingsSectionHeader(text = stringResource(R.string.settings_section_alarm))
+        SettingsCard {
+            // 音
+            val currentSoundTitle = soundLabel(context, settings.alarmSoundUri)
+            SettingsRow(
+                icon = SettingsSoundIcon,
+                title = stringResource(R.string.settings_sound_item_title),
+                value = currentSoundTitle,
+                isLast = false,
+                onClick = {
+                    val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                        putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+                        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                        settings.alarmSoundUri?.let { putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, it.toUri()) }
                     }
+                    soundPickerLauncher.launch(intent)
                 },
             )
-        },
-    ) { padding ->
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
-            val isCompact = maxHeight < COMPACT_SCREEN_HEIGHT_THRESHOLD
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                SettingsSection(title = stringResource(R.string.settings_section_alarm), isCompact = isCompact) {
-                    SettingsValueRow(
-                        label = stringResource(R.string.settings_dismiss_method_title),
-                        value = dismissMethodLabel(settings.dismissMethod),
-                        onClick = { openDialog = SettingsDialog.DISMISS_METHOD },
-                        isCompact = isCompact,
-                    )
-                    SettingsValueRow(
-                        label = stringResource(R.string.settings_auto_stop_title),
-                        value = stringResource(R.string.interval_minutes_label, settings.autoStopMinutes),
-                        onClick = { openDialog = SettingsDialog.AUTO_STOP },
-                        isCompact = isCompact,
-                    )
-                    SettingsValueRow(
-                        label = stringResource(R.string.settings_snooze_length_title),
-                        value = stringResource(R.string.interval_minutes_label, settings.defaultSnoozeMinutes),
-                        onClick = { openDialog = SettingsDialog.SNOOZE_LENGTH },
-                        isCompact = isCompact,
-                    )
-                    // 純正はスヌーズの長さの次に音量スライダーを置く
-                    AlarmVolumeRow(isCompact = isCompact)
-                    SettingsValueRow(
-                        label = stringResource(R.string.settings_fade_in_title),
-                        value = formatSeconds(settings.alarmFadeInSeconds),
-                        onClick = { openDialog = SettingsDialog.ALARM_FADE_IN },
-                        isCompact = isCompact,
-                    )
-                    SettingsValueRow(
-                        label = stringResource(R.string.settings_volume_button_title),
-                        value = volumeButtonLabel(settings.volumeButtonAction),
-                        onClick = { openDialog = SettingsDialog.VOLUME_BUTTON },
-                        isCompact = isCompact,
-                    )
-                    SettingsValueRow(
-                        label = stringResource(R.string.settings_week_start_title),
-                        value = weekStartLabel(settings.weekStart),
-                        onClick = { openDialog = SettingsDialog.WEEK_START },
-                        isCompact = isCompact,
-                    )
-                }
 
-                SettingsSection(title = stringResource(R.string.settings_section_clock), isCompact = isCompact) {
-                    SettingsValueRow(
-                        label = stringResource(R.string.settings_clock_style_title),
-                        value = clockStyleLabel(clockDisplayMode),
-                        onClick = { openDialog = SettingsDialog.CLOCK_STYLE },
-                        isCompact = isCompact,
-                    )
-                    SettingsToggleRow(
-                        label = stringResource(R.string.settings_show_seconds_title),
-                        checked = settings.showClockSeconds,
-                        onCheckedChange = viewModel::setShowClockSeconds,
-                        isCompact = isCompact,
-                    )
-                    SettingsValueRow(
-                        label = stringResource(R.string.settings_date_time_title),
-                        value = null,
-                        onClick = { context.startActivity(Intent(AndroidSettings.ACTION_DATE_SETTINGS)) },
-                        isCompact = isCompact,
-                    )
-                }
+            // バイブレーション
+            SettingsSwitchRow(
+                icon = SettingsVibrationIcon,
+                title = stringResource(R.string.vibration_title),
+                isChecked = settings.vibration,
+                isLast = false,
+                onCheckedChange = { viewModel.setVibration(it) },
+            )
 
-                SettingsSection(title = stringResource(R.string.settings_section_timer), showDivider = false, isCompact = isCompact) {
-                    SettingsValueRow(
-                        label = stringResource(R.string.settings_timer_sound_title),
-                        value = timerSoundLabel(context, settings.timerSoundUri),
-                        onClick = {
-                            val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
-                                putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
-                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
-                                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
-                                settings.timerSoundUri?.let { putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, it.toUri()) }
-                            }
-                            timerSoundPickerLauncher.launch(intent)
-                        },
-                        isCompact = isCompact,
-                    )
-                    SettingsValueRow(
-                        label = stringResource(R.string.settings_fade_in_title),
-                        value = formatSeconds(settings.timerFadeInSeconds),
-                        onClick = { openDialog = SettingsDialog.TIMER_FADE_IN },
-                        isCompact = isCompact,
-                    )
-                    SettingsToggleRow(
-                        label = stringResource(R.string.settings_timer_vibration_title),
-                        checked = settings.timerVibration,
-                        onCheckedChange = viewModel::setTimerVibration,
-                        isCompact = isCompact,
-                    )
+            // 徐々に音量を上げる
+            val fadeInText = if (settings.fadeInSeconds == 0) {
+                stringResource(R.string.settings_fade_in_off)
+            } else {
+                stringResource(R.string.settings_seconds_format, settings.fadeInSeconds.toString())
+            }
+            SettingsRow(
+                icon = SettingsFadeInIcon,
+                title = stringResource(R.string.settings_fade_in_title),
+                value = fadeInText,
+                isLast = false,
+                onClick = { currentPicker = SettingsPickerType.FADE_IN },
+            )
+
+            // 消音までの時間
+            val silenceText = settings.silenceAfterMinutes?.let {
+                stringResource(R.string.settings_minutes_format, it)
+            } ?: stringResource(R.string.settings_picker_none)
+            SettingsRow(
+                icon = SettingsSilenceAfterIcon,
+                title = stringResource(R.string.settings_silence_after_item_title),
+                value = silenceText,
+                isLast = false,
+                onClick = { currentPicker = SettingsPickerType.SILENCE_AFTER },
+            )
+
+            // 二度寝チェックまで
+            val wakeCheckText = stringResource(R.string.settings_minutes_format, settings.wakeCheckMinutes)
+            SettingsRow(
+                icon = SettingsWakeCheckIcon,
+                title = stringResource(R.string.settings_wake_check_item_title),
+                value = wakeCheckText,
+                isLast = false,
+                onClick = { currentPicker = SettingsPickerType.WAKE_CHECK },
+            )
+
+            // ミニゲーム
+            val gamesCountText = stringResource(R.string.settings_mini_games_count_format, settings.enabledGames.size)
+            SettingsRow(
+                icon = SettingsMiniGamesIcon,
+                title = stringResource(R.string.settings_mini_games_item_title),
+                value = gamesCountText,
+                isLast = true,
+                onClick = onOpenGameList,
+            )
+        }
+
+        // 2. 見た目 セクション
+        SettingsSectionHeader(text = stringResource(R.string.settings_section_appearance), topPadding = 10.dp)
+        SettingsCard {
+            SettingsThemeRow(
+                selectedTheme = settings.theme,
+                onSelectTheme = { viewModel.setTheme(it) },
+            )
+        }
+    }
+
+    // 各種設定選択の中央ポップアップ
+    currentPicker?.let { picker ->
+        when (picker) {
+            SettingsPickerType.FADE_IN -> {
+                val options = listOf(0, 5, 10, 15, 20, 25, 30).map { sec ->
+                    val label = if (sec == 0) stringResource(R.string.settings_fade_in_off) else stringResource(R.string.settings_seconds_format, sec.toString())
+                    PickerOption(value = sec, label = label)
                 }
+                SettingsPickerPopup(
+                    title = stringResource(R.string.settings_fade_in_title),
+                    icon = SettingsFadeInIcon,
+                    options = options,
+                    selectedValue = settings.fadeInSeconds,
+                    onSelect = {
+                        viewModel.setFadeInSeconds(it)
+                        currentPicker = null
+                    },
+                    onDismiss = { currentPicker = null },
+                )
+            }
+            SettingsPickerType.SILENCE_AFTER -> {
+                val noneLabel = stringResource(R.string.settings_picker_none)
+                val options = listOf<Int?>(null, 1, 5, 10, 15).map { min ->
+                    val label = min?.let { stringResource(R.string.settings_minutes_format, it) } ?: noneLabel
+                    PickerOption(value = min, label = label)
+                }
+                SettingsPickerPopup(
+                    title = stringResource(R.string.settings_silence_after_item_title),
+                    icon = SettingsSilenceAfterIcon,
+                    options = options,
+                    selectedValue = settings.silenceAfterMinutes,
+                    onSelect = {
+                        viewModel.setSilenceAfterMinutes(it)
+                        currentPicker = null
+                    },
+                    onDismiss = { currentPicker = null },
+                )
+            }
+            SettingsPickerType.WAKE_CHECK -> {
+                val options = listOf(1, 3, 5, 10, 15).map { min ->
+                    PickerOption(value = min, label = stringResource(R.string.settings_minutes_format, min))
+                }
+                SettingsPickerPopup(
+                    title = stringResource(R.string.settings_wake_check_item_title),
+                    icon = SettingsWakeCheckIcon,
+                    options = options,
+                    selectedValue = settings.wakeCheckMinutes,
+                    onSelect = {
+                        viewModel.setWakeCheckMinutes(it)
+                        currentPicker = null
+                    },
+                    onDismiss = { currentPicker = null },
+                )
             }
         }
     }
+}
 
-    when (openDialog) {
-        SettingsDialog.DISMISS_METHOD -> ChoiceDialog(
-            title = stringResource(R.string.settings_dismiss_method_title),
-            options = AlarmDismissMethod.entries.map { it to dismissMethodLabel(it) },
-            selected = settings.dismissMethod,
-            onSelect = { viewModel.setDismissMethod(it); closeDialog() },
-            onDismiss = ::closeDialog,
-            // スワイプでの解除(鳴動画面のジェスチャー)は未実装のため、選べないまま表示する
-            disabledOptions = setOf(AlarmDismissMethod.SWIPE),
-        )
-        SettingsDialog.AUTO_STOP -> ChoiceDialog(
-            title = stringResource(R.string.settings_auto_stop_title),
-            options = MINUTE_PRESETS.map { it to stringResource(R.string.interval_minutes_label, it) },
-            selected = settings.autoStopMinutes,
-            onSelect = { viewModel.setAutoStopMinutes(it); closeDialog() },
-            onDismiss = ::closeDialog,
-        )
-        SettingsDialog.SNOOZE_LENGTH -> ChoiceDialog(
-            title = stringResource(R.string.settings_snooze_length_title),
-            options = MINUTE_PRESETS.map { it to stringResource(R.string.interval_minutes_label, it) },
-            selected = settings.defaultSnoozeMinutes,
-            onSelect = { viewModel.setDefaultSnoozeMinutes(it); closeDialog() },
-            onDismiss = ::closeDialog,
-        )
-        SettingsDialog.ALARM_FADE_IN -> ChoiceDialog(
-            title = stringResource(R.string.settings_fade_in_title),
-            options = ALARM_FADE_IN_PRESETS.map { it to formatSeconds(it) },
-            selected = settings.alarmFadeInSeconds,
-            onSelect = { viewModel.setAlarmFadeInSeconds(it); closeDialog() },
-            onDismiss = ::closeDialog,
-        )
-        SettingsDialog.VOLUME_BUTTON -> ChoiceDialog(
-            title = stringResource(R.string.settings_volume_button_title),
-            options = VolumeButtonAction.entries.map { it to volumeButtonLabel(it) },
-            selected = settings.volumeButtonAction,
-            onSelect = { viewModel.setVolumeButtonAction(it); closeDialog() },
-            onDismiss = ::closeDialog,
-        )
-        SettingsDialog.WEEK_START -> ChoiceDialog(
-            title = stringResource(R.string.settings_week_start_title),
-            options = WeekStart.entries.map { it to weekStartLabel(it) },
-            selected = settings.weekStart,
-            onSelect = { viewModel.setWeekStart(it); closeDialog() },
-            onDismiss = ::closeDialog,
-        )
-        SettingsDialog.CLOCK_STYLE -> ChoiceDialog(
-            title = stringResource(R.string.settings_clock_style_title),
-            options = ClockDisplayMode.entries.map { it to clockStyleLabel(it) },
-            selected = clockDisplayMode,
-            onSelect = { viewModel.setClockDisplayMode(it); closeDialog() },
-            onDismiss = ::closeDialog,
-        )
-        SettingsDialog.TIMER_FADE_IN -> ChoiceDialog(
-            title = stringResource(R.string.settings_fade_in_title),
-            options = TIMER_FADE_IN_PRESETS.map { it to formatSeconds(it) },
-            selected = settings.timerFadeInSeconds,
-            onSelect = { viewModel.setTimerFadeInSeconds(it); closeDialog() },
-            onDismiss = ::closeDialog,
-        )
-        null -> Unit
+/**
+ * 設定画面のセクション見出しテキスト。
+ * 等幅フォントで控えめな大文字トラッキングを設定して表示する。
+ */
+@Composable
+private fun SettingsSectionHeader(
+    text: String,
+    topPadding: androidx.compose.ui.unit.Dp = 4.dp,
+) {
+    Text(
+        text = text,
+        style = TextStyle(
+            fontFamily = IbmPlexMono,
+            fontSize = 13.sp,
+            letterSpacing = 0.15.em,
+            color = MaterialTheme.customColors.subtleText,
+        ),
+        modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = topPadding, bottom = 2.dp),
+    )
+}
+
+/**
+ * 各セクションの項目を束ねる角丸カードコンテナ。
+ * カード背景と角丸14dpを適用して内部要素をグループ化する。
+ */
+@Composable
+private fun SettingsCard(content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            content()
+        }
     }
 }
 
-// セクション見出し + 行の並び + 区切り線。モックのpadding(見出し24/8, 行24/14, 区切り線上マージン8)を再現する。
-// 狭い画面(isCompact=true)では上下の余白を詰めてスクロールしやすくする。
+/**
+ * アイコン、項目名、値、矢印アイコンからなる設定の基本行。
+ * 44dp以上の操作領域を保ち、タップ時にダイアログや遷移アクションを呼ぶ。
+ */
 @Composable
-private fun SettingsSection(title: String, showDivider: Boolean = true, isCompact: Boolean = false, content: @Composable () -> Unit) {
-    val topPadding = if (isCompact) 12.dp else 24.dp
-    val bottomPadding = if (isCompact) 4.dp else 8.dp
-    val dividerTop = if (isCompact) 4.dp else 8.dp
-    Column {
+private fun SettingsRow(
+    icon: ImageVector,
+    title: String,
+    value: String?,
+    isLast: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isMonospaceValue: Boolean = false,
+) {
+    val dividerColor = MaterialTheme.colorScheme.background
+    val subtleTextColor = MaterialTheme.customColors.subtleText
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 58.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(),
+                onClick = onClick,
+            )
+            .drawBehind {
+                if (!isLast) {
+                    val strokeWidth = 1.dp.toPx()
+                    drawLine(
+                        color = dividerColor,
+                        start = androidx.compose.ui.geometry.Offset(0f, size.height - strokeWidth / 2f),
+                        end = androidx.compose.ui.geometry.Offset(size.width, size.height - strokeWidth / 2f),
+                        strokeWidth = strokeWidth,
+                    )
+                }
+            }
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        // 左アイコン
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = subtleTextColor,
+        )
+
+        // 項目名
         Text(
             text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 24.dp, top = topPadding, end = 24.dp, bottom = bottomPadding),
+            style = TextStyle(fontSize = 15.sp, color = onSurfaceColor),
+            modifier = Modifier.weight(1f),
         )
-        content()
-        if (showDivider) {
-            HorizontalDivider(
-                modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = dividerTop),
-                color = MaterialTheme.colorScheme.outlineVariant,
-            )
-        }
-    }
-}
 
-// 値を表示し、タップでダイアログや外部画面を開く行。value=nullなら値行を出さない(「日付と時刻の変更」用)
-@Composable
-private fun SettingsValueRow(label: String, value: String?, onClick: () -> Unit, isCompact: Boolean = false) {
-    val verticalPadding = if (isCompact) 8.dp else 14.dp
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = verticalPadding),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(text = label, style = MaterialTheme.typography.bodyLarge)
-            if (value != null) {
-                Text(text = value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-}
-
-// 切り替え(Switch)の行。行全体をタップしても切り替わるようにする
-@Composable
-private fun SettingsToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit, isCompact: Boolean = false) {
-    val verticalPadding = if (isCompact) 8.dp else 14.dp
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 24.dp, vertical = verticalPadding),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(text = label, style = MaterialTheme.typography.bodyLarge)
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
-}
-
-/**
- * アラームの音量スライダー。Androidの時計アプリが一般に取る扱いへ合わせている。
- *
- * - 値はアプリ側に持たず、端末のSTREAM_ALARMを直接読み書きする
- * - 下限は0ではなく端末が返す最小値。端末によってはアラームを完全に無音にできない
- * - 端末の音量が別の場所で変わることがあるため、保存先のSettings.Systemを見張って合わせる
- * - 自分で書き換えた分は見張りが1回読み飛ばす。指で動かしている最中も合わせに行かない
- * - サイレントモードでアラームが鳴らせない状態のときは操作できなくする
- * - 指を離した時点でその音量の試聴音を鳴らす。数字だけでは大きさが分からないため。
- *   連打で鳴り続けないよう、鳴らした後2秒は次を鳴らさない
- */
-@Composable
-private fun AlarmVolumeRow(isCompact: Boolean = false) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
-    val minVolume = remember { alarmMinVolume(audioManager).toFloat() }
-    val maxVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM).toFloat() }
-    var volume by remember {
-        mutableFloatStateOf(audioManager.getStreamVolume(AudioManager.STREAM_ALARM).toFloat().coerceIn(minVolume, maxVolume))
-    }
-    var isEnabled by remember { mutableStateOf(alarmVolumeAdjustable(context)) }
-    val previewPlayer = remember { AlarmVolumePreviewPlayer(context) }
-    DisposableEffect(Unit) { onDispose { previewPlayer.stop() } }
-
-    // 指で動かしている最中は、端末側の値で上書きしない。触っている場所が飛んでしまうため
-    val interactionSource = remember { MutableInteractionSource() }
-    val isDragged by interactionSource.collectIsDraggedAsState()
-    // 自分でsetStreamVolumeした分の通知を1回だけ読み飛ばすための目印
-    val skipNextChange = remember { AtomicBoolean(false) }
-
-    // 端末側で音量が変わったら、このスライダーも合わせる（純正と同じくSettings.Systemを見張る）
-    DisposableEffect(context) {
-        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean) {
-                if (skipNextChange.getAndSet(false)) return
-                if (isDragged) return
-                volume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM).toFloat().coerceIn(minVolume, maxVolume)
-                isEnabled = alarmVolumeAdjustable(context)
-            }
-        }
-        context.contentResolver.registerContentObserver(AndroidSettings.System.CONTENT_URI, true, observer)
-        onDispose { context.contentResolver.unregisterContentObserver(observer) }
-    }
-    val verticalPadding = if (isCompact) 4.dp else 8.dp
-
-    Row(
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = verticalPadding),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        // 純正はスライダーの左にアラームのアイコンを置き、消音のときは絵柄を切り替える
-        Icon(
-            painter = painterResource(
-                if (volume <= 0f) R.drawable.ic_alarm_off else R.drawable.ic_alarm_tab,
-            ),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(24.dp),
-        )
-        Column(modifier = Modifier.weight(1f)) {
+        // 値
+        if (value != null) {
             Text(
-                text = stringResource(R.string.settings_volume_title),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = value,
+                style = TextStyle(
+                    fontFamily = if (isMonospaceValue) IbmPlexMono else null,
+                    fontSize = 14.sp,
+                    color = subtleTextColor,
+                ),
             )
-            Slider(
-                value = volume,
-                valueRange = minVolume..maxVolume,
-                enabled = isEnabled,
-                interactionSource = interactionSource,
-                // stepsを指定すると目盛りの点が描かれる。純正の音量スライダーに点は無いので指定せず、
-                // 代わりに値を整数へ丸めることで、見た目を保ったまま段階どおりに止まるようにする
-                onValueChange = { newValue ->
-                    val stepped = newValue.roundToInt()
-                    if (stepped.toFloat() != volume) {
-                        volume = stepped.toFloat()
-                        skipNextChange.set(true)
-                        audioManager.setStreamVolume(AudioManager.STREAM_ALARM, stepped, 0)
-                    }
-                },
-                onValueChangeFinished = { if (volume > 0f) previewPlayer.play(scope) },
+        }
+
+        // 矢印chevron
+        ChevronRightIcon()
+    }
+}
+
+/**
+ * バイブレーション等のON/OFFを切り替えるスイッチ行コンポーネント。
+ * design/Settings.dc.html記載の44dp×26dp角丸トグルスイッチ意匠を再現する。
+ */
+@Composable
+private fun SettingsSwitchRow(
+    icon: ImageVector,
+    title: String,
+    isChecked: Boolean,
+    isLast: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val dividerColor = MaterialTheme.colorScheme.background
+    val subtleTextColor = MaterialTheme.customColors.subtleText
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val outlineVariantColor = MaterialTheme.colorScheme.outlineVariant
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 58.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(),
+                onClick = { onCheckedChange(!isChecked) },
+            )
+            .drawBehind {
+                if (!isLast) {
+                    val strokeWidth = 1.dp.toPx()
+                    drawLine(
+                        color = dividerColor,
+                        start = androidx.compose.ui.geometry.Offset(0f, size.height - strokeWidth / 2f),
+                        end = androidx.compose.ui.geometry.Offset(size.width, size.height - strokeWidth / 2f),
+                        strokeWidth = strokeWidth,
+                    )
+                }
+            }
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = subtleTextColor,
+        )
+
+        Text(
+            text = title,
+            style = TextStyle(fontSize = 15.sp, color = onSurfaceColor),
+            modifier = Modifier.weight(1f),
+        )
+
+        // カスタムトグルスイッチ (44dp x 26dp, 角丸13dp)
+        Box(
+            modifier = Modifier
+                .width(44.dp)
+                .height(26.dp)
+                .background(
+                    color = if (isChecked) primaryColor else outlineVariantColor,
+                    shape = RoundedCornerShape(13.dp),
+                )
+                .padding(3.dp),
+            contentAlignment = if (isChecked) Alignment.CenterEnd else Alignment.CenterStart,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(20.dp)
+                    .background(
+                        color = if (isChecked) surfaceColor else subtleTextColor,
+                        shape = CircleShape,
+                    ),
             )
         }
     }
 }
 
-// 端末が許すアラーム音量の下限。API28より前はこの値を聞けないため0とする
-private fun alarmMinVolume(audioManager: AudioManager): Int =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-        audioManager.getStreamMinVolume(AudioManager.STREAM_ALARM)
-    } else {
-        0
+/**
+ * 配色テーマの選択行コンポーネント。
+ * 丸プレビューを並べて表示し、直接タップまたは行タップで切り替えを提供する。
+ */
+@Composable
+private fun SettingsThemeRow(
+    selectedTheme: AppTheme,
+    onSelectTheme: (AppTheme) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val subtleTextColor = MaterialTheme.customColors.subtleText
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val isDynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+
+    // この行だけは行全体を押させない。丸をその場で切り替えるため、押し先が二つになると紛らわしい
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 58.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Icon(
+            imageVector = SettingsThemeIcon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = subtleTextColor,
+        )
+
+        Text(
+            text = stringResource(R.string.settings_theme_item_title),
+            style = TextStyle(fontSize = 15.sp, color = onSurfaceColor),
+            modifier = Modifier.weight(1f),
+        )
+
+        // 配色の丸プレビュー
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ThemeCircle(
+                surfaceColor = NavySurface,
+                accentColor = NavyPrimary,
+                isSelected = selectedTheme == AppTheme.NAVY,
+                onClick = { onSelectTheme(AppTheme.NAVY) },
+            )
+            ThemeCircle(
+                surfaceColor = BlackSurface,
+                accentColor = BlackPrimary,
+                isSelected = selectedTheme == AppTheme.BLACK,
+                onClick = { onSelectTheme(AppTheme.BLACK) },
+            )
+            ThemeCircle(
+                surfaceColor = LightSurface,
+                accentColor = LightPrimary,
+                isSelected = selectedTheme == AppTheme.LIGHT,
+                onClick = { onSelectTheme(AppTheme.LIGHT) },
+            )
+            if (isDynamicAvailable) {
+                DynamicThemeCircle(
+                    isSelected = selectedTheme == AppTheme.DYNAMIC,
+                    onClick = { onSelectTheme(AppTheme.DYNAMIC) },
+                )
+            }
+        }
     }
+}
 
 /**
- * いま音量を変えられる状態か。サイレントモードでアラームまで止められているときは、
- * 動かしても意味がないので操作できなくする（純正も同じ判定でスライダーを無効にする）。
- * 通知ポリシーを読む権限が無い端末では、判断できないので操作できる扱いにする。
+ * 配色を選ぶ円の大きさ。
+ * 行の上でそのまま押して切り替えるため、指で狙える大きさにする。
  */
-private fun alarmVolumeAdjustable(context: Context): Boolean {
-    val manager = context.getSystemService(NotificationManager::class.java) ?: return true
-    return when (manager.currentInterruptionFilter) {
-        NotificationManager.INTERRUPTION_FILTER_NONE -> false
-        NotificationManager.INTERRUPTION_FILTER_PRIORITY -> runCatching {
-            manager.notificationPolicy.priorityCategories and NotificationManager.Policy.PRIORITY_CATEGORY_ALARMS != 0
-        }.getOrDefault(true)
-        else -> true
-    }
-}
+private val THEME_CIRCLE_SIZE = 28.dp
 
-// アラーム音量スライダーの試聴音再生。USAGE_ALARMで鳴らすことで、端末のアラーム音量(直前にAudioManagerで
-// 変えた値)がそのまま反映される。短く鳴らして自動的に止める使い切りのMediaPlayerを、呼ぶたびに作り直す。
-private class AlarmVolumePreviewPlayer(private val context: Context) {
-    private var player: MediaPlayer? = null
-    private var stopJob: Job? = null
-
-    // 直前に鳴らし始めた時刻。連打で鳴り続けるのを防ぐために覚えておく
-    private var lastPlayedAt = 0L
-
-    fun play(scope: CoroutineScope) {
-        val now = SystemClock.elapsedRealtime()
-        if (now - lastPlayedAt < PREVIEW_COOLDOWN_MILLIS) return
-        stop()
-        val uri = RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_ALARM) ?: return
-        val newPlayer = MediaPlayer()
-        runCatching {
-            newPlayer.setAudioAttributes(SoundFadeIn.alarmAudioAttributes())
-            newPlayer.setDataSource(context, uri)
-            newPlayer.prepare()
-            newPlayer.start()
-        }.onSuccess {
-            lastPlayedAt = now
-            player = newPlayer
-            stopJob = scope.launch {
-                delay(PREVIEW_DURATION_MILLIS)
-                stop()
-            }
-        }.onFailure { newPlayer.release() }
-    }
-
-    fun stop() {
-        stopJob?.cancel()
-        stopJob = null
-        player?.let { runCatching { it.stop() }; it.release() }
-        player = null
-    }
-
-    companion object {
-        // 大きさが分かれば十分な長さ。純正のスライダーも一瞬だけ鳴る
-        private const val PREVIEW_DURATION_MILLIS = 1200L
-
-        // 鳴らした後、次を鳴らさない時間。純正も2秒空けている
-        private const val PREVIEW_COOLDOWN_MILLIS = 2000L
-    }
-}
-
-// 単一選択のダイアログ。ダイアログの種類ごとにAlertDialogを書き分けないための共通実装。
-// disabledOptionsは、まだ実装していない選択肢を選べないまま表示する(DISMISS_METHODの「スワイプ」用)。
+/**
+ * 単色配色テーマの円。押すとその配色へ切り替わる。
+ * 選択中は主役色2dpの枠線で示す。
+ *
+ * 円は背景色と主役色で斜めに塗り分ける。
+ * 背景色だけだと、黒(#0A0A0A)と紺(#0B1530)が明るい画面ではほぼ同じに見えて区別できない。
+ */
 @Composable
-private fun <T> ChoiceDialog(
+private fun ThemeCircle(
+    surfaceColor: Color,
+    accentColor: Color,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val outlineColor = MaterialTheme.colorScheme.outline
+    // 左上を背景色、右下を主役色にする。同じ位置で色を止めて境目をはっきり出す
+    val halfBrush = remember(surfaceColor, accentColor) {
+        Brush.linearGradient(
+            0f to surfaceColor,
+            0.5f to surfaceColor,
+            0.5f to accentColor,
+            1f to accentColor,
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .size(THEME_CIRCLE_SIZE)
+            .background(halfBrush, CircleShape)
+            .border(
+                width = if (isSelected) 2.dp else 1.dp,
+                color = if (isSelected) primaryColor else outlineColor,
+                shape = CircleShape,
+            )
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(bounded = false, radius = 16.dp),
+                onClick = onClick,
+            ),
+    )
+}
+
+/**
+ * 端末の色（DYNAMIC）用のグラデーションプレビュー円。
+ * 壁紙連携を連想させる3色グラデーションを描画する。
+ */
+@Composable
+private fun DynamicThemeCircle(
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val outlineColor = MaterialTheme.colorScheme.outline
+    val dynamicBrush = Brush.linearGradient(colors = DynamicThemePreviewColors)
+
+    Box(
+        modifier = modifier
+            .size(THEME_CIRCLE_SIZE)
+            .background(dynamicBrush, CircleShape)
+            .border(
+                width = if (isSelected) 2.dp else 1.dp,
+                color = if (isSelected) primaryColor else outlineColor,
+                shape = CircleShape,
+            )
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(bounded = false, radius = 16.dp),
+                onClick = onClick,
+            ),
+    )
+}
+
+/**
+ * 設定行の右端に配置されるchevron-right意匠。
+ */
+@Composable
+private fun ChevronRightIcon() {
+    Icon(
+        imageVector = SettingsChevronRightIcon,
+        contentDescription = null,
+        modifier = Modifier.size(17.dp),
+        tint = MaterialTheme.customColors.subtleText,
+    )
+}
+
+/**
+ * ポップアップピッカーの個別選択肢データ。
+ */
+data class PickerOption<T>(
+    val value: T,
+    val label: String,
+)
+
+/**
+ * design/SettingsPicker.dc.htmlの設計に基づく中央ポップアップダイアログ。
+ * アイコン、タイトル、ラジオボタン意匠の選択肢リスト、キャンセル・決定ボタンを描画し、決定時に確定する。
+ */
+@Composable
+fun <T> SettingsPickerPopup(
     title: String,
-    options: List<Pair<T, String>>,
-    selected: T,
+    icon: ImageVector,
+    options: List<PickerOption<T>>,
+    selectedValue: T,
     onSelect: (T) -> Unit,
     onDismiss: () -> Unit,
-    disabledOptions: Set<T> = emptySet(),
+    modifier: Modifier = Modifier,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column {
-                options.forEach { (value, label) ->
-                    val enabled = value !in disabledOptions
-                    Row(
+    var tempSelectedValue by remember(selectedValue) { mutableStateOf(selectedValue) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp),
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 22.dp, bottom = 8.dp),
+            ) {
+                // タイトル行
+                Row(
+                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 0.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.customColors.subtleText,
+                    )
+                    Text(
+                        text = title,
+                        style = TextStyle(
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        ),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // 選択肢一覧
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    options.forEach { option ->
+                        val isSelected = option.value == tempSelectedValue
+                        PickerOptionRow(
+                            label = option.label,
+                            isSelected = isSelected,
+                            onClick = { tempSelectedValue = option.value },
+                        )
+                    }
+                }
+
+                // ボタン行（キャンセル・決定）
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // キャンセルボタン
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 48.dp)
-                            .clickable(enabled = enabled) { onSelect(value) },
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(22.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = ripple(),
+                                onClick = onDismiss,
+                            )
+                            .padding(horizontal = 20.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        RadioButton(selected = value == selected, onClick = { onSelect(value) }, enabled = enabled)
                         Text(
-                            text = label,
-                            modifier = Modifier.padding(vertical = 12.dp),
-                            color = if (enabled) Color.Unspecified else MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = stringResource(R.string.cancel),
+                            style = TextStyle(
+                                fontSize = 14.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                        )
+                    }
+
+                    // 決定ボタン
+                    Box(
+                        modifier = Modifier
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(MaterialTheme.colorScheme.primary)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = ripple(),
+                                onClick = { onSelect(tempSelectedValue) },
+                            )
+                            .padding(horizontal = 24.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.decide),
+                            style = TextStyle(
+                                fontSize = 14.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            ),
                         )
                     }
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } },
-    )
+        }
+    }
 }
 
+/**
+ * ピッカーポップアップの1選択肢行コンポーネント。
+ * ラジオボタン風の22dp円とラベルを配置し、タップで選択を行う。
+ */
+@Composable
+private fun PickerOptionRow(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val outlineColor = MaterialTheme.colorScheme.outline
+    val surfaceContainerColor = MaterialTheme.colorScheme.surfaceContainer
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val onSurfaceVariantColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 54.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(),
+                onClick = onClick,
+            )
+            .padding(horizontal = 22.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(15.dp),
+    ) {
+        // ラジオボタン意匠 (22dp)
+        Box(
+            modifier = Modifier
+                .size(22.dp)
+                .background(Color.Transparent, CircleShape)
+                .border(
+                    width = if (isSelected) 6.dp else 2.dp,
+                    color = if (isSelected) primaryColor else outlineColor,
+                    shape = CircleShape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .background(surfaceContainerColor, CircleShape),
+                )
+            }
+        }
+
+        // ラベル
+        Text(
+            text = label,
+            style = TextStyle(
+                fontSize = 15.sp,
+                color = if (isSelected) onSurfaceColor else onSurfaceVariantColor,
+            ),
+            modifier = Modifier.weight(1f),
+        )
+    }
+}

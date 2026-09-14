@@ -1,39 +1,35 @@
 package com.marutyan.termalarm.ui.timer
 
 import android.os.SystemClock
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,106 +40,92 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import com.marutyan.termalarm.ui.theme.pressScaleEffect
-import com.marutyan.termalarm.ui.theme.subHeroClock
-import com.marutyan.termalarm.ui.theme.timerAddFadeSpec
-import com.marutyan.termalarm.ui.theme.timerAddSlideSpec
-import com.marutyan.termalarm.ui.theme.timerProgressAnimationSpec
-import com.marutyan.termalarm.ui.common.TermAlarmOverflowMenu
+import com.marutyan.termalarm.ui.common.SCREEN_HORIZONTAL_PADDING
+import com.marutyan.termalarm.ui.common.TOP_BAR_CONTENT_GAP
+import com.marutyan.termalarm.ui.common.TOP_BAR_TOP_INSET
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
 import com.marutyan.termalarm.domain.millisUntilNextSecondBoundary
-import com.marutyan.termalarm.domain.overdueMillis
 import com.marutyan.termalarm.domain.remainingMillis
-import com.marutyan.termalarm.ui.theme.tabularNums
+import com.marutyan.termalarm.ui.common.TermAlarmTopBar
+import com.marutyan.termalarm.ui.theme.customColors
+import com.marutyan.termalarm.ui.theme.pressScaleEffect
+import com.marutyan.termalarm.ui.theme.timerAddFadeSpec
+import com.marutyan.termalarm.ui.theme.timerAddSlideSpec
 import kotlinx.coroutines.delay
 
-/**
- * タイマータブの画面。動作中のタイマー一覧(複数同時表示)を円形リングのカードとして並べる
- * (docs/OFFICIAL_UI.md「タイマー」)。時分秒の入力は画面上から無くし、右下のFABから
- * 開くTimerAddScreenへ追い出した。Add画面はNavHostのルートではなくこの画面内のローカルな
- * 状態切り替えとして表示する(NavHostは変更禁止のため、経路を増やさずに完結させる)。
- * 残り時間の表示は1秒ごとに更新する。
- */
-// 右下の追加ボタンの大きさ。純正の実測値に合わせている
-private val FAB_SIZE = 80.dp
+/** 右下に追加ボタンを浮かせる際のサイズ(dp)。設計図 design/Timer.dc.html に合わせるために定義する。 */
+val TIMER_ADD_BUTTON_SIZE = 60.dp
 
+/** 右下に追加ボタンを浮かせる際の角丸(dp)。設計図の形状を再現するために定義する。 */
+val TIMER_ADD_BUTTON_CORNER_RADIUS = 20.dp
+
+/** 追加ボタン内部のプラスアイコンのサイズ(dp)。視認性を保つために定義する。 */
+val TIMER_ADD_ICON_SIZE = 26.dp
+
+/** カード一覧の左右の余白(dp)。純正時計アプリの実測値16.2dpに基づく。 */
+val TIMER_CARD_HORIZONTAL_PADDING = 16.2.dp
+
+/**
+ * タイマー画面で、数字を入れる画面(新規作成)を出すかどうかを決める。
+ *
+ * [timers]がnullのときは読み込みが終わっておらず、0件かどうかが分からないので出さない。
+ * 読み込み前の空リストを「0件」と受け取ると、保存済みのタイマーがあっても
+ * 画面を開いた直後だけ新規作成の画面が見えてしまう。
+ *
+ * @param timers 読み込み済みの一覧。読み込み前はnull
+ * @param isAddRequested 右下の追加ボタンが押されているか
+ */
+internal fun shouldShowTimerKeypad(timers: List<TimerState>?, isAddRequested: Boolean): Boolean =
+    when {
+        timers == null -> false
+        isAddRequested -> true
+        else -> timers.isEmpty()
+    }
+
+/**
+ * タイマータブの画面。design/Timer.dc.html を再現する。
+ * 見出し「タイマー」(28sp、太さ300)、動作中タイマーの円形リングカード一覧(角丸20dp)、
+ * 画面右下に浮かせた「タイマーを追加」ボタン(60dp角、角丸20dp、主役の色)を配置する。
+ * 追加ボタンを押したときだけテンキーによる追加画面(TimerAddScreen)を表示する。0件のときは中央に案内を表示する。
+ */
 @Composable
 fun TimerScreen(
     viewModel: TimerViewModel,
     onOpenSettings: () -> Unit = {},
     onOpenPrivacyPolicy: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
-    bottomBar: @Composable () -> Unit,
 ) {
     var showAddScreen by rememberSaveable { mutableStateOf(false) }
-    val timers by viewModel.timers.collectAsStateWithLifecycle()
-    // 通知に出る秒と画面の秒を合わせる。詳しくはrememberTickingNowを参照
+    // 読み込みが終わるまではnull。0件かどうかがまだ決まっていないことを表す
+    val loadedTimers by viewModel.timers.collectAsStateWithLifecycle()
+    val timers = loadedTimers.orEmpty()
     val tickingNow = rememberTickingNow(timers)
     val (nowElapsed, nowWall) = tickingNow
     val sortedTimers = remember(timers, nowElapsed, nowWall) {
         sortTimers(timers, nowElapsed, nowWall)
     }
-    // 純正はタイマーが1件も無いとき、案内文ではなくテンキーをそのまま出す。
-    // 追加ボタンを押したときも同じテンキーなので、どちらの理由でも同じ画面を使う
-    val showKeypad = showAddScreen || sortedTimers.isEmpty()
 
-    // 枠は1つだけ持ち、中身を入れ替える。追加画面のときも下部ナビを見せたままにするため
-    // (純正も同じで、テンキーを出している間ナビは消えない)
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.tab_timer), style = MaterialTheme.typography.headlineMedium) },
-                actions = {
-                    TermAlarmOverflowMenu(
-                        onOpenSettings = onOpenSettings,
-                        onOpenPrivacyPolicy = onOpenPrivacyPolicy,
-                        onOpenAbout = onOpenAbout,
-                    )
-                },
-            )
-        },
-        floatingActionButton = {
-            // テンキーを出している間は、追加ボタンを隠す
-            if (!showKeypad) {
-                FloatingActionButton(
-                    onClick = { showAddScreen = true },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    // 純正を実測すると80dp。既定のままでは45dpしかなく、押す場所として小さい
-                    modifier = Modifier.size(FAB_SIZE),
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.timer_add))
-                }
-            }
-        },
-        bottomBar = bottomBar,
-    ) { padding ->
+    // タイマーが1件も無いときは、案内を出さずに数字を入れる画面をそのまま見せる。
+    // 押す先が同じ画面になるため、そのときは右下の追加ボタンも出さない
+    val showKeypad = shouldShowTimerKeypad(loadedTimers, showAddScreen)
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        // 読み込みが終わるまでは一覧も数字を入れる画面も出さない。
+        // どちらを出しても、読み込み後に入れ替わってちらついて見える
+        if (loadedTimers == null) return@Box
+
         AnimatedContent(
             targetState = showKeypad,
             transitionSpec = {
@@ -156,33 +138,100 @@ fun TimerScreen(
                 }
             },
             label = "TimerAddScreenTransition",
-            modifier = Modifier.padding(padding),
         ) { isKeypad ->
             if (isKeypad) {
                 TimerAddScreen(
-                    onStart = { h, m, s -> viewModel.start(h, m, s); showAddScreen = false },
-                    // 1件も無いときはテンキーがタブそのものの中身なので、戻る先が無い
+                    onStart = { h, m, s ->
+                        viewModel.start(h, m, s)
+                        showAddScreen = false
+                    },
+                    // 1件も無いときは戻る先が無いので、閉じる操作を用意しない
                     onClose = if (sortedTimers.isEmpty()) null else ({ showAddScreen = false }),
+                    onOpenSettings = onOpenSettings,
+                    onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                    onOpenAbout = onOpenAbout,
                 )
             } else {
-                LazyColumn(
-                    // 下を厚くしておかないと、最後のカードが右下の追加ボタンに隠れる
-                    contentPadding = PaddingValues(start = 13.dp, end = 13.dp, top = 16.dp, bottom = 96.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    items(sortedTimers, key = { it.id }) { timer ->
-                        TimerCard(
-                            timer = timer,
-                            nowElapsed = nowElapsed,
-                            nowWall = nowWall,
-                            onPause = { viewModel.pause(timer.id) },
-                            onResume = { viewModel.resume(timer.id) },
-                            onReset = { viewModel.reset(timer.id) },
-                            onExtend = { viewModel.extendOneMinute(timer.id) },
-                            onDelete = { viewModel.delete(timer.id) },
-                            // 残り時間が縮んで並び順が変わったとき、その場で飛ばず動いて入れ替わるようにする
-                            modifier = Modifier.animateItem(),
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        // 画面上部の帯。位置は帯の側が持つので、ここでは余白を足さない
+                        TermAlarmTopBar(
+                            onOpenSettings = onOpenSettings,
+                            onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                            onOpenAbout = onOpenAbout,
                         )
+
+                        Spacer(modifier = Modifier.height(TOP_BAR_CONTENT_GAP))
+
+                        // 見出し「タイマー」 (28sp、太さ300)
+                        Box(modifier = Modifier.padding(horizontal = SCREEN_HORIZONTAL_PADDING)) {
+                            Text(
+                                text = stringResource(R.string.tab_timer),
+                                style = TextStyle(
+                                    fontFamily = FontFamily.Default,
+                                    fontWeight = FontWeight.W300,
+                                    fontSize = 28.sp,
+                                    lineHeight = 36.sp,
+                                    letterSpacing = (-0.01).em,
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // 1件も無いときはこの枝に来ない（数字を入れる画面をそのまま出すため）
+                        LazyColumn(
+                                contentPadding = PaddingValues(
+                                    start = TIMER_CARD_HORIZONTAL_PADDING,
+                                    end = TIMER_CARD_HORIZONTAL_PADDING,
+                                    bottom = 96.dp,
+                                ),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
+                                items(sortedTimers, key = { it.id }) { timer ->
+                                    TimerCard(
+                                        timer = timer,
+                                        nowElapsed = nowElapsed,
+                                        nowWall = nowWall,
+                                        onPause = { viewModel.pause(timer.id) },
+                                        onResume = { viewModel.resume(timer.id) },
+                                        onReset = { viewModel.reset(timer.id) },
+                                        onExtend = { viewModel.extendOneMinute(timer.id) },
+                                        onDelete = { viewModel.delete(timer.id) },
+                                        modifier = Modifier.animateItem(),
+                                    )
+                                }
+                            }
+                    }
+
+                    // 右下に浮かせた「タイマーを追加」ボタン (60dp角、角丸20dp、主役の色)
+                    val addInteraction = remember { MutableInteractionSource() }
+                    val addDesc = stringResource(R.string.timer_add)
+                    Surface(
+                        onClick = { showAddScreen = true },
+                        interactionSource = addInteraction,
+                        shape = RoundedCornerShape(TIMER_ADD_BUTTON_CORNER_RADIUS),
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 20.dp, bottom = 26.dp)
+                            .size(TIMER_ADD_BUTTON_SIZE)
+                            .semantics { contentDescription = addDesc }
+                            .pressScaleEffect(addInteraction),
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Add,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(TIMER_ADD_ICON_SIZE),
+                            )
+                        }
                     }
                 }
             }
@@ -191,12 +240,8 @@ fun TimerScreen(
 }
 
 /**
- * 残り時間の表示に使う「今」。画面が見えている間だけ進める。
- * 再計算に使うだけで、データベースへは書き込まない。
- *
- * ただ1秒ごとに数えると、通知に出る秒と画面の秒が最大1秒ずれる。
- * 通知は「残り時間が尽きる時刻」から逆算して数えるため、こちらの起動時刻とは関係がない。
- * 残り時間が次の秒へ変わる瞬間に合わせて描き直すことで、通知と同じ数字を出す。
+ * 残り時間の表示に使う現在時刻ペア(elapsedRealtime, wallClock)。
+ * 次の秒境界に合わせて更新する。
  */
 @Composable
 private fun rememberTickingNow(timers: List<TimerState>): Pair<Long, Long> {
@@ -213,9 +258,8 @@ private fun rememberTickingNow(timers: List<TimerState>): Pair<Long, Long> {
 }
 
 /**
- * タイマー一覧を「次に鳴る順（残り時間が短い順）」に並べ替える。
- * 鳴動中(FINISHED)を最優先、次に動作中(RUNNING)を残り時間の昇順、一時停止中(PAUSED)は
- * 計測が止まっており動作中タイマーの視認性を邪魔しないよう末尾にまとめて残り時間の昇順で並べる。
+ * タイマー一覧を「鳴動中(FINISHED)」「動作中(RUNNING)」「一時停止中(PAUSED)」の順、
+ * 同一状態内は残り時間昇順に並べ替える。
  */
 private fun sortTimers(
     timers: List<TimerState>,
@@ -234,4 +278,3 @@ private fun sortTimers(
         timer.id
     },
 )
-

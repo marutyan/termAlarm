@@ -15,41 +15,69 @@ import com.marutyan.termalarm.R
 import com.marutyan.termalarm.notification.NotificationChannels
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
-import com.marutyan.termalarm.domain.overdueMillis
+import com.marutyan.termalarm.domain.isTimerActive
+import com.marutyan.termalarm.domain.isTimerOverdue
 import com.marutyan.termalarm.domain.remainingMillis
+import com.marutyan.termalarm.domain.timerDisplayText
+import com.marutyan.termalarm.domain.timerRemainingFraction
+import com.marutyan.termalarm.domain.userLabelOrNull
 import com.marutyan.termalarm.ui.alarmlist.TermAlarmTab
 import com.marutyan.termalarm.ui.navigation.EXTRA_DEEPLINK_TAB
-import java.time.Duration
 
 /**
  * タイマーの通知を組み立てて出す。
  *
- * 純正の時計アプリを調べたところ、動作中はサービスを持たず、通知を1回出すだけだった。
- * 残り時間はMetricStyleへ「ゼロになる時刻」を渡し、数えるのは端末に任せている。
- * そのため1秒ごとに通知を作り直す必要がなく、状態が変わったときだけ出し直せばよい。
+ * 残り時間は端末に数えさせず、画面と同じ[timerDisplayText]で文字を作って書き込む。
+ * 端末へ「ゼロになる時刻」を渡して数えさせていたときは、丸め方も秒が切り替わる位置も
+ * 端末任せになり、画面の数字と1秒ずれて見えていた。そのぶん、秒が変わるたびに
+ * 出し直す必要がある。出し直すのはTimerForegroundServiceの役目。
  *
- * この置き場所をサービスから切り離してあるのは、動作中は誰でも（画面でもReceiverでも）
- * 通知を出し直せるようにするため。
+ * この置き場所をサービスから切り離してあるのは、状態が変わったときに
+ * 誰でも（画面でもReceiverでも）通知を出し直せるようにするため。
  */
 object TimerNotifications {
 
     /**
-     * いまのタイマー一覧に合わせて通知を出し直す。1件も無ければ消す。
+     * 通知の文字を、この分だけ先の時刻で作る(ミリ秒)。
+     *
+     * 通知を出してからステータスバーや通知欄へ届くまでに少し時間がかかる。
+     * 秒が変わるちょうどに出すと、画面の数字が先に変わって一瞬ずれて見える。
+     * 変わる少し前に、変わった後の値で出しておくと、同じ瞬間に切り替わって見える。
+     */
+    const val DISPLAY_LEAD_MILLIS = 60L
+
+    /**
+     * いまのタイマー一覧に合わせて通知を出し直す。動いているものが1件も無ければ消す。
      * 動作中・一時停止中・鳴動中のどれでも同じ通知にまとめる（純正も1つにまとめている）。
      */
     fun refresh(context: Context, timers: List<TimerState>) {
         val manager = context.getSystemService(NotificationManager::class.java)
-        if (timers.isEmpty()) {
+        val active = activeTimers(timers)
+        if (active.isEmpty()) {
             manager.cancel(TIMER_FOREGROUND_NOTIFICATION_ID)
             return
         }
-        manager.notify(TIMER_FOREGROUND_NOTIFICATION_ID, build(context, timers))
+        manager.notify(TIMER_FOREGROUND_NOTIFICATION_ID, build(context, active))
     }
 
-    /** 通知そのものを作る。鳴動中のサービスが startForeground へ渡すためにも使う。 */
-    fun build(context: Context, timers: List<TimerState>): Notification {
+    /**
+     * 通知へ出すタイマーだけを取り出す。
+     * 停止して設定した長さへ戻ったものは一覧には残るが、動いていないので通知へは出さない。
+     */
+    fun activeTimers(timers: List<TimerState>): List<TimerState> {
         val nowElapsed = SystemClock.elapsedRealtime()
         val nowWall = System.currentTimeMillis()
+        return timers.filter { isTimerActive(it, nowElapsed, nowWall) }
+    }
+
+    /**
+     * 通知そのものを作る。サービスがstartForegroundへ渡すためにも使う。
+     * 渡す一覧は[activeTimers]で絞ったものにすること。
+     */
+    fun build(context: Context, timers: List<TimerState>): Notification {
+        // 届くまでの遅れを見越して、少し先の時刻で文字を作る（[DISPLAY_LEAD_MILLIS]）
+        val nowElapsed = SystemClock.elapsedRealtime() + DISPLAY_LEAD_MILLIS
+        val nowWall = System.currentTimeMillis() + DISPLAY_LEAD_MILLIS
         // 鳴っているものを最優先。それ以外は残り時間が短い順に見て、いちばん早く鳴るものを主役にする
         val main = timers.firstOrNull { it.runState == TimerRunState.FINISHED }
             ?: timers.filter { it.runState == TimerRunState.RUNNING }
@@ -83,12 +111,25 @@ object TimerNotifications {
 
         // 見出しは「進行中の重要な通知」として扱われるための必須項目。
         // 本文は書かない。MetricStyleが各タイマーの見出しを持つため、同じ言葉が2行続いてしまう
-        builder.setContentTitle(main.label.ifBlank { context.getString(R.string.timer_notification_title) })
+        builder.setContentTitle(
+            main.userLabelOrNull() ?: context.getString(R.string.timer_notification_title),
+        )
         applyRemainingTime(context, builder, timers, main, nowElapsed, nowWall)
-        builder.addAction(action(context, R.string.timer_stop, ACTION_STOP, main.id))
-        builder.addAction(action(context, R.string.timer_extend_one_minute, ACTION_EXTEND, main.id))
-        if (main.runState == TimerRunState.RUNNING) {
-            builder.addAction(action(context, R.string.timer_pause, ACTION_PAUSE, main.id))
+        // 操作は2つまでにする。3つ並べるとステータスバーのチップへ昇格せず、
+        // 動作中だけチップが出ない状態になっていた。純正も状態ごとに2つだけ出す
+        when (main.runState) {
+            TimerRunState.RUNNING -> {
+                builder.addAction(action(context, R.string.timer_pause, ACTION_PAUSE, main.id))
+                builder.addAction(action(context, R.string.timer_extend_one_minute, ACTION_EXTEND, main.id))
+            }
+            TimerRunState.PAUSED -> {
+                builder.addAction(action(context, R.string.timer_resume, ACTION_RESUME, main.id))
+                builder.addAction(action(context, R.string.timer_stop, ACTION_STOP, main.id))
+            }
+            TimerRunState.FINISHED -> {
+                builder.addAction(action(context, R.string.timer_stop, ACTION_STOP, main.id))
+                builder.addAction(action(context, R.string.timer_extend_one_minute, ACTION_EXTEND, main.id))
+            }
         }
         if (timers.size > 1) {
             builder.setSubText(context.getString(R.string.timer_notification_summary, timers.size))
@@ -97,10 +138,11 @@ object TimerNotifications {
     }
 
     /**
-     * 残り時間を通知へ載せる。
+     * 残り時間と進み具合を通知へ載せる。
      *
      * 純正は動いているタイマーを横に並べて出す。2件なら数字が2つ、3件なら3つ並ぶ。
      * MetricStyleへタイマーの数だけMetricを足すと、その形になる。
+     * MetricStyleを使えない端末では、主役の残り時間を本文へ書く。
      */
     private fun applyRemainingTime(
         context: Context,
@@ -110,16 +152,21 @@ object TimerNotifications {
         nowElapsed: Long,
         nowWall: Long,
     ) {
+        // 残りの割合をバーで出す。数字だけだと、あとどれくらいかが一目で掴めない
+        builder.setProgress(
+            PROGRESS_RESOLUTION,
+            (timerRemainingFraction(main, nowElapsed, nowWall) * PROGRESS_RESOLUTION).toInt(),
+            false,
+        )
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) {
-            applyChronometerFallback(builder, main, nowElapsed, nowWall)
-            builder.setContentText(context.getString(statusTextRes(main.runState)))
+            builder.setContentText(timerDisplayText(main, nowElapsed, nowWall))
             return
         }
         applyMetricStyle(context, builder, timers, main, nowElapsed, nowWall)
     }
 
     /**
-     * 残り時間の表示を端末へ任せ、ステータスバーへも出す。
+     * 残り時間をMetricStyleへ載せ、ステータスバーのチップへも出す。
      * MetricStyleはAndroid 17(CINNAMON_BUN)からの仕組みなので、呼び出し側で版を確かめること。
      */
     @RequiresApi(Build.VERSION_CODES.CINNAMON_BUN)
@@ -137,25 +184,12 @@ object TimerNotifications {
         ordered.forEach { style.addMetric(metricOf(context, it, nowElapsed, nowWall)) }
         builder.setStyle(style.setCriticalMetric(0))
         builder.setRequestPromotedOngoing(true)
-        // ステータスバーの狭い場所(96dpまで)へ出す文字。収まらないとアイコンだけになる
-        builder.setShortCriticalText(shortCriticalText(context, main, nowElapsed, nowWall))
+        // ステータスバーの狭い場所(96dpまで)へ出す文字。画面と同じ文字をそのまま出す。
+        // 0を過ぎた後も「タイムアップ」とは書かず、マイナスで数え上げる
+        builder.setShortCriticalText(timerDisplayText(main, nowElapsed, nowWall))
     }
 
-    /**
-     * ステータスバーの丸いチップへ出す短い文字。
-     * 幅が96dpしかないため、7文字ほどで収まるようにする。
-     */
-    private fun shortCriticalText(
-        context: Context,
-        main: TimerState,
-        nowElapsed: Long,
-        nowWall: Long,
-    ): String = when (main.runState) {
-        TimerRunState.FINISHED -> context.getString(R.string.timer_notification_short_finished)
-        else -> formatDuration(remainingMillis(main, nowElapsed, nowWall))
-    }
-
-    /** タイマー1件を、通知が数を数えられる形へ変える。 */
+    /** タイマー1件を、通知へ載せる形へ変える。数字は画面と同じ文字をそのまま書く。 */
     @RequiresApi(Build.VERSION_CODES.CINNAMON_BUN)
     private fun metricOf(
         context: Context,
@@ -163,55 +197,23 @@ object TimerNotifications {
         nowElapsed: Long,
         nowWall: Long,
     ): Notification.Metric {
-        val remaining = remainingMillis(timer, nowElapsed, nowWall)
-        val value = if (timer.runState == TimerRunState.PAUSED) {
-            Notification.Metric.TimeDifference.forPausedTimer(
-                Duration.ofMillis(remaining),
-                Notification.Metric.TimeDifference.FORMAT_CHRONOMETER,
-            )
-        } else {
-            // 残り時間が尽きる時刻。鳴動中はすでに過ぎているので、過去の時刻になる
-            val zero = when (timer.runState) {
-                TimerRunState.FINISHED -> nowElapsed - overdueMillis(timer, nowElapsed, nowWall)
-                else -> nowElapsed + remaining
-            }
-            Notification.Metric.TimeDifference.forTimer(
-                zero,
-                Notification.Metric.TimeDifference.FORMAT_CHRONOMETER,
-            )
-        }
+        val value = Notification.Metric.FixedText(timerDisplayText(timer, nowElapsed, nowWall))
         // 名前を付けていないタイマーは、代わりに今の状態を書く(純正も状態を出している)
-        val label = timer.label.ifBlank { context.getString(statusTextRes(timer.runState)) }
+        val label = timer.userLabelOrNull()
+            ?: context.getString(statusTextRes(timer, nowElapsed, nowWall))
         return Notification.Metric(value, label)
     }
 
-    /**
-     * MetricStyleを使えない端末向けに、通知の時計機能へ終わる時刻を渡して数えさせる。
-     * 数字を書き込むのではなく基準の時刻を渡す点はMetricStyleと同じ考え方。
-     */
-    private fun applyChronometerFallback(
-        builder: Notification.Builder,
-        main: TimerState,
-        nowElapsed: Long,
-        nowWall: Long,
-    ) {
-        if (main.runState == TimerRunState.PAUSED) return
-        val remaining = when (main.runState) {
-            TimerRunState.FINISHED -> -overdueMillis(main, nowElapsed, nowWall)
-            else -> remainingMillis(main, nowElapsed, nowWall)
-        }
-        builder.setWhen(nowWall + remaining)
-            .setUsesChronometer(true)
-            .setChronometerCountDown(true)
-            .setShowWhen(true)
+    // タイマーの状態を表す文言。名前の無いタイマーの見出しに使う。
+    // 0を過ぎていれば、鳴動中へ移る前でも「終了」と出す(画面のマイナス表示と合わせる)
+    private fun statusTextRes(timer: TimerState, nowElapsed: Long, nowWall: Long): Int = when {
+        isTimerOverdue(timer, nowElapsed, nowWall) -> R.string.timer_notification_finished
+        timer.runState == TimerRunState.PAUSED -> R.string.timer_notification_paused
+        else -> R.string.timer_notification_running
     }
 
-    // タイマーの状態を表す文言。通知の本文と、名前の無いタイマーの見出しの両方で使う
-    private fun statusTextRes(runState: TimerRunState): Int = when (runState) {
-        TimerRunState.FINISHED -> R.string.timer_notification_finished
-        TimerRunState.PAUSED -> R.string.timer_notification_paused
-        TimerRunState.RUNNING -> R.string.timer_notification_running
-    }
+    // 進み具合のバーの目盛りの細かさ。割合をそのまま渡せないため、この数で割った整数にする
+    private const val PROGRESS_RESOLUTION = 1000
 
     // 通知のボタン1つ分。アイコンは出さないのでnullを渡す
     private fun action(context: Context, labelRes: Int, action: String, id: Long): Notification.Action =
@@ -264,4 +266,5 @@ object TimerNotifications {
     const val ACTION_STOP = "com.marutyan.termalarm.timer.STOP"
     const val ACTION_EXTEND = "com.marutyan.termalarm.timer.EXTEND"
     const val ACTION_PAUSE = "com.marutyan.termalarm.timer.PAUSE"
+    const val ACTION_RESUME = "com.marutyan.termalarm.timer.RESUME"
 }

@@ -90,8 +90,9 @@ fun sessionStartDate(schedule: AlarmSchedule, at: ZonedDateTime): LocalDate {
 /**
  * nowより厳密に後（同時刻は含めない）で最も早い鳴動時刻を返す。
  * enabledがfalseならnull。skippedSessionStartと開始日が一致するセッションの鳴動は飛ばす。
- * repeatDaysが空なら「次の1回だけ」を意味するため、今日と（日またぎ考慮のため）前日のセッションのみを調べ、
- * それが過ぎていればnull（自動的に無効化される想定）。
+ * repeatDaysが空なら「次の1回だけ」を意味する。今日のぶんがまだ来ていなければ今日、
+ * 過ぎていれば翌日を返す（日またぎ考慮のため前日も調べる）。
+ * 鳴り終わったあとに自分でオフにするかどうかは[isOneShotSessionFinished]が判断する。
  * repeatDaysが指定されていれば、該当曜日のセッション開始日を今日から最大14日先まで順に調べる。
  * タイムゾーン・DSTの解決はZonedDateTime.atZoneの既定動作に委ねる
  * （存在しない時刻はギャップ分繰り上げ、重複する時刻は繰り上げ前＝早い方のオフセットを採用する）。
@@ -101,7 +102,7 @@ fun nextTrigger(schedule: AlarmSchedule, now: ZonedDateTime): ZonedDateTime? {
 
     // 日またぎスケジュールは前日に始まったセッションがまだ終わっていない可能性があるため -1 日から調べる。
     // 日をまたがない場合、前日のセッションの鳴動は必ずnow以前になるため実害はない
-    val dayOffsets = if (schedule.repeatDays.isEmpty()) -1..0 else -1..MAX_SEARCH_DAYS_AHEAD
+    val dayOffsets = if (schedule.repeatDays.isEmpty()) -1..1 else -1..MAX_SEARCH_DAYS_AHEAD
     val offsets = calculateOccurrenceOffsets(schedule)
 
     for (dayOffset in dayOffsets) {
@@ -118,6 +119,21 @@ fun nextTrigger(schedule: AlarmSchedule, now: ZonedDateTime): ZonedDateTime? {
         }
     }
     return null
+}
+
+/**
+ * 曜日を指定していないターム（一回きり）の、そのぶんが鳴り終わったかを返す。
+ *
+ * 曜日を指定していないタームは、オンにした時点から見て「今日のその時刻、過ぎていれば翌日」に鳴り、
+ * 鳴り終わったら自分でオフになる。この関数がtrueを返したら、呼び出し側がオフにする。
+ * 曜日を指定しているタームはその曜日ごとに繰り返すため、常にfalseを返す。
+ */
+fun isOneShotSessionFinished(schedule: AlarmSchedule, now: ZonedDateTime): Boolean {
+    if (schedule.repeatDays.isNotEmpty()) return false
+    // 次に鳴る回が無い＝もう鳴るものが残っていない
+    val next = nextTrigger(schedule, now) ?: return true
+    // 次に鳴る回が別の日のセッションなら、今日のぶんは終わっている
+    return sessionStartDate(schedule, next) != sessionStartDate(schedule, now)
 }
 
 /**
@@ -232,35 +248,12 @@ fun occurrenceProgress(schedule: AlarmSchedule, occurrenceIndex: Int): Double {
 }
 
 /**
- * 進捗率 progress (0.0..1.0) における音量上限を返す。
- * 端末のアラーム音量に対する割合（1..100%）という意味を持ち、フェードインの到達点となる。音を鳴らす処理自体は対象外。
- * startVolumePercent と endVolumePercent が同値のときは進捗率によらずその値をそのまま返す。
- */
-fun maxVolumePercent(schedule: AlarmSchedule, progress: Double): Int {
-    if (schedule.startVolumePercent == schedule.endVolumePercent) {
-        return schedule.startVolumePercent.coerceIn(1, 100)
-    }
-    val raw = schedule.startVolumePercent + (schedule.endVolumePercent - schedule.startVolumePercent) * progress
-    return raw.roundToInt().coerceIn(1, 100)
-}
-
-/**
- * 指定した鳴動回（occurrenceIndex: 0始まり）の音量上限を返す。
- * 端末のアラーム音量に対する割合（1..100%）という意味を持ち、フェードインの到達点となる。音を鳴らす処理自体は対象外。
- */
-fun maxVolumePercent(schedule: AlarmSchedule, occurrenceIndex: Int): Int {
-    val p = occurrenceProgress(schedule, occurrenceIndex)
-    return maxVolumePercent(schedule, p)
-}
-
-/**
- * 解除チャレンジの強さと進捗率 progress (0.0..1.0) から、その回に出題する問題数を返す。
+ * 解除チャレンジの難易度と進捗率 progress (0.0..1.0) から、出題時の問題数を返す。
  * 朝の二度寝を防ぐため、HARD では進捗に応じて 1〜3 問を出題し、境界値（1/3, 2/3）はその値を含む側が大きい方の問題数となる。
  */
 fun challengeQuestionCount(challenge: ChallengeLevel, progress: Double): Int =
     when (challenge) {
-        ChallengeLevel.NONE -> 0
-        ChallengeLevel.LIGHT -> 1
+        ChallengeLevel.EASY -> 1
         ChallengeLevel.HARD -> when {
             progress < 1.0 / 3.0 -> 1
             progress < 2.0 / 3.0 -> 2
@@ -270,37 +263,56 @@ fun challengeQuestionCount(challenge: ChallengeLevel, progress: Double): Int =
 
 /**
  * スケジュールと進捗率 progress (0.0..1.0) から、その回に出題する解除チャレンジの問題数を返す。
- * アラームごとの難易度設定に応じて問題数を導出する。
+ * 出題タイミング設定と難易度設定に応じて問題数を導出する。
  */
 fun challengeQuestionCount(schedule: AlarmSchedule, progress: Double): Int =
-    challengeQuestionCount(schedule.challenge, progress)
+    when (schedule.challengeTiming) {
+        ChallengeTiming.NEVER -> 0
+        ChallengeTiming.END_ONLY -> if (progress >= 1.0) challengeQuestionCount(schedule.challenge, progress) else 0
+        ChallengeTiming.EVERY_TIME -> challengeQuestionCount(schedule.challenge, progress)
+    }
 
 /**
  * スケジュールと指定した鳴動回（occurrenceIndex: 0始まり）から、その回に出題する解除チャレンジの問題数を返す。
- * 何回目の鳴動かに応じた進捗率から出題数を決定する。
+ * 出題タイミングの設定（NEVER / END_ONLY / EVERY_TIME）とセッション終了判定および難易度設定から出題数を決定する。
  */
 fun challengeQuestionCount(schedule: AlarmSchedule, occurrenceIndex: Int): Int {
-    val p = occurrenceProgress(schedule, occurrenceIndex)
-    return challengeQuestionCount(schedule.challenge, p)
+    val totalCount = occurrenceCount(schedule)
+    val isLast = occurrenceIndex >= totalCount - 1
+    return when (schedule.challengeTiming) {
+        ChallengeTiming.NEVER -> 0
+        ChallengeTiming.END_ONLY -> {
+            if (isLast) {
+                val p = occurrenceProgress(schedule, occurrenceIndex)
+                challengeQuestionCount(schedule.challenge, p)
+            } else {
+                0
+            }
+        }
+        ChallengeTiming.EVERY_TIME -> {
+            val p = occurrenceProgress(schedule, occurrenceIndex)
+            challengeQuestionCount(schedule.challenge, p)
+        }
+    }
 }
 
 /**
  * 範囲の最後の鳴動を停止した後に、本当に起きたかを確認する起床確認の時刻を求める。
- * wakeCheckMinutes が null の場合は確認を行わないため null を返す。
+ * wakeCheck が false の場合は確認を行わないため null を返す。
  * 有効な場合は、実際に停止した時刻 lastDismissedAt に wakeCheckMinutes 分を足した時刻を返す。
  */
-fun wakeCheckTime(schedule: AlarmSchedule, lastDismissedAt: ZonedDateTime): ZonedDateTime? {
-    val minutes = schedule.wakeCheckMinutes ?: return null
-    return lastDismissedAt.plusMinutes(minutes.toLong())
+fun wakeCheckTime(schedule: AlarmSchedule, lastDismissedAt: ZonedDateTime, wakeCheckMinutes: Int): ZonedDateTime? {
+    if (!schedule.wakeCheck) return null
+    return lastDismissedAt.plusMinutes(wakeCheckMinutes.toLong())
 }
 
 /**
  * そのセッションにおいて起床確認を行うべきかを判定する。
- * wakeCheckMinutes が null の場合、または「今日はもう止める」が実行され
+ * wakeCheck が false の場合、または「タームを終了」が実行され
  * skippedSessionStart がセッション開始日と一致する場合は確認を行わないため false を返す。
  */
 fun shouldPerformWakeCheck(schedule: AlarmSchedule, sessionStart: LocalDate): Boolean {
-    if (schedule.wakeCheckMinutes == null) return false
+    if (!schedule.wakeCheck) return false
     if (schedule.skippedSessionStart == sessionStart) return false
     return true
 }
@@ -311,4 +323,5 @@ fun shouldPerformWakeCheck(schedule: AlarmSchedule, sessionStart: LocalDate): Bo
  */
 fun shouldPerformWakeCheck(schedule: AlarmSchedule, at: ZonedDateTime): Boolean =
     shouldPerformWakeCheck(schedule, sessionStartDate(schedule, at))
+
 

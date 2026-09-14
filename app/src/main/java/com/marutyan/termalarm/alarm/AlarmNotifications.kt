@@ -8,7 +8,6 @@ import androidx.core.app.NotificationCompat
 import com.marutyan.termalarm.MainActivity
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.AlarmSchedule
-import com.marutyan.termalarm.domain.canEndTodaySession
 import com.marutyan.termalarm.domain.remainingOccurrenceCount
 import com.marutyan.termalarm.notification.NotificationChannels
 import com.marutyan.termalarm.ui.common.clockTimePattern
@@ -54,15 +53,6 @@ object AlarmNotifications {
             // epoch millisは2286年まで13桁で揃うため、文字列のまま比較しても時刻順になる
             .setSortKey(next.toInstant().toEpochMilli().toString())
 
-        // 寝ぼけたまま押せてしまう事故を防ぐ設定(skipRequiresApp)のときは、鳴動画面と同じく操作を出さない
-        if (!schedule.skipRequiresApp && canEndTodaySession(schedule, now)) {
-            builder.addAction(
-                0,
-                context.getString(R.string.ringing_skip_today),
-                endSessionPendingIntent(context, schedule.id),
-            )
-        }
-
         manager(context).notify(UPCOMING_TAG, schedule.id.toInt(), builder.build())
     }
 
@@ -94,16 +84,6 @@ object AlarmNotifications {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-    // 「このタームを終了」を押したときの送り先。受け口はAlarmTriggerReceiverに揃えている
-    private fun endSessionPendingIntent(context: Context, id: Long): PendingIntent =
-        PendingIntent.getBroadcast(
-            context,
-            id.toInt(),
-            Intent(context, AlarmTriggerReceiver::class.java)
-                .setAction(ACTION_END_SESSION)
-                .putExtra(EXTRA_ALARM_ID, id),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
 
     // 鳴る前の予告なので、画面の上へ降りてこないIMPORTANCE_DEFAULTにする（純正の「次のアラーム」と同じ）
     private fun ensureChannel(context: Context): String = NotificationChannels.ensure(

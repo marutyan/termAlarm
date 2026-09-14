@@ -22,10 +22,9 @@ private fun schedule(
     repeatDays: Set<DayOfWeek> = emptySet(),
     enabled: Boolean = true,
     skippedSessionStart: LocalDate? = null,
-    challenge: ChallengeLevel = ChallengeLevel.NONE,
-    startVolumePercent: Int = 100,
-    endVolumePercent: Int = 100,
-    wakeCheckMinutes: Int? = null,
+    challengeTiming: ChallengeTiming = ChallengeTiming.NEVER,
+    challenge: ChallengeLevel = ChallengeLevel.EASY,
+    wakeCheck: Boolean = false,
 ) = AlarmSchedule(
     id = 1L,
     startMinutes = startMinutes,
@@ -34,14 +33,11 @@ private fun schedule(
     endIntervalMinutes = endIntervalMinutes,
     repeatDays = repeatDays,
     label = "test",
-    soundUri = null,
-    vibrate = true,
     enabled = enabled,
     skippedSessionStart = skippedSessionStart,
+    challengeTiming = challengeTiming,
     challenge = challenge,
-    startVolumePercent = startVolumePercent,
-    endVolumePercent = endVolumePercent,
-    wakeCheckMinutes = wakeCheckMinutes,
+    wakeCheck = wakeCheck,
 )
 
 class ScheduleCalculatorTest {
@@ -74,7 +70,12 @@ class ScheduleCalculatorTest {
         assertEquals(ZonedDateTime.of(today, java.time.LocalTime.of(8, 59), TOKYO), nextTrigger(s, justBeforeLast))
 
         val atLast = ZonedDateTime.of(today, java.time.LocalTime.of(8, 59), TOKYO)
-        assertNull("最後の鳴動(8:59)を過ぎたら単発扱いでnextTriggerはnull", nextTrigger(s, atLast))
+        // 曜日を指定していないタームは、過ぎたら翌日を返す。鳴り終わった判定は別の関数が持つ
+        assertEquals(
+            ZonedDateTime.of(today.plusDays(1), java.time.LocalTime.of(7, 0), TOKYO),
+            nextTrigger(s, atLast),
+        )
+        assertTrue("最後の鳴動(8:59)を過ぎたら鳴り終わったと判定される", isOneShotSessionFinished(s, atLast))
     }
 
     // --- 曜日判定・日またぎ ---
@@ -110,16 +111,21 @@ class ScheduleCalculatorTest {
     // --- repeatDaysが空（次の1回だけ） ---
 
     @Test
-    fun `repeatDaysが空なら次の1回だけを返しその後はnullになる`() {
+    fun `repeatDaysが空なら今日のぶんの後は翌日を返し鳴り終わったと判定される`() {
         val today = LocalDate.of(2024, 1, 3)
         val s = schedule(startMinutes = 7 * 60, endMinutes = 9 * 60, startIntervalMinutes = 5)
 
         val beforeStart = ZonedDateTime.of(today, java.time.LocalTime.of(6, 0), TOKYO)
         assertEquals(ZonedDateTime.of(today, java.time.LocalTime.of(7, 0), TOKYO), nextTrigger(s, beforeStart))
 
-        // 最後の鳴動(9:00)を過ぎたら、翌日以降を探さずnull（自動的に無効化される想定）
+        // 最後の鳴動(9:00)を過ぎたら、翌日の同じ時刻を返す。
+        // オフにするかどうかはisOneShotSessionFinishedが判断する
         val afterLast = ZonedDateTime.of(today, java.time.LocalTime.of(9, 1), TOKYO)
-        assertNull(nextTrigger(s, afterLast))
+        assertEquals(
+            ZonedDateTime.of(today.plusDays(1), java.time.LocalTime.of(7, 0), TOKYO),
+            nextTrigger(s, afterLast),
+        )
+        assertTrue(isOneShotSessionFinished(s, afterLast))
     }
 
     @Test
@@ -371,8 +377,10 @@ class ScheduleCalculatorTest {
 
         var current = ZonedDateTime.of(today, java.time.LocalTime.of(6, 59), TOKYO)
         val actualDateTimes = mutableListOf<ZonedDateTime>()
+        // 曜日が空でも翌日が返るようになったため、その日のうちだけを数える
         while (true) {
             val next = nextTrigger(s, current) ?: break
+            if (next.toLocalDate() != today) break
             actualDateTimes.add(next)
             current = next
         }
@@ -457,7 +465,7 @@ class ScheduleCalculatorTest {
         assertEquals(ZonedDateTime.of(today, java.time.LocalTime.of(7, 30), TOKYO), nextTrigger(s, justBeforeLast))
 
         val atLast = ZonedDateTime.of(today, java.time.LocalTime.of(7, 30), TOKYO)
-        assertNull("最後の鳴動(7:30)以降はnextTriggerがnullになること", nextTrigger(s, atLast))
+        assertTrue("最後の鳴動(7:30)以降は鳴り終わったと判定されること", isOneShotSessionFinished(s, atLast))
     }
 
     // 深夜から翌朝にかけて日をまたぐセッションにおいて可変間隔が正確に計算されることを検証する。
@@ -547,77 +555,13 @@ class ScheduleCalculatorTest {
         assertEquals(listOf(0), calculateOccurrenceOffsets(s))
     }
 
-    // --- 鳴動ごとの音量上限 ---
-
-    @Test
-    fun `音量上限 開始40・終了100でpに応じて40、70、100になる`() {
-        val s = schedule(
-            startMinutes = 7 * 60,
-            endMinutes = 9 * 60,
-            startIntervalMinutes = 10,
-            startVolumePercent = 40,
-            endVolumePercent = 100,
-        )
-        // 手計算:
-        // p = 0.0 -> 40 + (100 - 40) * 0.0 = 40
-        // p = 0.5 -> 40 + (100 - 40) * 0.5 = 70
-        // p = 1.0 -> 40 + (100 - 40) * 1.0 = 100
-        assertEquals(40, maxVolumePercent(s, 0.0))
-        assertEquals(70, maxVolumePercent(s, 0.5))
-        assertEquals(100, maxVolumePercent(s, 1.0))
-    }
-
-    @Test
-    fun `音量上限 開始と終了が同値ならpによらずその値になる`() {
-        val s = schedule(
-            startMinutes = 7 * 60,
-            endMinutes = 9 * 60,
-            startIntervalMinutes = 10,
-            startVolumePercent = 60,
-            endVolumePercent = 60,
-        )
-        assertEquals(60, maxVolumePercent(s, 0.0))
-        assertEquals(60, maxVolumePercent(s, 0.3))
-        assertEquals(60, maxVolumePercent(s, 0.5))
-        assertEquals(60, maxVolumePercent(s, 0.8))
-        assertEquals(60, maxVolumePercent(s, 1.0))
-    }
-
-    @Test
-    fun `音量上限 計算結果が1から100の外へ出ない`() {
-        val lowerSchedule = schedule(
-            startMinutes = 7 * 60,
-            endMinutes = 9 * 60,
-            startIntervalMinutes = 10,
-            startVolumePercent = 0,
-            endVolumePercent = 0,
-        )
-        assertEquals(1, maxVolumePercent(lowerSchedule, 0.0))
-        assertEquals(1, maxVolumePercent(lowerSchedule, 1.0))
-
-        val upperSchedule = schedule(
-            startMinutes = 7 * 60,
-            endMinutes = 9 * 60,
-            startIntervalMinutes = 10,
-            startVolumePercent = 120,
-            endVolumePercent = 150,
-        )
-        assertEquals(100, maxVolumePercent(upperSchedule, 0.0))
-        assertEquals(100, maxVolumePercent(upperSchedule, 0.5))
-        assertEquals(100, maxVolumePercent(upperSchedule, 1.0))
-    }
-
     // --- 解除チャレンジの問題数 ---
 
     @Test
-    fun `問題数 NONEで0、LIGHTで常に1になる`() {
-        assertEquals(0, challengeQuestionCount(ChallengeLevel.NONE, 0.0))
-        assertEquals(0, challengeQuestionCount(ChallengeLevel.NONE, 0.5))
-        assertEquals(0, challengeQuestionCount(ChallengeLevel.NONE, 1.0))
-
-        assertEquals(1, challengeQuestionCount(ChallengeLevel.LIGHT, 0.0))
-        assertEquals(1, challengeQuestionCount(ChallengeLevel.LIGHT, 0.5))
-        assertEquals(1, challengeQuestionCount(ChallengeLevel.LIGHT, 1.0))
+    fun `問題数 EASYで常に1になる`() {
+        assertEquals(1, challengeQuestionCount(ChallengeLevel.EASY, 0.0))
+        assertEquals(1, challengeQuestionCount(ChallengeLevel.EASY, 0.5))
+        assertEquals(1, challengeQuestionCount(ChallengeLevel.EASY, 1.0))
     }
 
     @Test
@@ -634,33 +578,117 @@ class ScheduleCalculatorTest {
         assertEquals(3, challengeQuestionCount(ChallengeLevel.HARD, 2.0 / 3.0))
     }
 
-    // --- 範囲終了後の起床確認 ---
-
     @Test
-    fun `起床確認 wakeCheckMinutesがnullなら時刻がnullになる`() {
-        val s = schedule(
+    fun `NEVER のとき、どの鳴動でも出題数が0になること`() {
+        // 7:00〜7:30の10分間隔（全4回）
+        val schedule = schedule(
             startMinutes = 7 * 60,
-            endMinutes = 8 * 60,
+            endMinutes = 7 * 60 + 30,
             startIntervalMinutes = 10,
-            wakeCheckMinutes = null,
+            challengeTiming = ChallengeTiming.NEVER,
+            challenge = ChallengeLevel.HARD,
         )
-        val dismissedAt = ZonedDateTime.of(2026, 9, 13, 8, 0, 0, 0, TOKYO)
-        assertNull(wakeCheckTime(s, dismissedAt))
+        assertEquals(0, challengeQuestionCount(schedule, 0))
+        assertEquals(0, challengeQuestionCount(schedule, 1))
+        assertEquals(0, challengeQuestionCount(schedule, 2))
+        assertEquals(0, challengeQuestionCount(schedule, 3))
     }
 
     @Test
-    fun `起床確認 停止時刻の15分後になり予定時刻ではなく停止時刻から数えている`() {
+    fun `END_ONLY のとき、セッションの最後の鳴動だけ出題数が1以上になり、途中は0になること`() {
+        // 7:00〜7:30の10分間隔（全4回、最後はindex 3）
+        val schedule = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 7 * 60 + 30,
+            startIntervalMinutes = 10,
+            challengeTiming = ChallengeTiming.END_ONLY,
+            challenge = ChallengeLevel.EASY,
+        )
+        assertEquals(0, challengeQuestionCount(schedule, 0))
+        assertEquals(0, challengeQuestionCount(schedule, 1))
+        assertEquals(0, challengeQuestionCount(schedule, 2))
+        assertEquals(1, challengeQuestionCount(schedule, 3))
+    }
+
+    @Test
+    fun `END_ONLY かつ HARD のとき、最後の鳴動の出題数が進捗率に応じた数（最後なので3）になること`() {
+        // 7:00〜7:30の10分間隔（全4回、最後はindex 3で進捗率1.0）
+        val schedule = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 7 * 60 + 30,
+            startIntervalMinutes = 10,
+            challengeTiming = ChallengeTiming.END_ONLY,
+            challenge = ChallengeLevel.HARD,
+        )
+        assertEquals(0, challengeQuestionCount(schedule, 0))
+        assertEquals(0, challengeQuestionCount(schedule, 1))
+        assertEquals(0, challengeQuestionCount(schedule, 2))
+        assertEquals(3, challengeQuestionCount(schedule, 3))
+    }
+
+    @Test
+    fun `EVERY_TIME かつ EASY のとき、どの鳴動でも1問になること`() {
+        // 7:00〜7:30の10分間隔（全4回）
+        val schedule = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 7 * 60 + 30,
+            startIntervalMinutes = 10,
+            challengeTiming = ChallengeTiming.EVERY_TIME,
+            challenge = ChallengeLevel.EASY,
+        )
+        assertEquals(1, challengeQuestionCount(schedule, 0))
+        assertEquals(1, challengeQuestionCount(schedule, 1))
+        assertEquals(1, challengeQuestionCount(schedule, 2))
+        assertEquals(1, challengeQuestionCount(schedule, 3))
+    }
+
+    @Test
+    fun `EVERY_TIME かつ HARD のとき、進捗率に応じて1〜3問になること`() {
+        // 7:00〜7:30の10分間隔（全4回）
+        // index 0: 経過0分 / 30分 = 0.0 -> 1問
+        // index 1: 経過10分 / 30分 = 1/3 (0.333...) -> 2問
+        // index 2: 経過20分 / 30分 = 2/3 (0.666...) -> 3問
+        // index 3: 経過30分 / 30分 = 1.0 -> 3問
+        val schedule = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 7 * 60 + 30,
+            startIntervalMinutes = 10,
+            challengeTiming = ChallengeTiming.EVERY_TIME,
+            challenge = ChallengeLevel.HARD,
+        )
+        assertEquals(1, challengeQuestionCount(schedule, 0))
+        assertEquals(2, challengeQuestionCount(schedule, 1))
+        assertEquals(3, challengeQuestionCount(schedule, 2))
+        assertEquals(3, challengeQuestionCount(schedule, 3))
+    }
+
+    // --- 範囲終了後の起床確認 ---
+
+    @Test
+    fun `起床確認 wakeCheckがfalseなら時刻がnullになる`() {
         val s = schedule(
             startMinutes = 7 * 60,
             endMinutes = 8 * 60,
             startIntervalMinutes = 10,
-            wakeCheckMinutes = 15,
+            wakeCheck = false,
+        )
+        val stoppedAt = ZonedDateTime.of(2026, 9, 13, 8, 0, 0, 0, TOKYO)
+        assertNull(wakeCheckTime(s, stoppedAt, 5))
+    }
+
+    @Test
+    fun `起床確認 wakeCheckがtrueなら停止時刻に全体設定の分数を足した時刻になる`() {
+        val s = schedule(
+            startMinutes = 7 * 60,
+            endMinutes = 8 * 60,
+            startIntervalMinutes = 10,
+            wakeCheck = true,
         )
         // 予定時刻は 8:00 だが、実際に止めた時刻は遅れて 8:07
-        // 予定時刻から数えたら 8:15 だが、実際の停止時刻から数えるため 8:22 になる
-        val lastDismissedAt = ZonedDateTime.of(2026, 9, 13, 8, 7, 0, 0, TOKYO)
-        val expectedWakeCheckTime = ZonedDateTime.of(2026, 9, 13, 8, 22, 0, 0, TOKYO)
-        assertEquals(expectedWakeCheckTime, wakeCheckTime(s, lastDismissedAt))
+        // 全体設定の wakeCheckMinutes = 5 分を足すと、手計算で確定した 8:12 となる
+        val lastStoppedAt = ZonedDateTime.of(2026, 9, 13, 8, 7, 0, 0, TOKYO)
+        val expectedWakeCheckTime = ZonedDateTime.of(2026, 9, 13, 8, 12, 0, 0, TOKYO)
+        assertEquals(expectedWakeCheckTime, wakeCheckTime(s, lastStoppedAt, 5))
     }
 
     @Test
@@ -670,7 +698,7 @@ class ScheduleCalculatorTest {
             startMinutes = 7 * 60,
             endMinutes = 8 * 60,
             startIntervalMinutes = 10,
-            wakeCheckMinutes = 15,
+            wakeCheck = true,
             skippedSessionStart = sessionDate,
         )
         assertFalse(shouldPerformWakeCheck(sWithSkip, sessionDate))
@@ -679,7 +707,7 @@ class ScheduleCalculatorTest {
             startMinutes = 7 * 60,
             endMinutes = 8 * 60,
             startIntervalMinutes = 10,
-            wakeCheckMinutes = 15,
+            wakeCheck = true,
             skippedSessionStart = null,
         )
         assertTrue(shouldPerformWakeCheck(sWithoutSkip, sessionDate))
@@ -688,18 +716,18 @@ class ScheduleCalculatorTest {
             startMinutes = 7 * 60,
             endMinutes = 8 * 60,
             startIntervalMinutes = 10,
-            wakeCheckMinutes = 15,
+            wakeCheck = true,
             skippedSessionStart = sessionDate.minusDays(1),
         )
         assertTrue(shouldPerformWakeCheck(sWithDifferentDaySkip, sessionDate))
 
-        val sWithNullMinutes = schedule(
+        val sWithWakeCheckFalse = schedule(
             startMinutes = 7 * 60,
             endMinutes = 8 * 60,
             startIntervalMinutes = 10,
-            wakeCheckMinutes = null,
+            wakeCheck = false,
             skippedSessionStart = null,
         )
-        assertFalse(shouldPerformWakeCheck(sWithNullMinutes, sessionDate))
+        assertFalse(shouldPerformWakeCheck(sWithWakeCheckFalse, sessionDate))
     }
 }

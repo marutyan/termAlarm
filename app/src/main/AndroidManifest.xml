@@ -121,9 +121,13 @@
         <!-- 動作中/完了のタイマーが1件でもある間だけ生存するフォアグラウンドサービス。通知に残り時間を出し、
              完了時にUSAGE_ALARMで鳴らす -->
         <service
-            android:name=".timer.TimerRingingService"
+            android:name=".timer.TimerForegroundService"
             android:exported="false"
-            android:foregroundServiceType="mediaPlayback" />
+            android:foregroundServiceType="mediaPlayback|specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="timer" />
+        </service>
 
         <!-- 通知のボタン(停止/+1分/一時停止)の受け口。自アプリ内のPendingIntent経由でのみ呼ばれる -->
         <receiver
@@ -162,6 +166,47 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- ウィジェットを置くときに見た目を選ばせる画面 -->
+        <activity
+            android:name=".widget.WidgetConfigActivity"
+            android:exported="true"
+            android:theme="@style/Theme.TermAlarm">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <!-- ホーム画面へ置く時計ウィジェット -->
+        <receiver
+            android:name=".widget.TermAlarmWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/term_alarm_widget_info" />
+        </receiver>
+
+        <!-- ウィジェットの定期更新（1分タイマー発火先）・鳴動終了・端末時刻変更・アプリ更新を受け取るレシーバー -->
+        <receiver
+            android:name=".widget.WidgetUpdateReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.marutyan.termalarm.alarm.action.RINGING_FINISHED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- アプリ起動時にウィジェットのターム変更監視を初期化するProvider -->
+        <provider
+            android:name=".widget.WidgetInitProvider"
+            android:authorities="${applicationId}.widgetinitprovider"
+            android:exported="false" />
     </application>
 
 </manifest>

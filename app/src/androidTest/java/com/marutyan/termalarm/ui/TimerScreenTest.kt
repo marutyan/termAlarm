@@ -73,26 +73,24 @@ class TimerScreenTest {
 
     private fun setScreen() {
         composeTestRule.setContent {
-            TimerScreen(viewModel = remember { TimerViewModel(repository, testAppContext()) }, bottomBar = {})
+            TimerScreen(viewModel = remember { TimerViewModel(repository, testAppContext()) })
         }
     }
 
-    // 動作中のタイマーが1件も無いとき、純正と同じくテンキーがそのまま出ることを保証する。
-    // 戻る先が無いので取り消し(×)は出さない
+    // 動作中のタイマーが1件も無いとき、追加ボタンだけが出ることを保証する。
+    // テンキーは追加ボタンを押してから出す(docs/SPEC.md「タイマー」)
     @Test
-    fun タイマーが無いときテンキーが出る() {
+    fun タイマーが無いとき追加ボタンが出る() {
         setScreen()
-        composeTestRule.waitUntilAtLeastOneExists(hasText("5"), 5_000)
-        composeTestRule.onNodeWithContentDescription(string(R.string.timer_start)).assertExists()
-        composeTestRule.onNodeWithContentDescription(string(R.string.timer_cancel)).assertDoesNotExist()
-        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).assertExists()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_start)).assertDoesNotExist()
     }
 
-    // テンキーで5分00秒(5 → 0 → 0)を入力して開始すると、一覧に1件現れることを保証する。
-    // 1件も無い間はテンキーがそのまま出ているため、追加ボタンを押す手順は要らない。
+    // 追加ボタンからテンキーを開き、5分00秒(5 → 0 → 0)を入力して開始すると一覧に1件現れることを保証する。
     @Test
     fun 開始すると一覧に1件現れる() {
         setScreen()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).performClick()
         composeTestRule.waitUntilAtLeastOneExists(hasText("5"), 5_000)
         composeTestRule.onNodeWithText("5").performClick()
         composeTestRule.onNodeWithText("0").performClick()
@@ -107,6 +105,30 @@ class TimerScreenTest {
         assertEquals(TimerRunState.RUNNING, saved.runState)
     }
 
+    // すぐ選べる長さのボタン(例: 1分)を押すと、数字を入れて開始を押さなくても即座にタイマーが始まることを保証する
+    @Test
+    fun すぐ選べる長さのボタンを押すと即座にタイマーが始まる() {
+        setScreen()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).performClick()
+        composeTestRule.waitUntilAtLeastOneExists(hasText("1分"), 5_000)
+        composeTestRule.onNodeWithText("1分").performClick()
+
+        composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().size == 1 } }
+        val saved = runBlocking { repository.observeAll().first().single() }
+        assertEquals(60_000L, saved.totalMillis) // 1分 = 60,000ms
+        assertEquals(TimerRunState.RUNNING, saved.runState)
+    }
+
+    // 追加画面で右上の閉じるボタン(×)を押すと入力がキャンセルされて一覧に戻ることを保証する
+    @Test
+    fun 閉じるボタンを押すと追加画面が閉じる() {
+        setScreen()
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).performClick()
+        composeTestRule.waitUntilAtLeastOneExists(hasContentDescription(string(R.string.timer_cancel)), 5_000)
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_cancel)).performClick()
+        composeTestRule.waitUntilAtLeastOneExists(hasContentDescription(string(R.string.timer_add)), 5_000)
+    }
+
     // 2件開始すると両方が一覧に出て、それぞれ独立した状態(合計時間・実行状態)を持つことを保証する
     @Test
     fun 複数開始すると両方一覧に出てそれぞれ独立している() {
@@ -114,7 +136,8 @@ class TimerScreenTest {
         val addDescription = string(R.string.timer_add)
         val startDescription = string(R.string.timer_start)
 
-        // 1件目は、1件も無いときにそのまま出ているテンキーで 5分00秒 (5 → 0 → 0) を入力して開始する
+        // 1件目は、追加ボタンからテンキーを開いて 5分00秒 (5 → 0 → 0) を入力して開始する
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).performClick()
         composeTestRule.waitUntilAtLeastOneExists(hasText("5"), 5_000)
         composeTestRule.onNodeWithText("5").performClick()
         composeTestRule.onNodeWithText("0").performClick()
@@ -236,8 +259,8 @@ class TimerScreenTest {
         composeTestRule.onNodeWithContentDescription(string(R.string.timer_delete)).performClick()
 
         composeTestRule.waitUntil(5_000) { runBlocking { repository.observeAll().first().isEmpty() } }
-        // 最後の1件を消すと、純正と同じくテンキーへ戻る
-        composeTestRule.waitUntilAtLeastOneExists(hasText("5"), 5_000)
+        // 最後の1件を消すと、追加ボタンだけが残る
+        composeTestRule.onNodeWithContentDescription(string(R.string.timer_add)).assertExists()
     }
 
     /**

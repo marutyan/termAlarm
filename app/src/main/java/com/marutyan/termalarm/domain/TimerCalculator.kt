@@ -63,11 +63,20 @@ fun resetTimer(state: TimerState, nowElapsedRealtime: Long, nowWallClockMillis: 
     )
 
 /**
- * 動作中に1分単位などで延長する（docs/SPEC.md「動作中に1分単位で延長できる」）。
- * 合計時間(totalMillis)と現在の残り時間の両方へ同じだけ加える。FINISHED(鳴動中)は延長の対象外。
+ * 動作中または鳴動中に指定時間(extraMillis)延長する（docs/SPEC.md「動作中に1分単位で延長できる」）。
+ * 動作中・一時停止中は合計時間(totalMillis)と現在の残り時間の両方へ加算する。
+ * 鳴動中(FINISHED)の場合は指定時間でタイマーを再開し、合計時間と残り時間をその時間に合わせてRUNNINGへ戻す。
  */
 fun extendTimer(state: TimerState, extraMillis: Long, nowElapsedRealtime: Long, nowWallClockMillis: Long): TimerState {
-    if (state.runState == TimerRunState.FINISHED) return state
+    if (state.runState == TimerRunState.FINISHED) {
+        return state.copy(
+            totalMillis = extraMillis,
+            remainingMillisAtAnchor = extraMillis,
+            anchorElapsedRealtime = nowElapsedRealtime,
+            anchorWallClockMillis = nowWallClockMillis,
+            runState = TimerRunState.RUNNING,
+        )
+    }
     val currentRemaining = remainingMillis(state, nowElapsedRealtime, nowWallClockMillis)
     return state.copy(
         totalMillis = state.totalMillis + extraMillis,
@@ -78,28 +87,45 @@ fun extendTimer(state: TimerState, extraMillis: Long, nowElapsedRealtime: Long, 
 }
 
 // 残り時間が尽きたときの遷移。鳴動中(FINISHED)として残り0秒に固定する
-fun finishTimer(state: TimerState, nowElapsedRealtime: Long, nowWallClockMillis: Long): TimerState = state.copy(
-    remainingMillisAtAnchor = 0L,
-    // 鳴り始めた時刻をここへ残す。純正はタイムアップの後も経過をマイナスで数え続けるため、
-    // その起点が要る。サービス側に覚えさせると、再起動やサービスの停止で失われる
-    anchorElapsedRealtime = nowElapsedRealtime,
-    anchorWallClockMillis = nowWallClockMillis,
-    runState = TimerRunState.FINISHED,
-)
+fun finishTimer(state: TimerState, nowElapsedRealtime: Long, nowWallClockMillis: Long): TimerState {
+    // 実際に0になった時刻を起点にする。サービスが気づくのは数秒遅れることがあり、
+    // 気づいた時刻を起点にすると、画面の数え上げがそのぶん巻き戻って見える
+    val overshoot = if (nowElapsedRealtime >= state.anchorElapsedRealtime) {
+        (nowElapsedRealtime - state.anchorElapsedRealtime - state.remainingMillisAtAnchor)
+            .coerceAtLeast(0L)
+    } else {
+        // elapsedRealtimeの逆行は再起動の合図。起点を今にする（遅れは測れない）
+        0L
+    }
+    return state.copy(
+        remainingMillisAtAnchor = 0L,
+        // 鳴り始めた時刻をここへ残す。純正はタイムアップの後も経過をマイナスで数え続けるため、
+        // その起点が要る。サービス側に覚えさせると、再起動やサービスの停止で失われる
+        anchorElapsedRealtime = nowElapsedRealtime - overshoot,
+        anchorWallClockMillis = nowWallClockMillis - overshoot,
+        runState = TimerRunState.FINISHED,
+    )
+}
 
 /**
- * 鳴り始めてから経過したミリ秒。鳴動中(FINISHED)でなければ0。
+ * 0になってから経過したミリ秒。まだ0になっていなければ0。
  * 純正のタイマーはタイムアップの後、残り時間の代わりに経過時間をマイナスで出し続ける。
+ *
+ * 動作中(RUNNING)でも、残りが尽きていればその経過を返す。
+ * 鳴動中(FINISHED)へ切り替わるのはサービスが気づいた後になるため、
+ * 切り替えを待つと画面が数秒固まって見えるためである。
  */
 fun overdueMillis(state: TimerState, nowElapsedRealtime: Long, nowWallClockMillis: Long): Long {
-    if (state.runState != TimerRunState.FINISHED) return 0L
+    if (state.runState == TimerRunState.PAUSED) return 0L
     val elapsed = if (nowElapsedRealtime >= state.anchorElapsedRealtime) {
         nowElapsedRealtime - state.anchorElapsedRealtime
     } else {
         // elapsedRealtimeの逆行は再起動の合図。壁時計へ切り替える(remainingMillisと同じ考え方)
         nowWallClockMillis - state.anchorWallClockMillis
     }
-    return elapsed.coerceAtLeast(0L)
+    // FINISHEDは基準時刻が0になった瞬間なので、そのまま経過になる。
+    // RUNNINGは残りを使い切ってからの超過ぶんを取り出す
+    return (elapsed - state.remainingMillisAtAnchor).coerceAtLeast(0L)
 }
 
 /**
@@ -119,23 +145,33 @@ fun rebaseTimerAfterReboot(state: TimerState, nowElapsedRealtime: Long, nowWallC
 }
 
 /**
- * 残り時間の表示が次の秒へ変わるまでのミリ秒。
+ * 表示の秒が次に変わるまでのミリ秒。
  *
- * 画面をただ1秒ごとに描き直すと、通知に出る秒と最大1秒ずれる。
- * 通知は「残り時間が尽きる時刻」から逆算して数えるため、画面を開いた時刻とは関係がないため。
- * 動いているタイマーのうち、いちばん早く秒が変わるものに合わせて描き直せば、通知と同じ数字が出る。
+ * ただ1秒ごとに描き直すと、秒が切り替わる位置が通知とずれて見える。
+ * 動いているタイマーのうち、いちばん早く変わるものに合わせて描き直せば、
+ * 画面・通知・ステータスバーのチップが同じ瞬間に同じ数字へ変わる。
  *
- * 動いているタイマーが1つも無ければ1秒を返す。
+ * 残り時間は切り上げ、0を過ぎてからの数え上げは切り捨てなので、変わる位置が違う。
+ * 変わるものが1つも無ければ1秒を返す。
  */
 fun millisUntilNextSecondBoundary(
     timers: List<TimerState>,
     nowElapsedRealtime: Long,
     nowWallClockMillis: Long,
 ): Long {
-    val remainder = timers
-        .filter { it.runState == TimerRunState.RUNNING }
-        .minOfOrNull { remainingMillis(it, nowElapsedRealtime, nowWallClockMillis) % 1000L }
-        ?: 0L
-    // ちょうど区切りのときは、まるまる1秒待つ
-    return if (remainder <= 0L) 1000L else remainder
+    val next = timers.mapNotNull { state ->
+        when {
+            isTimerOverdue(state, nowElapsedRealtime, nowWallClockMillis) -> {
+                // 数え上げは切り捨てなので、1000の倍数を越えた瞬間に1つ増える
+                1000L - overdueMillis(state, nowElapsedRealtime, nowWallClockMillis) % 1000L
+            }
+            state.runState == TimerRunState.RUNNING -> {
+                // 残りは切り上げなので、1000の倍数を割った瞬間に1つ減る
+                val remainder = remainingMillis(state, nowElapsedRealtime, nowWallClockMillis) % 1000L
+                if (remainder <= 0L) 1000L else remainder
+            }
+            else -> null
+        }
+    }.minOrNull() ?: 1000L
+    return next.coerceIn(1L, 1000L)
 }

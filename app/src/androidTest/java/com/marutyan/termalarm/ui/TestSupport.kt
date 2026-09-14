@@ -2,6 +2,8 @@ package com.marutyan.termalarm.ui
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
@@ -15,18 +17,20 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
+import com.marutyan.termalarm.alarm.AlarmSchedulerStore
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
-import com.marutyan.termalarm.data.ClockSettingsRepository
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.data.StopwatchRepository
 import com.marutyan.termalarm.data.TimerRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
+import com.marutyan.termalarm.domain.ChallengeTiming
+import com.marutyan.termalarm.domain.ChallengeLevel
 import java.time.DayOfWeek
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditScreen
 import com.marutyan.termalarm.ui.alarmedit.AlarmEditViewModel
-import com.marutyan.termalarm.ui.alarmlist.AlarmListScreen
-import com.marutyan.termalarm.ui.alarmlist.AlarmListViewModel
+import com.marutyan.termalarm.ui.home.HomeScreen
+import com.marutyan.termalarm.ui.home.HomeViewModel
 
 // UIテスト共通の下ごしらえ。各テストで3回以上使うため1箇所にまとめる(app/src/main/には触れない)。
 
@@ -71,7 +75,7 @@ internal fun createTestStopwatchRepository(): Pair<AlarmDatabase, StopwatchRepos
 }
 
 /**
- * テストで使う既定値のアラーム。docs/SPEC.mdの既定値(7:00〜9:00・5分間隔・skipRequiresApp=true等)と
+ * テストで使う既定値のアラーム。
  * AlarmEditUiStateの既定値に合わせる。個々のテストは変えたいフィールドだけ引数で上書きする。
  */
 internal fun defaultTestSchedule(
@@ -80,9 +84,9 @@ internal fun defaultTestSchedule(
     repeatDays: Set<DayOfWeek> = emptySet(),
     intervalMinutes: Int = 5,
     label: String = "",
-    skipRequiresApp: Boolean = true,
-    skipGame: Boolean = false,
-    snoozeMinutes: Int? = null,
+    challengeTiming: ChallengeTiming = ChallengeTiming.NEVER,
+    challenge: ChallengeLevel = ChallengeLevel.EASY,
+    wakeCheck: Boolean = false,
 ): AlarmSchedule = AlarmSchedule(
     id = 0,
     startMinutes = startMinutes,
@@ -91,44 +95,55 @@ internal fun defaultTestSchedule(
     endIntervalMinutes = intervalMinutes,
     repeatDays = repeatDays,
     label = label,
-    soundUri = null,
-    vibrate = true,
     enabled = true,
     skippedSessionStart = null,
-    skipRequiresApp = skipRequiresApp,
-    skipGame = skipGame,
-    snoozeMinutes = snoozeMinutes,
+    challengeTiming = challengeTiming,
+    challenge = challenge,
+    wakeCheck = wakeCheck,
 )
 
-// テスト内で「一覧」⇔「追加・編集」を行き来するための最小限の画面切り替え。
-// 本物のNavHost(TermAlarmNavHost)はComposeNavigationのルーティングを担うが、
-// テストではその配線自体を検証したいわけではないため、実際の画面(AlarmListScreen/AlarmEditScreen)と
-// 本物のViewModelをそのまま使いつつ、画面切り替えだけをローカルなStateで代替する。
-private sealed interface ListEditScreen {
-    data object List : ListEditScreen
-    data class Edit(val id: Long?) : ListEditScreen
-}
-
+// テスト内でホーム画面とその上に重なるターム編集シートを行き来するためのホストComposable。
+// 本物のTermAlarmNavHostと同様に、HomeScreenの上にAlarmEditScreen（ModalBottomSheet）を重ねる。
 @Composable
 internal fun ListEditHost(repository: AlarmRepository) {
     val context = testAppContext()
-    var screen by remember { mutableStateOf<ListEditScreen>(ListEditScreen.List) }
-    when (val current = screen) {
-        ListEditScreen.List -> AlarmListScreen(
-            viewModel = remember { AlarmListViewModel(repository, context) },
-            onAddAlarm = { screen = ListEditScreen.Edit(null) },
-            onEditAlarm = { id -> screen = ListEditScreen.Edit(id) },
-            onOpenAbout = {},
-            onOpenPrivacyPolicy = {},
-            onOpenSettings = {},
-            onNavigateToSkipGame = {},
-            exactAlarmBanner = {},
-            notificationPermissionBanner = {},
+    var editingAlarmId by remember { mutableStateOf<Long?>(null) }
+    var isAddingTerm by remember { mutableStateOf(false) }
+    // 開くたびに変わる番号。本物の画面(TermAlarmNavHost)と同じく、ViewModelを使い回さないために要る。
+    // これが無いと、2回目の新規追加で前回の「保存済み」の状態を持ったものが再利用される
+    var editOpenId by remember { mutableIntStateOf(0) }
+    var termEndAlarmId by remember { mutableStateOf<Long?>(null) }
+
+    val homeViewModel = remember { HomeViewModel(repository, AlarmSchedulerStore(testAppContext())) }
+    val terms by homeViewModel.terms.collectAsState(initial = emptyList())
+    HomeScreen(
+        viewModel = homeViewModel,
+        onAddTerm = { isAddingTerm = true; editOpenId++ },
+        onEditTerm = { id -> editingAlarmId = id; editOpenId++ },
+        onEndTodayTerm = { id -> termEndAlarmId = id },
+    )
+
+    if (isAddingTerm || editingAlarmId != null) {
+        val targetId = if (isAddingTerm) null else editingAlarmId
+        AlarmEditScreen(
+            viewModel = remember(targetId, editOpenId) { AlarmEditViewModel(repository, context, targetId) },
+            onClose = {
+                isAddingTerm = false
+                editingAlarmId = null
+            },
         )
-        is ListEditScreen.Edit -> AlarmEditScreen(
-            viewModel = remember(current.id) { AlarmEditViewModel(repository, context, current.id) },
-            onClose = { screen = ListEditScreen.List },
-        )
+    }
+
+    termEndAlarmId?.let { id ->
+        val targetSchedule = terms.find { it.id == id }
+        if (targetSchedule != null) {
+            com.marutyan.termalarm.ui.termend.TermEndDialog(
+                schedule = targetSchedule,
+                repository = repository,
+                now = java.time.ZonedDateTime.now(),
+                onDismiss = { termEndAlarmId = null },
+            )
+        }
     }
 }
 
@@ -150,25 +165,13 @@ internal fun ComposeTestRule.switchNear(label: String): SemanticsNodeInteraction
 }
 
 /**
- * 時計タブUIテスト専用のインメモリRoomDB+ClockSettingsRepositoryを作る。
+ * 設定画面UIテスト専用のインメモリRoomDBとSettingsRepositoryを作る。
  * テストごとに新しいインメモリDBを作るため他機能のテストとは独立する。
  */
-internal fun createTestClockRepository(): Pair<AlarmDatabase, ClockSettingsRepository> {
+internal fun createTestSettingsRepository(): Pair<AlarmDatabase, SettingsRepository> {
     val context = InstrumentationRegistry.getInstrumentation().targetContext
     val db = Room.inMemoryDatabaseBuilder(context, AlarmDatabase::class.java)
         .fallbackToDestructiveMigration(true)
         .build()
-    return db to ClockSettingsRepository(db.clockSettingsDao())
-}
-
-/**
- * 設定画面UIテスト専用のインメモリRoomDBとSettingsRepository、ClockSettingsRepositoryを作る。
- * 設定画面が参照する2つのリポジトリを同一のインメモリDBに紐づけて独立したテスト環境を提供する。
- */
-internal fun createTestSettingsRepositories(): Triple<AlarmDatabase, SettingsRepository, ClockSettingsRepository> {
-    val context = InstrumentationRegistry.getInstrumentation().targetContext
-    val db = Room.inMemoryDatabaseBuilder(context, AlarmDatabase::class.java)
-        .fallbackToDestructiveMigration(true)
-        .build()
-    return Triple(db, SettingsRepository(db.appSettingsDao()), ClockSettingsRepository(db.clockSettingsDao()))
+    return db to SettingsRepository(db.appSettingsDao())
 }

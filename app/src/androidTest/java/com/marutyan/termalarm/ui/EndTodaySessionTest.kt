@@ -16,9 +16,8 @@ import androidx.compose.ui.test.performTextInput
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.AlarmDatabase
 import com.marutyan.termalarm.data.AlarmRepository
+import com.marutyan.termalarm.domain.ChallengeTiming
 import com.marutyan.termalarm.domain.GameQuestion
-import com.marutyan.termalarm.ui.alarmlist.AlarmListScreen
-import com.marutyan.termalarm.ui.alarmlist.AlarmListViewModel
 import com.marutyan.termalarm.ui.skipgame.SkipGameScreen
 import com.marutyan.termalarm.ui.skipgame.SkipGameViewModel
 import kotlin.random.Random
@@ -33,7 +32,7 @@ import org.junit.Test
 
 /**
  * 「今日はもう止める」の当日終了とゲームの振る舞いを保証する。
- * skipGame=falseは確認だけで終了し、skipGame=trueはゲーム画面を経由し、正解のときだけ当日終了が実行される。
+ * 出題なしは確認だけで終了し、出題ありはゲーム画面を経由し、正解のときだけ当日終了が実行される。
  *
  * ゲームは出題のたびに6種類からランダムに1つ選ばれ、種類ごとに画面が異なる(docs/SPEC.md「ゲーム」)。
  * このテストではSkipGameViewModelがRandomをコンストラクタ引数で受け取れる(既定はRandom.Default)ことを使い、
@@ -74,64 +73,12 @@ class EndTodaySessionTest {
 
     private fun string(resId: Int) = composeTestRule.activity.getString(resId)
 
-    // skipGame=falseのアラームは、一覧から「今日はもう止める」→確認ダイアログの承認だけでゲーム無しに完了することを保証する
-    @Test
-    fun skipGameがオフなら確認だけで当日終了する() {
-        val id = runBlocking { repository.add(defaultTestSchedule(skipGame = false, startMinutes = 0, endMinutes = 23 * 60 + 59)) }
-        var navigatedToSkipGame = false
-        composeTestRule.setContent {
-            AlarmListScreen(
-                viewModel = remember { AlarmListViewModel(repository, testAppContext()) },
-                onAddAlarm = {},
-                onEditAlarm = {},
-                onOpenAbout = {},
-                onOpenPrivacyPolicy = {},
-                onOpenSettings = {},
-                onNavigateToSkipGame = { navigatedToSkipGame = true },
-                exactAlarmBanner = {},
-                notificationPermissionBanner = {},
-            )
-        }
-        // 一覧のカードは動きを付けて出るため、押せる状態になるまで待つ
-        composeTestRule.waitUntilAtLeastOneExists(hasText(string(R.string.ringing_skip_today)), 5_000)
-        composeTestRule.onNodeWithText(string(R.string.ringing_skip_today)).performClick()
-        // skipGame=falseなのでゲーム画面へは遷移せず、確認ダイアログが出るはず
-        assertTrue(!navigatedToSkipGame)
-        composeTestRule.onNodeWithText(string(R.string.end_today_session_confirm)).performClick()
 
-        composeTestRule.waitUntil(5_000) { runBlocking { repository.getById(id)?.skippedSessionStart != null } }
-    }
-
-    // skipGame=trueのアラームは、一覧の「今日はもう止める」から確認ダイアログを経ずゲーム画面へ遷移することを保証する
-    @Test
-    fun skipGameがオンならゲーム画面へ遷移する() {
-        runBlocking { repository.add(defaultTestSchedule(skipGame = true, startMinutes = 0, endMinutes = 23 * 60 + 59)) }
-        var navigatedId: Long? = null
-        composeTestRule.setContent {
-            AlarmListScreen(
-                viewModel = remember { AlarmListViewModel(repository, testAppContext()) },
-                onAddAlarm = {},
-                onEditAlarm = {},
-                onOpenAbout = {},
-                onOpenPrivacyPolicy = {},
-                onOpenSettings = {},
-                onNavigateToSkipGame = { id -> navigatedId = id },
-                exactAlarmBanner = {},
-                notificationPermissionBanner = {},
-            )
-        }
-        // 一覧のカードは動きを付けて出るため、押せる状態になるまで待つ
-        composeTestRule.waitUntilAtLeastOneExists(hasText(string(R.string.ringing_skip_today)), 5_000)
-        composeTestRule.onNodeWithText(string(R.string.ringing_skip_today)).performClick()
-        // 確認ダイアログを経由せず直接遷移するので、確認ボタンは存在しない
-        composeTestRule.onNodeWithText(string(R.string.end_today_session_confirm)).assertDoesNotExist()
-        assertNotNull(navigatedId)
-    }
 
     // ゲームに正解すると当日終了(skippedSessionStartの書き込み)が実行されることを保証する
     @Test
     fun ゲームに正解すると当日終了が実行される() {
-        val id = runBlocking { repository.add(defaultTestSchedule(skipGame = true, startMinutes = 0, endMinutes = 23 * 60 + 59)) }
+        val id = runBlocking { repository.add(defaultTestSchedule(challengeTiming = ChallengeTiming.EVERY_TIME, startMinutes = 0, endMinutes = 23 * 60 + 59)) }
         lateinit var viewModel: SkipGameViewModel
         composeTestRule.setContent {
             viewModel = remember { SkipGameViewModel(repository, testAppContext(), id, hasShakeSensor = false, random = Random(0)) }
@@ -148,7 +95,7 @@ class EndTodaySessionTest {
     // ゲームに不正解のときは、当日終了が実行されないことを保証する
     @Test
     fun ゲームに不正解では当日終了が実行されない() {
-        val id = runBlocking { repository.add(defaultTestSchedule(skipGame = true, startMinutes = 0, endMinutes = 23 * 60 + 59)) }
+        val id = runBlocking { repository.add(defaultTestSchedule(challengeTiming = ChallengeTiming.EVERY_TIME, startMinutes = 0, endMinutes = 23 * 60 + 59)) }
         lateinit var viewModel: SkipGameViewModel
         composeTestRule.setContent {
             // 出題を固定する。乱数のままだと、問題文と選択肢に同じ文字が出て
@@ -181,6 +128,30 @@ class EndTodaySessionTest {
             is GameQuestion.SequentialTap -> (1..12).forEach { n -> composeTestRule.onNodeWithText(n.toString()).performClick() }
             is GameQuestion.ColorWord -> composeTestRule.onNodeWithText(question.correctAnswer).performClick()
             is GameQuestion.ShakeDevice -> error("hasShakeSensor=falseのためSHAKE_DEVICEは出題されないはず")
+            is GameQuestion.MirrorText -> {
+                composeTestRule.onNode(hasSetTextAction()).performTextInput(question.text)
+                composeTestRule.onNodeWithText(decide).performClick()
+            }
+            is GameQuestion.SequenceRecall -> {
+                // 提示完了後に正解シーケンスを順にタップする
+                composeTestRule.waitUntil(5_000) {
+                    composeTestRule.onAllNodesWithText(question.sequence.first().toString()).fetchSemanticsNodes().isNotEmpty()
+                }
+                question.sequence.forEach { n ->
+                    composeTestRule.onNodeWithText(n.toString()).performClick()
+                }
+            }
+            is GameQuestion.MemoryPairs -> {
+                // 全ペアを順に揃える
+                val glyphs = listOf("\u2605", "\u25CF", "\u25B2", "\u25A0", "\u25C6", "\u2660")
+                for (cardId in 0 until 6) {
+                    val matchingIndices = question.cards.mapIndexedNotNull { idx, c -> if (c == cardId) idx else null }
+                    matchingIndices.forEach { _ ->
+                        composeTestRule.onNodeWithText("?").performClick()
+                    }
+                }
+            }
+            is GameQuestion.Walk -> error("hasShakeSensor=falseのためWALKは出題されないはず")
         }
     }
 
@@ -203,6 +174,26 @@ class EndTodaySessionTest {
                 composeTestRule.onNodeWithText(wrongChoice).performClick()
             }
             is GameQuestion.ShakeDevice -> error("hasShakeSensor=falseのためSHAKE_DEVICEは出題されないはず")
+            is GameQuestion.MirrorText -> {
+                composeTestRule.onNode(hasSetTextAction()).performTextInput("WRONGWRONG")
+                composeTestRule.onNodeWithText(decide).performClick()
+            }
+            is GameQuestion.SequenceRecall -> {
+                composeTestRule.waitUntil(5_000) {
+                    composeTestRule.onAllNodesWithText("1").fetchSemanticsNodes().isNotEmpty()
+                }
+                repeat(5) {
+                    composeTestRule.onNodeWithText("1").performClick()
+                }
+            }
+            is GameQuestion.MemoryPairs -> {
+                // 不一致のペアを2枚タップ
+                val firstCardId = question.cards[0]
+                val mismatchIdx = question.cards.indexOfFirst { it != firstCardId }
+                composeTestRule.onAllNodesWithText("?")[0].performClick()
+                composeTestRule.onAllNodesWithText("?")[0].performClick()
+            }
+            is GameQuestion.Walk -> error("hasShakeSensor=falseのためWALKは出題されないはず")
         }
     }
 

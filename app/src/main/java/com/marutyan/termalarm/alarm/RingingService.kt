@@ -20,7 +20,7 @@ import com.marutyan.termalarm.notification.NotificationChannels
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.SettingsRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
-import com.marutyan.termalarm.domain.canEndTodaySession
+import com.marutyan.termalarm.domain.StopMethod
 import com.marutyan.termalarm.domain.remainingOccurrenceCount
 import com.marutyan.termalarm.ui.common.clockTimePattern
 import kotlinx.coroutines.CoroutineScope
@@ -54,6 +54,9 @@ class RingingService : Service() {
     private var currentAlarmId: Long = -1L
     private var currentTriggerAtMillis: Long = -1L
 
+    // いま鳴っているのが二度寝チェックか。止めたときにもう一度チェックを入れないために持つ
+    private var currentIsWakeCheck: Boolean = false
+
     // 鳴動中のoccurrenceの実時刻。domainの残り回数計算・当日終了のセッション判定に使う
     private fun occurrenceAt(): ZonedDateTime =
         ZonedDateTime.ofInstant(Instant.ofEpochMilli(currentTriggerAtMillis), ZoneId.systemDefault())
@@ -62,12 +65,20 @@ class RingingService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_STOP -> stopRinging { id -> AlarmScheduler.onStopped(this, id) }
-            ACTION_SNOOZE -> {
-                val requestedMinutes = intent.getIntExtra(EXTRA_SNOOZE_MINUTES, -1)
-                stopRinging { id -> snoozeOrStop(id, requestedMinutes) }
+            ACTION_STOP, ACTION_SNOOZE -> {
+                val method = intent.getStringExtra(EXTRA_STOP_METHOD)
+                val wasWakeCheck = currentIsWakeCheck
+                val stoppedOccurrence = occurrenceAt()
+                stopRinging(isTimeout = false, explicitStopMethod = method) { id ->
+                    AlarmScheduler.onStopped(this, id, stoppedOccurrence, wasWakeCheck)
+                }
             }
-            ACTION_SKIP -> stopRinging { id -> AlarmScheduler.onSessionEnded(this, id, occurrenceAt()) }
+            ACTION_SKIP -> {
+                val method = intent.getStringExtra(EXTRA_STOP_METHOD)
+                stopRinging(isTimeout = false, explicitStopMethod = method) { id ->
+                    AlarmScheduler.onSessionEnded(this, id, occurrenceAt())
+                }
+            }
             else -> startRinging(intent)
         }
         return START_NOT_STICKY
@@ -79,7 +90,14 @@ class RingingService : Service() {
             stopSelf()
             return
         }
+        // すでに別のタームが鳴っているなら、そちらを先に畳んでから切り替える。
+        // 畳まずに上書きすると、前のMediaPlayerを掴む手段が無くなって鳴り続け、
+        // そのタームの記録も次回の予約も行われないまま取り残される
+        if (currentAlarmId != -1L && currentAlarmId != id) {
+            handOverFromPreviousAlarm()
+        }
         currentAlarmId = id
+        currentIsWakeCheck = intent?.getBooleanExtra(EXTRA_IS_WAKE_CHECK, false) == true
         currentTriggerAtMillis = intent?.getLongExtra(EXTRA_TRIGGER_AT_MILLIS, System.currentTimeMillis())
             ?: System.currentTimeMillis()
 
@@ -93,59 +111,141 @@ class RingingService : Service() {
             // 都度DBへ問い合わせず、この時点の値をセッション終了まで使い続ける
             val settings = settingsRepository().observe().first()
             startForegroundNotification(schedule)
-            // 鳴り始めた時点で「次のアラーム」の予告は役目を終える。次回分は停止・スヌーズ後に出し直される
+            // 鳴り始めた時点で「次のアラーム」の予告は役目を終える。次回分は停止後に出し直される
             AlarmNotifications.cancelUpcoming(this@RingingService, id)
-            playSound(schedule, settings.alarmFadeInSeconds)
-            if (schedule.vibrate) startVibration()
-            scheduleAutoStop(settings.autoStopMinutes)
+            playSound(settings.alarmSoundUri, settings.fadeInSeconds)
+            if (settings.vibration) startVibration()
+            settings.silenceAfterMinutes?.let { scheduleAutoStop(it) }
         }
     }
 
-    // 一定時間(設定「消音までの時間」、既定10分)操作が無ければ、無視されたものとして
-    // 「停止」と同じ扱いにする（docs/SPEC.md「無視（放置）」）
-    private fun scheduleAutoStop(autoStopMinutes: Int) {
-        timeoutJob = scope.launch {
-            delay(autoStopMinutes * 60_000L)
-            stopRinging { id -> AlarmScheduler.onStopped(this@RingingService, id) }
-        }
-    }
-
-    // 音・バイブ・タイムアウトを止め、rescheduleの完了後にサービスを終了する共通処理
     /**
-     * スヌーズ操作の分岐。鳴動画面からは常に有効な分数が渡されるが、SNOOZE_ALARMインテント
-     * (外部アプリやアシスタント経由)は分数を指定せず呼ばれることがあるため、その場合はDBの
-     * snoozeMinutesを見て解決する。スヌーズ無効(null)のアラームに対しては、利用者が明示的に
-     * 選んだ設定を外部インテントで上書きせず、停止(次回予約)と同じ扱いにする。
+     * 別のタームが鳴り始めるとき、いま鳴っているぶんを畳む。
+     *
+     * 利用者が止めたわけではないので、放置として記録する。
+     * 鳴ったこと自体は事実であり、記録から落とすと実績が実態とずれる。
      */
-    private suspend fun snoozeOrStop(id: Long, requestedMinutes: Int) {
-        val minutes = requestedMinutes.takeIf { it > 0 } ?: repository().getById(id)?.snoozeMinutes
-        if (minutes != null && minutes > 0) {
-            AlarmScheduler.onSnoozed(this, id, minutes)
-        } else {
-            AlarmScheduler.onStopped(this, id)
+    private fun handOverFromPreviousAlarm() {
+        val previousId = currentAlarmId
+        val previousTrigger = currentTriggerAtMillis
+        val previousIsWakeCheck = currentIsWakeCheck
+        val previousOccurrence = occurrenceAt()
+        currentAlarmId = -1L
+        releaseRingingResources()
+        scope.launch {
+            runCatching {
+                recordRingSession(
+                    previousId,
+                    previousTrigger,
+                    isTimeout = true,
+                    explicitStopMethod = StopMethod.AUTO_SILENCED.name,
+                )
+            }
+            runCatching {
+                AlarmScheduler.onStopped(
+                    this@RingingService,
+                    previousId,
+                    previousOccurrence,
+                    previousIsWakeCheck,
+                )
+            }
         }
     }
 
-    private fun stopRinging(reschedule: suspend (Long) -> Unit) {
-        val id = currentAlarmId
+    // 一定時間(設定「消音までの時間」)操作が無ければ、無視されたものとして
+    // 「停止」と同じ扱いにする（docs/SPEC.md「無視（放置）」）
+    private fun scheduleAutoStop(silenceMinutes: Int) {
+        val wasWakeCheck = currentIsWakeCheck
+        val stoppedOccurrence = occurrenceAt()
+        timeoutJob = scope.launch {
+            delay(silenceMinutes * 60_000L)
+            stopRinging(isTimeout = true, explicitStopMethod = StopMethod.AUTO_SILENCED.name) { id ->
+                AlarmScheduler.onStopped(this@RingingService, id, stoppedOccurrence, wasWakeCheck)
+            }
+        }
+    }
+
+    /**
+     * 音・バイブ・自動消音の予約を片付ける。
+     * 停止のときと、別のタームへ切り替えるときの両方から使う。
+     */
+    private fun releaseRingingResources() {
         timeoutJob?.cancel()
+        timeoutJob = null
         mediaPlayer?.let { player -> runCatching { player.stop() }; player.release() }
         mediaPlayer = null
         vibrator?.cancel()
         vibrator = null
+    }
+
+    private fun stopRinging(
+        isTimeout: Boolean = false,
+        explicitStopMethod: String? = null,
+        reschedule: suspend (Long) -> Unit,
+    ) {
+        val id = currentAlarmId
+        // 鳴動画面の「ストップ」と通知の「停止」がほぼ同時に届くと、
+        // 記録が二重に入り予約も二重に走る。片方だけを通す
+        if (id == -1L) return
+        val triggerMillis = currentTriggerAtMillis
+        currentAlarmId = -1L
+        releaseRingingResources()
 
         // 通知の操作ボタンから止めた場合、ロック画面に出ている鳴動画面が取り残されるため閉じさせる
         sendBroadcast(Intent(ACTION_RINGING_FINISHED).setPackage(packageName))
 
         scope.launch {
-            if (id != -1L) reschedule(id)
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
+            try {
+                if (id != -1L) {
+                    // 記録の失敗で予約の入れ直しまで巻き添えにしない。記録は残らなくても鳴り続ける方が大事
+                    runCatching { recordRingSession(id, triggerMillis, isTimeout, explicitStopMethod) }
+                    runCatching { reschedule(id) }
+                }
+            } finally {
+                // 何が失敗しても前面サービスは必ず畳む。残すと通知が消えず、次の鳴動にも影響する
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
         }
     }
 
-    private fun playSound(schedule: AlarmSchedule, fadeInSeconds: Int) {
-        val uri: Uri = schedule.soundUri?.let(Uri::parse)
+    /**
+     * 鳴動停止時の実績を1件保存する。
+     * 停止方法、予定時刻、実停止時刻、セッション開始日、回数をDBに記録するために用いる。
+     */
+    private suspend fun recordRingSession(
+        alarmId: Long,
+        triggerMillis: Long,
+        isTimeout: Boolean,
+        explicitStopMethod: String?,
+    ) {
+        val schedule = repository().getById(alarmId) ?: return
+        val occurrenceAt = occurrenceAt()
+        val sessionStart = com.marutyan.termalarm.domain.sessionStartDate(schedule, occurrenceAt)
+        val totalCount = com.marutyan.termalarm.domain.occurrenceCount(schedule)
+        val remainingCount = com.marutyan.termalarm.domain.remainingOccurrenceCount(schedule, occurrenceAt)
+        val occurrenceIndex = (totalCount - remainingCount - 1).coerceAtLeast(0)
+
+        val stopMethod = explicitStopMethod ?: if (isTimeout) {
+            com.marutyan.termalarm.domain.StopMethod.AUTO_SILENCED.name
+        } else {
+            val hasChallenge = com.marutyan.termalarm.domain.challengeQuestionCount(schedule, occurrenceIndex) > 0
+            if (hasChallenge) com.marutyan.termalarm.domain.StopMethod.CHALLENGE.name else com.marutyan.termalarm.domain.StopMethod.TAP.name
+        }
+        val stoppedAt = if (isTimeout) null else System.currentTimeMillis()
+
+        Repositories.wakeRecord(this@RingingService).record(
+            alarmId = alarmId,
+            sessionStart = sessionStart.toEpochDay(),
+            scheduledAt = triggerMillis,
+            stoppedAt = stoppedAt,
+            stopMethod = stopMethod,
+            occurrenceIndex = occurrenceIndex,
+        )
+    }
+
+    private fun playSound(soundUri: String?, fadeInSeconds: Int) {
+        val uri: Uri = soundUri?.let(Uri::parse)
             ?: RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM)
             ?: return
         // 寝ている人を起こすため、設定「徐々に音量を上げる」の秒数(既定5秒)かけて音量を上げる
@@ -158,11 +258,10 @@ class RingingService : Service() {
 
     /**
      * 鳴動中に出す通知。純正の時計アプリと同じく、タイトルにアラームの名前、本文に鳴っている時刻を出し、
-     * 展開するとスヌーズと停止を押せるようにする。純正が1回分の操作しか持たないのに対し、
-     * このアプリは時間帯（ターム）で鳴らすため、本文へ残り回数を、操作へ「このタームを終了」を足す。
+     * 展開すると停止を押せるようにする。
      */
     private fun startForegroundNotification(schedule: AlarmSchedule) {
-        val fullScreenIntent = RingingActivity.fullScreenPendingIntent(this, currentAlarmId, currentTriggerAtMillis)
+        val fullScreenIntent = RingingActivity.fullScreenPendingIntent(this, currentAlarmId, currentTriggerAtMillis, currentIsWakeCheck)
         val builder = NotificationCompat.Builder(this, ensureChannel())
             .setSmallIcon(R.drawable.ic_stat_alarm)
             .setContentTitle(schedule.label.ifBlank { getString(R.string.ringing_notification_title) })
@@ -178,16 +277,7 @@ class RingingService : Service() {
             .setFullScreenIntent(fullScreenIntent, true)
             .setContentIntent(fullScreenIntent)
 
-        // 操作の並びは純正に合わせてスヌーズ・停止の順にする
-        val snoozeMinutes = schedule.snoozeMinutes
-        if (snoozeMinutes != null) {
-            builder.addAction(0, getString(R.string.ringing_snooze), servicePendingIntent(REQUEST_SNOOZE, snoozeIntent(this, snoozeMinutes)))
-        }
         builder.addAction(0, getString(R.string.ringing_stop), servicePendingIntent(REQUEST_STOP, stopIntent(this)))
-        // 寝ぼけたまま押せてしまう事故を防ぐ設定(skipRequiresApp)のときは、鳴動画面と同じく操作を出さない
-        if (!schedule.skipRequiresApp && canEndTodaySession(schedule, occurrenceAt())) {
-            builder.addAction(0, getString(R.string.ringing_skip_today), servicePendingIntent(REQUEST_SKIP, skipIntent(this)))
-        }
 
         val notification = builder.build()
         ServiceCompat.startForeground(
@@ -237,10 +327,8 @@ class RingingService : Service() {
         private const val CHANNEL_ID = "ringing"
         private const val NOTIFICATION_ID = 1001
 
-        // 通知の操作ボタンごとに割り当てるrequestCode。同じ値を使い回すと押したボタンと違う操作が走りうる
-        private const val REQUEST_SNOOZE = 1
+        // 通知の操作ボタンごとに割り当てるrequestCode
         private const val REQUEST_STOP = 2
-        private const val REQUEST_SKIP = 3
 
         // 鳴動画面(RingingActivity)へ「もう鳴っていないので閉じてよい」と伝えるための合図。
         // 自アプリ内でのみ送受信する（受け取り側はRECEIVER_NOT_EXPORTEDで登録する）
@@ -254,17 +342,22 @@ class RingingService : Service() {
         const val ACTION_STOP = "com.marutyan.termalarm.alarm.action.STOP"
         const val ACTION_SNOOZE = "com.marutyan.termalarm.alarm.action.SNOOZE"
         const val ACTION_SKIP = "com.marutyan.termalarm.alarm.action.SKIP"
-        const val EXTRA_SNOOZE_MINUTES = "com.marutyan.termalarm.alarm.EXTRA_SNOOZE_MINUTES"
+        const val EXTRA_STOP_METHOD = "com.marutyan.termalarm.alarm.extra.STOP_METHOD"
 
-        fun stopIntent(context: Context): Intent =
-            Intent(context, RingingService::class.java).setAction(ACTION_STOP)
-
-        fun snoozeIntent(context: Context, minutes: Int): Intent =
-            Intent(context, RingingService::class.java)
-                .setAction(ACTION_SNOOZE)
-                .putExtra(EXTRA_SNOOZE_MINUTES, minutes)
+        /**
+         * 鳴動停止用のIntentを生成する。
+         * 停止方法(CHALLENGE / TAP / AUTO_SILENCED)を指定してサービスへ渡すために用いる。
+         */
+        fun stopIntent(context: Context, stopMethod: com.marutyan.termalarm.domain.StopMethod? = null): Intent =
+            Intent(context, RingingService::class.java).apply {
+                action = ACTION_STOP
+                if (stopMethod != null) {
+                    putExtra(EXTRA_STOP_METHOD, stopMethod.name)
+                }
+            }
 
         fun skipIntent(context: Context): Intent =
             Intent(context, RingingService::class.java).setAction(ACTION_SKIP)
     }
 }
+

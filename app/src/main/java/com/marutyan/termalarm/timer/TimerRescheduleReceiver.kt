@@ -38,7 +38,7 @@ class TimerRescheduleReceiver : BroadcastReceiver() {
             }
             // 再起動をまたいで期限が過ぎていたタイマーは、ここで鳴動中へ移す
             if (TimerActions.markDueTimersFinished(appContext)) {
-                TimerRingingService.start(appContext)
+                TimerForegroundService.start(appContext)
             } else {
                 TimerActions.refreshNotification(appContext)
             }
