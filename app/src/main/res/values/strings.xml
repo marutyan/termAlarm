@@ -67,7 +67,7 @@
 
     <!-- 通常アラーム画面 (design/Alarms.dc.html) -->
     <string name="alarms_title">アラーム</string>
-    <string name="alarms_subtitle">鳴動は1回です。</string>
+    <string name="alarms_subtitle">指定した時刻に1回だけ鳴ります</string>
     <string name="alarms_add_alarm">アラームを追加</string>
     <string name="alarms_repeat_today_only">きょうだけ</string>
     <string name="alarms_switch_description">%1$sのアラームの有効無効切り替え</string>
@@ -260,7 +260,7 @@
     <string name="records_metric_duration_caption">開始から</string>
     <string name="records_metric_auto_silenced">放置</string>
     <string name="records_metric_percent_suffix">%</string>
-    <string name="records_metric_auto_silenced_caption">が放置で鳴り止んだ</string>
+    <string name="records_metric_auto_silenced_caption">止めずに終わった回</string>
     <string name="records_chart_title">何回目で起きたか</string>
     <string name="records_list_title">1日ごと</string>
     <string name="records_empty">記録がありません</string>

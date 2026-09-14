@@ -154,7 +154,7 @@ fun AlarmsScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 2. 「鳴動は1回です。」12.5sp、薄い文字の色
+        // 2. 説明の1行。12.5sp、薄い文字の色
         Text(
             text = stringResource(R.string.alarms_subtitle),
             style = TextStyle(
