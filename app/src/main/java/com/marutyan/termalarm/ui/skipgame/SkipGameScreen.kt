@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -94,17 +95,18 @@ fun SkipGameScreen(
 
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
+                .heightIn(min = maxHeight)
                 .padding(
-                    top = statusBarTop + 24.dp,
+                    top = statusBarTop + 62.dp,
                     start = 20.dp,
                     end = 20.dp,
                     bottom = 24.dp,
@@ -237,11 +239,9 @@ fun SkipGameScreen(
                 )
             }
 
-            Spacer(
-                modifier = Modifier
-                    .weight(1f, fill = false)
-                    .heightIn(min = 32.dp),
-            )
+            // 中央のスペーサー（文字拡大時にも最小32dpの間隔を保ち、通常時は案内バーを画面下端へ押し出す）
+            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.weight(1f))
 
             // 下部案内バー (design/RingingChallenge.dc.html準拠)
             ChallengeBottomBar(

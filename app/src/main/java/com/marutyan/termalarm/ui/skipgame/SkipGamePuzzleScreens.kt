@@ -103,10 +103,10 @@ internal fun SequentialTapGameContent(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .heightIn(min = 64.dp)
-                                .clip(RoundedCornerShape(4.dp))
+                                .heightIn(min = 78.dp)
+                                .clip(RoundedCornerShape(3.dp))
                                 .background(bgColor)
-                                .border(1.dp, borderColor, RoundedCornerShape(4.dp))
+                                .border(1.dp, borderColor, RoundedCornerShape(3.dp))
                             .clickable(
                                 enabled = !isPressed,
                                 interactionSource = remember { MutableInteractionSource() },

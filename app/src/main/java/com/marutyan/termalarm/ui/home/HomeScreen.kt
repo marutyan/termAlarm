@@ -241,11 +241,11 @@ fun HomeScreen(
             }
 
             FlowRow(
-                verticalArrangement = Arrangement.Bottom,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
                     text = nextTimeString,
+                    modifier = Modifier.alignByBaseline(),
                     style = TextStyle(
                         fontFamily = ibmPlexMonoFontFamily(300),
                         fontWeight = FontWeight.W300,
@@ -258,11 +258,11 @@ fun HomeScreen(
                 )
                 Text(
                     text = stringResource(R.string.home_remaining_count, remainingOccurrences),
+                    modifier = Modifier.alignByBaseline(),
                     style = TextStyle(
                         fontSize = 13.sp,
                         color = MaterialTheme.customColors.subtleText,
                     ),
-                    modifier = Modifier.padding(bottom = 6.dp),
                 )
             }
 
@@ -322,15 +322,14 @@ fun HomeScreen(
                 ) {
                     Canvas(modifier = Modifier.size(17.dp)) {
                         val strokeWidth = 1.7.dp.toPx()
-                        val r = (size.minDimension - strokeWidth) / 2f
+                        val scale = size.width / 24f
                         val center = Offset(size.width / 2f, size.height / 2f)
                         drawCircle(
                             color = subtleTextColor,
-                            radius = r,
+                            radius = 9f * scale,
                             center = center,
                             style = Stroke(width = strokeWidth),
                         )
-                        val scale = size.width / 24f
                         drawLine(
                             color = subtleTextColor,
                             start = Offset(8.5f * scale, 8.5f * scale),

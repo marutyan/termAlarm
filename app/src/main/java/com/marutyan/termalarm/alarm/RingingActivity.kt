@@ -14,6 +14,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -336,7 +337,7 @@ internal fun RingingContent(
         if (maxVolume > 0) ((currentVolume.toFloat() / maxVolume) * 5).roundToInt().coerceIn(1, 5) else 3
     }
 
-    // 7. 「9:00まで 残り21回」テキスト (12sp)
+    // 7. 「9:00まで 残り21回」テキスト (12.5sp)
     val remainingText = if (remainingCount > 0) {
         stringResource(R.string.ringing_remaining_until_end, endTimeText, remainingCount)
     } else {
@@ -354,108 +355,110 @@ internal fun RingingContent(
     // ステータスバーの下端から余白62dpを確保
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(
-                top = statusBarTop + 62.dp,
-                start = 20.dp,
-                end = 20.dp,
-                bottom = 30.dp,
-            ),
+    BoxWithConstraints(
+        modifier = modifier.fillMaxSize(),
     ) {
-        // 1〜4: 上部表示（左: 回数ラベル、時刻、範囲間隔 / 右: 音量目盛）
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top,
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                // 1. 「4回目 / 25回」のラベル。10sp、字間0.16em、主役の色
-                Text(
-                    text = occurrenceLabelText,
-                    style = TextStyle(
-                        fontFamily = ibmPlexMonoFontFamily(400),
-                        fontSize = 10.sp,
-                        letterSpacing = 0.16.em,
-                        color = MaterialTheme.colorScheme.primary,
-                    ),
-                )
-
-                // 2. 鳴っている時刻。86sp、太さ200、等幅数字
-                Text(
-                    text = occurrenceTimeString,
-                    style = TextStyle(
-                        fontFamily = ibmPlexMonoFontFamily(200),
-                        fontWeight = FontWeight.W200,
-                        fontSize = 86.sp,
-                        lineHeight = 76.sp,
-                        letterSpacing = (-0.055).em,
-                        fontFeatureSettings = "tnum",
-                        color = MaterialTheme.colorScheme.onSurface,
-                    ),
-                )
-
-                // 3. 範囲と間隔。13sp、薄い文字の色
-                Text(
-                    text = rangeAndIntervalText,
-                    style = TextStyle(
-                        fontFamily = ibmPlexMonoFontFamily(400),
-                        fontSize = 13.sp,
-                        fontFeatureSettings = "tnum",
-                        color = MaterialTheme.customColors.subtleText,
-                    ),
-                )
-            }
-
-            // 4. 右上に音量の目盛。5本の縦棒で、いまの音量を示す
-            VolumeIndicator(volumeLevel = volumeLevel)
-        }
-
-        // 5. 18dp空ける
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // 6. 鳴動の目盛。高さ12dp
-        OccurrenceScaleBar(
-            totalCount = totalCount,
-            currentIndex = currentOccurrenceIndex,
-        )
-
-        // 7. 「9:00まで 残り21回」。12sp
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = remainingText,
-            style = TextStyle(
-                fontSize = 12.sp,
-                color = MaterialTheme.customColors.subtleText,
-            ),
-        )
-
-        // 中央のスペーサー（文字拡大時にも最小32dpの間隔を保ちつつボタンを下へ押し出す）
-        Spacer(
-            modifier = Modifier
-                .weight(1f, fill = false)
-                .heightIn(min = 32.dp),
-        )
-
-        // 8 & 9: 下部カード群
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .verticalScroll(rememberScrollState())
+                .heightIn(min = maxHeight)
+                .padding(
+                    top = statusBarTop + 62.dp,
+                    start = 20.dp,
+                    end = 20.dp,
+                    bottom = 30.dp,
+                ),
         ) {
-            // 8. 下部に「ストップ」。主役の色で塗ったカード。左にアイコン、「次は 7:20」を添える
-            RingingStopCard(
-                nextOccurrenceText = nextOccurrenceText,
-                onClick = onStop,
+            // 1〜4: 上部表示（左: 回数ラベル、時刻、範囲間隔 / 右: 音量目盛）
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    // 1. 「4回目 / 25回」のラベル。11sp、字間0.16em、主役の色
+                    Text(
+                        text = occurrenceLabelText,
+                        style = TextStyle(
+                            fontFamily = ibmPlexMonoFontFamily(400),
+                            fontSize = 11.sp,
+                            letterSpacing = 0.16.em,
+                            color = MaterialTheme.colorScheme.primary,
+                        ),
+                    )
+
+                    // 2. 鳴っている時刻。86sp、太さ200、等幅数字
+                    Text(
+                        text = occurrenceTimeString,
+                        style = TextStyle(
+                            fontFamily = ibmPlexMonoFontFamily(200),
+                            fontWeight = FontWeight.W200,
+                            fontSize = 86.sp,
+                            lineHeight = 76.sp,
+                            letterSpacing = (-0.055).em,
+                            fontFeatureSettings = "tnum",
+                            color = MaterialTheme.colorScheme.onSurface,
+                        ),
+                    )
+
+                    // 3. 範囲と間隔。13sp、薄い文字の色
+                    Text(
+                        text = rangeAndIntervalText,
+                        style = TextStyle(
+                            fontFamily = ibmPlexMonoFontFamily(400),
+                            fontSize = 13.sp,
+                            fontFeatureSettings = "tnum",
+                            color = MaterialTheme.customColors.subtleText,
+                        ),
+                    )
+                }
+
+                // 4. 右上に音量の目盛。5本の縦棒で、いまの音量を示す
+                VolumeIndicator(volumeLevel = volumeLevel)
+            }
+
+            // 5. 18dp空ける
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // 6. 鳴動の目盛。高さ12dp
+            OccurrenceScaleBar(
+                totalCount = totalCount,
+                currentIndex = currentOccurrenceIndex,
             )
 
-            // 9. その下に「タームを終了」。枠線だけのカード。右に「>」
-            RingingEndTermCard(
-                onClick = onEndTerm,
+            // 7. 「9:00まで 残り21回」。12.5sp
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = remainingText,
+                style = TextStyle(
+                    fontSize = 12.5.sp,
+                    color = MaterialTheme.customColors.subtleText,
+                ),
             )
+
+            // 中央のスペーサー（文字拡大時にも最小32dpの間隔を保ち、通常時はボタン群を画面下端へ押し出す）
+            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.weight(1f))
+
+            // 8 & 9: 下部カード群
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                // 8. 下部に「ストップ」。主役の色で塗ったカード。左にアイコン、「次は 7:20」を添える
+                RingingStopCard(
+                    nextOccurrenceText = nextOccurrenceText,
+                    onClick = onStop,
+                )
+
+                // 9. その下に「タームを終了」。枠線だけのカード。右に「>」
+                RingingEndTermCard(
+                    onClick = onEndTerm,
+                )
+            }
         }
     }
 }
