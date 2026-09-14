@@ -8,6 +8,7 @@ import com.marutyan.termalarm.MainActivity
 import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
+import com.marutyan.termalarm.domain.isOneShotSessionFinished
 import com.marutyan.termalarm.domain.nextTrigger
 import kotlinx.coroutines.flow.first
 import java.time.Duration
@@ -46,8 +47,28 @@ object AlarmScheduler {
         AlarmNotifications.cancelUpcoming(context, id)
     }
 
-    // 鳴動画面の「停止」、および無操作タイムアウト時に呼ぶ。次の1回を予約する（結果は同じなのでrescheduleに委譲）
-    suspend fun onStopped(context: Context, id: Long) = reschedule(context, id)
+    /**
+     * 鳴動画面の「停止」、および無操作タイムアウト時に呼ぶ。
+     * 曜日を指定していないタームはここで鳴り終わりを判定し、自分でオフにする。
+     * そうでなければ次の1回を予約し直す。
+     */
+    suspend fun onStopped(context: Context, id: Long) {
+        if (disableIfOneShotFinished(context, id)) return
+        reschedule(context, id)
+    }
+
+    /**
+     * 曜日を指定していないタームのぶんが鳴り終わっていたら、オフにして予約を片付ける。
+     * オフにしたときだけtrueを返す。
+     */
+    private suspend fun disableIfOneShotFinished(context: Context, id: Long): Boolean {
+        val repo = repository(context)
+        val schedule = repo.getById(id) ?: return false
+        if (!isOneShotSessionFinished(schedule, ZonedDateTime.now())) return false
+        repo.setEnabled(id, false)
+        cancel(context, id)
+        return true
+    }
 
     /**
      * 当日のタームを終了する。
@@ -57,6 +78,8 @@ object AlarmScheduler {
         // 当日終了の永続化ルール自体はAlarmRepository.endTodaySession()に一本化する（担当Bの実装と重複させない）
         val repo = repository(context)
         repo.endTodaySession(id, occurrenceAt)
+        // 曜日を指定していないタームは、今日のぶんを終えたらもう鳴るものが無いのでオフにする
+        if (disableIfOneShotFinished(context, id)) return
         val schedule = repo.getById(id) ?: return
         scheduleNextOccurrence(context, schedule)
     }

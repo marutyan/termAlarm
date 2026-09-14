@@ -90,8 +90,9 @@ fun sessionStartDate(schedule: AlarmSchedule, at: ZonedDateTime): LocalDate {
 /**
  * nowより厳密に後（同時刻は含めない）で最も早い鳴動時刻を返す。
  * enabledがfalseならnull。skippedSessionStartと開始日が一致するセッションの鳴動は飛ばす。
- * repeatDaysが空なら「次の1回だけ」を意味するため、今日と（日またぎ考慮のため）前日のセッションのみを調べ、
- * それが過ぎていればnull（自動的に無効化される想定）。
+ * repeatDaysが空なら「次の1回だけ」を意味する。今日のぶんがまだ来ていなければ今日、
+ * 過ぎていれば翌日を返す（日またぎ考慮のため前日も調べる）。
+ * 鳴り終わったあとに自分でオフにするかどうかは[isOneShotSessionFinished]が判断する。
  * repeatDaysが指定されていれば、該当曜日のセッション開始日を今日から最大14日先まで順に調べる。
  * タイムゾーン・DSTの解決はZonedDateTime.atZoneの既定動作に委ねる
  * （存在しない時刻はギャップ分繰り上げ、重複する時刻は繰り上げ前＝早い方のオフセットを採用する）。
@@ -101,7 +102,7 @@ fun nextTrigger(schedule: AlarmSchedule, now: ZonedDateTime): ZonedDateTime? {
 
     // 日またぎスケジュールは前日に始まったセッションがまだ終わっていない可能性があるため -1 日から調べる。
     // 日をまたがない場合、前日のセッションの鳴動は必ずnow以前になるため実害はない
-    val dayOffsets = if (schedule.repeatDays.isEmpty()) -1..0 else -1..MAX_SEARCH_DAYS_AHEAD
+    val dayOffsets = if (schedule.repeatDays.isEmpty()) -1..1 else -1..MAX_SEARCH_DAYS_AHEAD
     val offsets = calculateOccurrenceOffsets(schedule)
 
     for (dayOffset in dayOffsets) {
@@ -118,6 +119,21 @@ fun nextTrigger(schedule: AlarmSchedule, now: ZonedDateTime): ZonedDateTime? {
         }
     }
     return null
+}
+
+/**
+ * 曜日を指定していないターム（一回きり）の、そのぶんが鳴り終わったかを返す。
+ *
+ * 曜日を指定していないタームは、オンにした時点から見て「今日のその時刻、過ぎていれば翌日」に鳴り、
+ * 鳴り終わったら自分でオフになる。この関数がtrueを返したら、呼び出し側がオフにする。
+ * 曜日を指定しているタームはその曜日ごとに繰り返すため、常にfalseを返す。
+ */
+fun isOneShotSessionFinished(schedule: AlarmSchedule, now: ZonedDateTime): Boolean {
+    if (schedule.repeatDays.isNotEmpty()) return false
+    // 次に鳴る回が無い＝もう鳴るものが残っていない
+    val next = nextTrigger(schedule, now) ?: return true
+    // 次に鳴る回が別の日のセッションなら、今日のぶんは終わっている
+    return sessionStartDate(schedule, next) != sessionStartDate(schedule, now)
 }
 
 /**

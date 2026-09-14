@@ -70,7 +70,12 @@ class ScheduleCalculatorTest {
         assertEquals(ZonedDateTime.of(today, java.time.LocalTime.of(8, 59), TOKYO), nextTrigger(s, justBeforeLast))
 
         val atLast = ZonedDateTime.of(today, java.time.LocalTime.of(8, 59), TOKYO)
-        assertNull("最後の鳴動(8:59)を過ぎたら単発扱いでnextTriggerはnull", nextTrigger(s, atLast))
+        // 曜日を指定していないタームは、過ぎたら翌日を返す。鳴り終わった判定は別の関数が持つ
+        assertEquals(
+            ZonedDateTime.of(today.plusDays(1), java.time.LocalTime.of(7, 0), TOKYO),
+            nextTrigger(s, atLast),
+        )
+        assertTrue("最後の鳴動(8:59)を過ぎたら鳴り終わったと判定される", isOneShotSessionFinished(s, atLast))
     }
 
     // --- 曜日判定・日またぎ ---
@@ -106,16 +111,21 @@ class ScheduleCalculatorTest {
     // --- repeatDaysが空（次の1回だけ） ---
 
     @Test
-    fun `repeatDaysが空なら次の1回だけを返しその後はnullになる`() {
+    fun `repeatDaysが空なら今日のぶんの後は翌日を返し鳴り終わったと判定される`() {
         val today = LocalDate.of(2024, 1, 3)
         val s = schedule(startMinutes = 7 * 60, endMinutes = 9 * 60, startIntervalMinutes = 5)
 
         val beforeStart = ZonedDateTime.of(today, java.time.LocalTime.of(6, 0), TOKYO)
         assertEquals(ZonedDateTime.of(today, java.time.LocalTime.of(7, 0), TOKYO), nextTrigger(s, beforeStart))
 
-        // 最後の鳴動(9:00)を過ぎたら、翌日以降を探さずnull（自動的に無効化される想定）
+        // 最後の鳴動(9:00)を過ぎたら、翌日の同じ時刻を返す。
+        // オフにするかどうかはisOneShotSessionFinishedが判断する
         val afterLast = ZonedDateTime.of(today, java.time.LocalTime.of(9, 1), TOKYO)
-        assertNull(nextTrigger(s, afterLast))
+        assertEquals(
+            ZonedDateTime.of(today.plusDays(1), java.time.LocalTime.of(7, 0), TOKYO),
+            nextTrigger(s, afterLast),
+        )
+        assertTrue(isOneShotSessionFinished(s, afterLast))
     }
 
     @Test
@@ -367,8 +377,10 @@ class ScheduleCalculatorTest {
 
         var current = ZonedDateTime.of(today, java.time.LocalTime.of(6, 59), TOKYO)
         val actualDateTimes = mutableListOf<ZonedDateTime>()
+        // 曜日が空でも翌日が返るようになったため、その日のうちだけを数える
         while (true) {
             val next = nextTrigger(s, current) ?: break
+            if (next.toLocalDate() != today) break
             actualDateTimes.add(next)
             current = next
         }
@@ -453,7 +465,7 @@ class ScheduleCalculatorTest {
         assertEquals(ZonedDateTime.of(today, java.time.LocalTime.of(7, 30), TOKYO), nextTrigger(s, justBeforeLast))
 
         val atLast = ZonedDateTime.of(today, java.time.LocalTime.of(7, 30), TOKYO)
-        assertNull("最後の鳴動(7:30)以降はnextTriggerがnullになること", nextTrigger(s, atLast))
+        assertTrue("最後の鳴動(7:30)以降は鳴り終わったと判定されること", isOneShotSessionFinished(s, atLast))
     }
 
     // 深夜から翌朝にかけて日をまたぐセッションにおいて可変間隔が正確に計算されることを検証する。
