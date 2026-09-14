@@ -119,7 +119,7 @@ private const val APP_ICON_FOREGROUND_SCALE = 1.64f
  * 上の帯をステータスバーの下端からどれだけ下げるか。
  * 5つの主な画面が同じ位置に帯を置くため、値をここ1か所で持つ。
  */
-val TOP_BAR_TOP_INSET = 36.dp
+val TOP_BAR_TOP_INSET = 26.dp
 
 /**
  * 上の帯と、その下に続く中身との間隔。

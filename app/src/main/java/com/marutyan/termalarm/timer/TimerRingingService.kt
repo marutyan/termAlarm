@@ -108,7 +108,10 @@ class TimerRingingService : Service() {
         val uri = settings.alarmSoundUri?.let(Uri::parse)
             ?: RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM)
             ?: return
-        val player = SoundFadeIn.startRinging(this, scope, uri, settings.fadeInSeconds) ?: return
+        // タイマーは0になった瞬間に鳴らす。「徐々に音量を上げる」はアラームの設定で、
+        // これをタイマーへ効かせると、鳴っているのに数秒間ほとんど聞こえず、
+        // 「マイナス数秒で鳴り始めた」ように感じられる
+        val player = SoundFadeIn.startRinging(this, scope, uri, fadeInSeconds = 0) ?: return
         ringingPlayers[id] = player
         if (settings.vibration) startVibrationIfNeeded()
     }

@@ -71,10 +71,28 @@ private const val ROUTE_END_TODAY_GAME = "endTodayGame"
 private const val ROUTE_GAME_LIST = "gameList"
 private const val ROUTE_ABOUT = "about"
 private const val ROUTE_PRIVACY = "privacy"
+
+/**
+ * タブの上へ重ねて開く下位の画面。
+ * これらから戻るときは、下にいた画面も滑り込ませて動きを対にするために用いる。
+ */
+private val SUB_SCREEN_ROUTES = setOf(ROUTE_GAME_LIST, ROUTE_ABOUT, ROUTE_PRIVACY)
 private const val ARG_ALARM_ID = "alarmId"
 
 // タームまたは通常アラームの編集シート対象。alarmIdがnullなら新規作成、値があれば該当IDの編集
-private data class EditTarget(val alarmId: Long?)
+/**
+ * 開いているターム編集シートの対象。
+ *
+ * [openId] は開くたびに変わる番号。ViewModelを覚えておく鍵に混ぜるために持つ。
+ * 新規追加はalarmIdがいつもnullなので、これが無いと2回目以降に
+ * 前回の「保存済み」の状態を引き継いだViewModelが使い回され、開いた直後に閉じてしまう。
+ */
+private data class EditTarget(val alarmId: Long?, val openId: Long = nextEditOpenId())
+
+/** 編集シートを開くたびに1つ増える番号。ViewModelの鍵を毎回変えるために用いる。 */
+private var editOpenCounter: Long = 0L
+
+private fun nextEditOpenId(): Long = ++editOpenCounter
 
 // SET_ALARM等の外部インテントを受けたAlarmIntentActivity(ui.intent)がMainActivity起動時に付ける拡張。
 // 値が-1なら新規作成、0以上ならそのidの編集シートをホーム画面上で開く。他パッケージから参照するためpublic。
@@ -150,7 +168,16 @@ fun TermAlarmNavHost(
                 startDestination = NavItem.TERMS.route,
                 enterTransition = { fadeIn(animationSpec = tabFadeSpec()) },
                 exitTransition = { fadeOut(animationSpec = tabFadeSpec()) },
-                popEnterTransition = { EnterTransition.None },
+                // 下位の画面から戻るときだけ、下にいた画面も滑り込ませる。
+                // 出ていく側だけが動くと、戻る動きが途中で切れて見える。
+                // タブどうしの行き来はこれまでどおり動かさない
+                popEnterTransition = {
+                    if (initialState.destination.route in SUB_SCREEN_ROUTES) {
+                        screenCloseEnter(slidePx)
+                    } else {
+                        EnterTransition.None
+                    }
+                },
                 popExitTransition = { ExitTransition.None },
                 predictivePopEnterTransition = { _ -> EnterTransition.None },
                 predictivePopExitTransition = { _ -> screenPredictivePopExit() },
@@ -200,7 +227,7 @@ fun TermAlarmNavHost(
 
                     editTarget?.let { target ->
                         val editViewModel: AlarmEditViewModel = viewModel(
-                            key = "term_edit_${target.alarmId ?: "new"}",
+                            key = "term_edit_${target.alarmId ?: "new"}_${target.openId}",
                             factory = AlarmEditViewModelFactory(repository, context, target.alarmId, isSingleAlarm = false),
                         )
                         AlarmEditScreen(
@@ -248,7 +275,7 @@ fun TermAlarmNavHost(
 
                     editTarget?.let { target ->
                         val editViewModel: AlarmEditViewModel = viewModel(
-                            key = "alarm_edit_${target.alarmId ?: "new"}",
+                            key = "alarm_edit_${target.alarmId ?: "new"}_${target.openId}",
                             factory = AlarmEditViewModelFactory(repository, context, target.alarmId, isSingleAlarm = true),
                         )
                         AlarmEditScreen(
@@ -323,8 +350,6 @@ fun TermAlarmNavHost(
                     SettingsScreen(
                         viewModel = viewModel,
                         onOpenGameList = { navController.navigate(ROUTE_GAME_LIST) },
-                        onOpenPrivacyPolicy = { navController.navigate(ROUTE_PRIVACY) },
-                        onOpenAbout = { navController.navigate(ROUTE_ABOUT) },
                         onBack = {
                             if (!navController.popBackStack()) {
                                 navController.navigate(NavItem.TERMS.route) {

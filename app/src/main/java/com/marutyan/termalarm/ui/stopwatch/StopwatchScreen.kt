@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,13 +61,11 @@ import com.marutyan.termalarm.ui.theme.IbmPlexMono
 import com.marutyan.termalarm.ui.theme.customColors
 import com.marutyan.termalarm.ui.theme.pressScaleEffect
 import com.marutyan.termalarm.ui.theme.tabularNums
-import kotlinx.coroutines.delay
 
 /**
  * 動作中(RUNNING)の経過時間更新間隔(100ms = 10Hz)。
  * 1/100秒表示の滑らかさを保ちつつ描画負荷を抑える。
  */
-private const val TICK_INTERVAL_RUNNING_MILLIS = 100L
 
 /**
  * ストップウォッチタブの画面。design/Stopwatch.dc.html を再現する。
@@ -375,10 +374,13 @@ private fun rememberTickingNow(isRunning: Boolean): Pair<Long, Long> {
     var nowWall by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(isRunning) {
         if (!isRunning) return@LaunchedEffect
+        // 一定間隔で起こすと、画面の描き直しと噛み合わず数字が飛んで見える。
+        // 画面が描かれる直前に時刻を取り、1コマごとに数える
         while (true) {
-            delay(TICK_INTERVAL_RUNNING_MILLIS)
-            nowElapsed = SystemClock.elapsedRealtime()
-            nowWall = System.currentTimeMillis()
+            withFrameMillis {
+                nowElapsed = SystemClock.elapsedRealtime()
+                nowWall = System.currentTimeMillis()
+            }
         }
     }
     return nowElapsed to nowWall

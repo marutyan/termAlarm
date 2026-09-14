@@ -93,8 +93,6 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
     modifier: Modifier = Modifier,
     onOpenGameList: () -> Unit = {},
-    onOpenPrivacyPolicy: () -> Unit = {},
-    onOpenAbout: () -> Unit = {},
     onBack: () -> Unit = {},
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -241,29 +239,6 @@ fun SettingsScreen(
             SettingsThemeRow(
                 selectedTheme = settings.theme,
                 onSelectTheme = { viewModel.setTheme(it) },
-            )
-        }
-
-        // 3. このアプリ セクション
-        SettingsSectionHeader(text = stringResource(R.string.settings_section_about_app), topPadding = 10.dp)
-        SettingsCard {
-            // プライバシー
-            SettingsRow(
-                icon = SettingsPrivacyIcon,
-                title = stringResource(R.string.settings_privacy_item_title),
-                value = null,
-                isLast = false,
-                onClick = onOpenPrivacyPolicy,
-            )
-
-            // このアプリについて
-            SettingsRow(
-                icon = SettingsAboutIcon,
-                title = stringResource(R.string.settings_about_item_title),
-                value = stringResource(R.string.settings_app_version_value),
-                isMonospaceValue = true,
-                isLast = true,
-                onClick = onOpenAbout,
             )
         }
     }
