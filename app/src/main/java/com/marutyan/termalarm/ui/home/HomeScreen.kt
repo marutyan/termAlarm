@@ -79,6 +79,7 @@ import com.marutyan.termalarm.domain.sessionStartDate
 import com.marutyan.termalarm.ui.common.TermAlarmTopBar
 import com.marutyan.termalarm.ui.common.clockTimePattern
 import com.marutyan.termalarm.ui.common.formatClockMinutes
+import com.marutyan.termalarm.ui.common.formatRangeAndInterval
 import com.marutyan.termalarm.ui.permission.ExactAlarmPermissionBanner
 import com.marutyan.termalarm.ui.permission.NotificationPermissionBanner
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
@@ -327,17 +328,8 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // 6. 範囲と間隔。13.5sp、副次の文字の色
-                val intervalSummary = remember(currentSchedule) {
-                    if (currentSchedule.startIntervalMinutes == currentSchedule.endIntervalMinutes) {
-                        "${currentSchedule.startIntervalMinutes}分ごと"
-                    } else {
-                        "${currentSchedule.startIntervalMinutes}〜${currentSchedule.endIntervalMinutes}分ごと"
-                    }
-                }
-                val rangeAndInterval = remember(currentSchedule, intervalSummary, timePattern) {
-                    val startStr = formatClockMinutes(currentSchedule.startMinutes, timePattern)
-                    val endStr = formatClockMinutes(currentSchedule.endMinutes, timePattern)
-                    "$startStr \u2013 $endStr \u00b7 $intervalSummary"
+                val rangeAndInterval = remember(currentSchedule, timePattern) {
+                    formatRangeAndInterval(currentSchedule, timePattern)
                 }
                 Text(
                     text = rangeAndInterval,

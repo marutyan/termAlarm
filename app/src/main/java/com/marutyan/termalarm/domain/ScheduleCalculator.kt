@@ -186,18 +186,26 @@ fun remainingTimeUntilNextTrigger(schedule: AlarmSchedule, now: ZonedDateTime): 
 }
 
 /**
+ * 間隔の言い方。例:「5分ごと」。終わりへ向けて間隔を詰めるタームは「5〜2分ごと」。
+ *
+ * 一覧・鳴動画面・ゲーム画面で同じ言い方をするため、ここだけで作る。
+ * それぞれで組み立てていたときは、鳴動画面だけ「加速 5→2分」と別の書き方になっていた。
+ */
+fun intervalSummary(schedule: AlarmSchedule): String =
+    if (schedule.startIntervalMinutes == schedule.endIntervalMinutes) {
+        "${schedule.startIntervalMinutes}分ごと"
+    } else {
+        "${schedule.startIntervalMinutes}〜${schedule.endIntervalMinutes}分ごと"
+    }
+
+/**
  * 一覧画面に表示する要約文字列を組み立てる。間隔と1セッションあたりの鳴動回数を1行にまとめる。
  * 例: 「5分ごと · 25回」「1回のみ」（単発に退化する場合）。
  */
 fun scheduleSummary(schedule: AlarmSchedule): String {
     val count = occurrenceCount(schedule)
-    return if (count <= 1) {
-        "1回のみ"
-    } else if (schedule.startIntervalMinutes == schedule.endIntervalMinutes) {
-        "${schedule.startIntervalMinutes}分ごと · ${count}回"
-    } else {
-        "${schedule.startIntervalMinutes}〜${schedule.endIntervalMinutes}分ごと · ${count}回"
-    }
+    if (count <= 1) return "1回のみ"
+    return "${intervalSummary(schedule)} · ${count}回"
 }
 
 /**

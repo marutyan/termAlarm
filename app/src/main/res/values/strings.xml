@@ -13,8 +13,6 @@
     <!-- 鳴動画面刷新用文字列 -->
     <string name="ringing_occurrence_label">%1$d回目 / %2$d回</string>
     <string name="ringing_wake_check_label">二度寝チェック</string>
-    <string name="ringing_range_and_interval">%1$s – %2$s · %3$s</string>
-    <string name="ringing_interval_constant">%1$d分ごと</string>
     <string name="ringing_volume_label">音量</string>
     <string name="ringing_remaining_until_end">%1$sまで 残り%2$d回</string>
     <string name="ringing_remaining_last">%1$s 最後の鳴動</string>

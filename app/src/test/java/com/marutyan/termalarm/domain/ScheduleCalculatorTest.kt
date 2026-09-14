@@ -730,4 +730,31 @@ class ScheduleCalculatorTest {
         )
         assertFalse(shouldPerformWakeCheck(sWithWakeCheckFalse, sessionDate))
     }
+
+    @Test
+    fun `間隔の言い方は等間隔と加速で1か所から作る`() {
+        // 一覧・鳴動画面・ゲーム画面がそれぞれ組み立てていたとき、
+        // 鳴動画面だけ「加速 5→2分」と別の書き方になっていた
+        assertEquals(
+            "5分ごと",
+            intervalSummary(schedule(startMinutes = 7 * 60, endMinutes = 9 * 60, startIntervalMinutes = 5)),
+        )
+        assertEquals(
+            "10〜3分ごと",
+            intervalSummary(
+                schedule(
+                    startMinutes = 7 * 60,
+                    endMinutes = 8 * 60,
+                    startIntervalMinutes = 10,
+                    endIntervalMinutes = 3,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `一覧の要約は間隔の言い方に回数を足したものになる`() {
+        val s = schedule(startMinutes = 7 * 60, endMinutes = 9 * 60, startIntervalMinutes = 5)
+        assertTrue(scheduleSummary(s).startsWith(intervalSummary(s)))
+    }
 }

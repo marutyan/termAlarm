@@ -1,6 +1,8 @@
 package com.marutyan.termalarm.ui.common
 
 import android.text.format.DateFormat
+import com.marutyan.termalarm.domain.AlarmSchedule
+import com.marutyan.termalarm.domain.intervalSummary
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -23,3 +25,15 @@ fun clockTimePattern(withSeconds: Boolean = false): String =
 fun formatClockMinutes(minutesOfDay: Int, pattern: String): String =
     LocalTime.of(minutesOfDay / 60, minutesOfDay % 60)
         .format(DateTimeFormatter.ofPattern(pattern, Locale.getDefault()))
+
+/**
+ * タームの範囲と間隔を1行にまとめる。例:「7:00 – 9:00 · 5分ごと」。
+ *
+ * 一覧・鳴動画面・当日終了のゲーム画面で同じ形にするため、ここだけで組み立てる。
+ * 時刻の書き方は端末の設定に従うため、間隔の言い方(domain)と分けてここに置く。
+ */
+fun formatRangeAndInterval(schedule: AlarmSchedule, pattern: String): String {
+    val start = formatClockMinutes(schedule.startMinutes, pattern)
+    val end = formatClockMinutes(schedule.endMinutes, pattern)
+    return "$start – $end · ${intervalSummary(schedule)}"
+}
