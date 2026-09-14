@@ -78,6 +78,23 @@ val TIMER_ADD_ICON_SIZE = 26.dp
 val TIMER_CARD_HORIZONTAL_PADDING = 16.2.dp
 
 /**
+ * タイマー画面で、数字を入れる画面(新規作成)を出すかどうかを決める。
+ *
+ * [timers]がnullのときは読み込みが終わっておらず、0件かどうかが分からないので出さない。
+ * 読み込み前の空リストを「0件」と受け取ると、保存済みのタイマーがあっても
+ * 画面を開いた直後だけ新規作成の画面が見えてしまう。
+ *
+ * @param timers 読み込み済みの一覧。読み込み前はnull
+ * @param isAddRequested 右下の追加ボタンが押されているか
+ */
+internal fun shouldShowTimerKeypad(timers: List<TimerState>?, isAddRequested: Boolean): Boolean =
+    when {
+        timers == null -> false
+        isAddRequested -> true
+        else -> timers.isEmpty()
+    }
+
+/**
  * タイマータブの画面。design/Timer.dc.html を再現する。
  * 見出し「タイマー」(28sp、太さ300)、動作中タイマーの円形リングカード一覧(角丸20dp)、
  * 画面右下に浮かせた「タイマーを追加」ボタン(60dp角、角丸20dp、主役の色)を配置する。
@@ -91,7 +108,9 @@ fun TimerScreen(
     onOpenAbout: () -> Unit = {},
 ) {
     var showAddScreen by rememberSaveable { mutableStateOf(false) }
-    val timers by viewModel.timers.collectAsStateWithLifecycle()
+    // 読み込みが終わるまではnull。0件かどうかがまだ決まっていないことを表す
+    val loadedTimers by viewModel.timers.collectAsStateWithLifecycle()
+    val timers = loadedTimers.orEmpty()
     val tickingNow = rememberTickingNow(timers)
     val (nowElapsed, nowWall) = tickingNow
     val sortedTimers = remember(timers, nowElapsed, nowWall) {
@@ -100,9 +119,13 @@ fun TimerScreen(
 
     // タイマーが1件も無いときは、案内を出さずに数字を入れる画面をそのまま見せる。
     // 押す先が同じ画面になるため、そのときは右下の追加ボタンも出さない
-    val showKeypad = showAddScreen || sortedTimers.isEmpty()
+    val showKeypad = shouldShowTimerKeypad(loadedTimers, showAddScreen)
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // 読み込みが終わるまでは一覧も数字を入れる画面も出さない。
+        // どちらを出しても、読み込み後に入れ替わってちらついて見える
+        if (loadedTimers == null) return@Box
+
         AnimatedContent(
             targetState = showKeypad,
             transitionSpec = {

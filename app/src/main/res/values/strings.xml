@@ -48,7 +48,7 @@
     <string name="nav_standard_alarm">アラーム</string>
     <string name="nav_record">記録</string>
     <string name="nav_timer">タイマー</string>
-    <string name="nav_stopwatch">ストップ</string>
+    <string name="nav_stopwatch">ストップウォッチ</string>
     <string name="nav_settings">設定</string>
 
     <!-- ホーム画面 -->

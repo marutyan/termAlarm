@@ -35,31 +35,34 @@ const val TAB_TRANSITION_DURATION_MS = 150
 
 /**
  * 下位の画面を出し入れする時間(ミリ秒)。
- * Androidの予測型「戻る」が、指を離してから完了するまでに使う長さ。
+ * 押して開く・戻るときの長さ。純正より短くして、待たされる感じを無くしている。
  */
-const val SCREEN_TRANSITION_DURATION_MS = 300
+const val SCREEN_TRANSITION_DURATION_MS = 200
 
-/** 閉じていく画面が縮む先の倍率。Androidが公開している予測型「戻る」の設計値。 */
-const val SCREEN_EXIT_SCALE = 0.9f
+/**
+ * 閉じていく画面が縮む先の倍率。
+ * 純正時計アプリの戻る操作を録画し、画面の横幅が1080pxから926pxになるのを測って決めた。
+ */
+const val SCREEN_EXIT_SCALE = 0.86f
 
 /**
  * 現れる画面が始まるときの倍率。
- * 戻るときは手前にいた画面が実寸まで縮んでくる形になるので、1.0より大きい。
+ * 開くときに親画面が[SCREEN_EXIT_SCALE]の逆数まで広がるので、戻るときはそこから縮んでくる。
  */
-const val SCREEN_ENTER_START_SCALE = 1.1f
+const val SCREEN_ENTER_START_SCALE = 1.16f
 
 /**
  * 後ろで順番を待っている画面の濃さ。
- * 純正を録画して測ると、指を動かしている間は暗いままで、離してから濃くなっていた。
+ * 純正は端を引っ張っている間、戻り先の画面を暗いまま見せて、離してから濃くする。
  */
 const val SCREEN_ENTER_DIM_ALPHA = 0.25f
 
-// 濃さが入れ替わり始める、変化全体のうちの位置。ここまでは濃さを変えない
-private const val SCREEN_FADE_THROUGH_START = 0.65f
+// 端を引っ張っている間に濃さを入れ替え始める位置。ここまでは濃さを変えない
+private const val PREDICTIVE_FADE_START = 0.7f
 
-// 濃さの入れ替えを始めるまでの時間(ミリ秒)と、入れ替えにかける時間(ミリ秒)
-private val SCREEN_FADE_DELAY_MS = (SCREEN_TRANSITION_DURATION_MS * SCREEN_FADE_THROUGH_START).toInt()
-private val SCREEN_FADE_DURATION_MS = SCREEN_TRANSITION_DURATION_MS - SCREEN_FADE_DELAY_MS
+// 端の引っ張りで、濃さの入れ替えを始めるまでの時間(ミリ秒)と、入れ替えにかける時間(ミリ秒)
+private val PREDICTIVE_FADE_DELAY_MS = (SCREEN_TRANSITION_DURATION_MS * PREDICTIVE_FADE_START).toInt()
+private val PREDICTIVE_FADE_DURATION_MS = SCREEN_TRANSITION_DURATION_MS - PREDICTIVE_FADE_DELAY_MS
 
 // タイマー新規追加画面の表示・非表示アニメーション時間(ミリ秒)。下からの出現と上への消去に合わせるために定義する。
 const val TIMER_ADD_TRANSITION_DURATION_MS = 300
@@ -104,34 +107,38 @@ fun tabFadeSpec(): TweenSpec<Float> = tween(
     easing = LinearEasing,
 )
 
+// 画面の出し入れに使う曲線。最初に速く動いて長く減速する、Androidが画面の終了に使っているもの
+private val ScreenEasing: Easing = CubicBezierEasing(0.1f, 0.1f, 0f, 1f)
+
+/** 押して開く・戻るときの時間の取り方。大きさも濃さもこれ1つで動かす */
+private fun screenSpec(): TweenSpec<Float> = tween(
+    durationMillis = SCREEN_TRANSITION_DURATION_MS,
+    easing = ScreenEasing,
+)
+
 /**
- * 大きさと位置の変化の時間の取り方。
- *
- * 端の引っ張りでは指の進みがそのまま時間になるため、重み付けをすると
- * 指の動きと画面の動きがずれる。Androidの実装例も進みへ直接掛けている。
+ * 端を引っ張っている間の、大きさと位置の時間の取り方。
+ * 指の進みがそのまま時間になるため、重み付けをすると指と画面の動きがずれる。
  */
-private fun screenShapeSpec(): TweenSpec<Float> = tween(
+private fun screenSeekSpec(): TweenSpec<Float> = tween(
     durationMillis = SCREEN_TRANSITION_DURATION_MS,
     easing = LinearEasing,
 )
 
-/** 位置の変化用。[screenShapeSpec]と同じ時間の取り方をIntOffsetへ当てる */
-private fun screenShiftSpec(): TweenSpec<IntOffset> = tween(
+/** [screenSeekSpec]と同じ時間の取り方を、位置(IntOffset)へ当てたもの */
+private fun screenSeekShiftSpec(): TweenSpec<IntOffset> = tween(
     durationMillis = SCREEN_TRANSITION_DURATION_MS,
     easing = LinearEasing,
 )
 
-// 濃さの入れ替えに使う曲線。Androidが画面の終了に使っているものと同じ
-private val ScreenFadeEasing: Easing = CubicBezierEasing(0.1f, 0.1f, 0f, 1f)
-
 /**
- * 濃さの入れ替えの時間の取り方。
- * 変化の終盤だけで入れ替えるため、[SCREEN_FADE_DELAY_MS]だけ待ってから動かす。
+ * 端を引っ張っている間の、濃さの時間の取り方。
+ * 引いている途中で消えたり濃くなったりしないよう、終盤まで待ってから入れ替える。
  */
-private fun screenFadeSpec(): TweenSpec<Float> = tween(
-    durationMillis = SCREEN_FADE_DURATION_MS,
-    delayMillis = SCREEN_FADE_DELAY_MS,
-    easing = ScreenFadeEasing,
+private fun screenSeekFadeSpec(): TweenSpec<Float> = tween(
+    durationMillis = PREDICTIVE_FADE_DURATION_MS,
+    delayMillis = PREDICTIVE_FADE_DELAY_MS,
+    easing = ScreenEasing,
 )
 
 /**
@@ -152,36 +159,47 @@ fun rememberScreenBackShiftPx(): Int {
     }
 }
 
-/** 下位の画面を開くとき、新しく現れる側。奥から手前へ来るように、少し小さいところから実寸へ広がる */
+/** 下位の画面を開くとき、新しく現れる側。奥から手前へ来るように、小さいところから実寸へ広がる */
 fun screenOpenEnter(): EnterTransition =
-    scaleIn(animationSpec = screenShapeSpec(), initialScale = SCREEN_EXIT_SCALE) +
-        fadeIn(animationSpec = screenFadeSpec(), initialAlpha = SCREEN_ENTER_DIM_ALPHA)
+    scaleIn(animationSpec = screenSpec(), initialScale = SCREEN_EXIT_SCALE) +
+        fadeIn(animationSpec = screenSpec(), initialAlpha = SCREEN_ENTER_DIM_ALPHA)
 
-/** 下位の画面を開くとき、下に隠れる側。手前へ抜けるように少し広がりながら消える */
+/** 下位の画面を開くとき、下に隠れる側。手前へ抜けるように広がりながら消える */
 fun screenOpenExit(): ExitTransition =
-    scaleOut(animationSpec = screenShapeSpec(), targetScale = SCREEN_ENTER_START_SCALE) +
-        fadeOut(animationSpec = screenFadeSpec())
+    scaleOut(animationSpec = screenSpec(), targetScale = SCREEN_ENTER_START_SCALE) +
+        fadeOut(animationSpec = screenSpec())
 
 /** 戻るとき、現れる側。手前にいた画面が実寸まで縮んでくるので、実寸より大きいところから始める */
 fun screenCloseEnter(): EnterTransition =
-    scaleIn(animationSpec = screenShapeSpec(), initialScale = SCREEN_ENTER_START_SCALE) +
-        fadeIn(animationSpec = screenFadeSpec(), initialAlpha = SCREEN_ENTER_DIM_ALPHA)
+    scaleIn(animationSpec = screenSpec(), initialScale = SCREEN_ENTER_START_SCALE) +
+        fadeIn(animationSpec = screenSpec(), initialAlpha = SCREEN_ENTER_DIM_ALPHA)
 
 /** 戻るとき、閉じる側。奥へ下がるように縮みながら消える */
 fun screenCloseExit(): ExitTransition =
-    scaleOut(animationSpec = screenShapeSpec(), targetScale = SCREEN_EXIT_SCALE) +
-        fadeOut(animationSpec = screenFadeSpec())
+    scaleOut(animationSpec = screenSpec(), targetScale = SCREEN_EXIT_SCALE) +
+        fadeOut(animationSpec = screenSpec())
 
 /**
- * 端の引っ張りで戻している間の、閉じる側。
+ * 端を引っ張って戻している間の、現れる側。
  *
- * [screenCloseExit]に、指と反対側への横ずらしを足したもの。
- * どちらの端から引いたかで向きが変わるため、[swipeEdge]を見て符号を決める。
+ * 大きさは指の進みへ直に追従させ、濃さは離すまで暗いままにする。
+ * [screenCloseEnter]と分けているのは、引いている途中で濃くなると純正と違って見えるため。
+ */
+fun screenPredictivePopEnter(): EnterTransition =
+    scaleIn(animationSpec = screenSeekSpec(), initialScale = SCREEN_ENTER_START_SCALE) +
+        fadeIn(animationSpec = screenSeekFadeSpec(), initialAlpha = SCREEN_ENTER_DIM_ALPHA)
+
+/**
+ * 端を引っ張って戻している間の、閉じる側。
+ *
+ * 縮みながら、指と反対側へずれる。どちらの端から引いたかで向きが変わるため、
+ * [swipeEdge]を見て符号を決める。濃さは離すまで変えない。
  */
 fun screenPredictivePopExit(shiftPx: Int, swipeEdge: Int): ExitTransition {
     val signedShift = if (swipeEdge == BackEventCompat.EDGE_RIGHT) -shiftPx else shiftPx
-    return screenCloseExit() +
-        slideOutHorizontally(animationSpec = screenShiftSpec()) { signedShift }
+    return scaleOut(animationSpec = screenSeekSpec(), targetScale = SCREEN_EXIT_SCALE) +
+        fadeOut(animationSpec = screenSeekFadeSpec()) +
+        slideOutHorizontally(animationSpec = screenSeekShiftSpec()) { signedShift }
 }
 
 /**

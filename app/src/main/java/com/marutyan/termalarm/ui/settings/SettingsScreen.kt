@@ -66,10 +66,13 @@ import com.marutyan.termalarm.ui.common.TOP_BAR_TOP_INSET
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.AppSettings
 import com.marutyan.termalarm.domain.AppTheme
+import com.marutyan.termalarm.ui.theme.BlackPrimary
 import com.marutyan.termalarm.ui.theme.BlackSurface
 import com.marutyan.termalarm.ui.theme.DynamicThemePreviewColors
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
+import com.marutyan.termalarm.ui.theme.LightPrimary
 import com.marutyan.termalarm.ui.theme.LightSurface
+import com.marutyan.termalarm.ui.theme.NavyPrimary
 import com.marutyan.termalarm.ui.theme.NavySurface
 import com.marutyan.termalarm.ui.theme.customColors
 
@@ -537,17 +540,20 @@ private fun SettingsThemeRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ThemeCircle(
-                color = NavySurface,
+                surfaceColor = NavySurface,
+                accentColor = NavyPrimary,
                 isSelected = selectedTheme == AppTheme.NAVY,
                 onClick = { onSelectTheme(AppTheme.NAVY) },
             )
             ThemeCircle(
-                color = BlackSurface,
+                surfaceColor = BlackSurface,
+                accentColor = BlackPrimary,
                 isSelected = selectedTheme == AppTheme.BLACK,
                 onClick = { onSelectTheme(AppTheme.BLACK) },
             )
             ThemeCircle(
-                color = LightSurface,
+                surfaceColor = LightSurface,
+                accentColor = LightPrimary,
                 isSelected = selectedTheme == AppTheme.LIGHT,
                 onClick = { onSelectTheme(AppTheme.LIGHT) },
             )
@@ -570,21 +576,34 @@ private val THEME_CIRCLE_SIZE = 28.dp
 /**
  * 単色配色テーマの円。押すとその配色へ切り替わる。
  * 選択中は主役色2dpの枠線で示す。
+ *
+ * 円は背景色と主役色で斜めに塗り分ける。
+ * 背景色だけだと、黒(#0A0A0A)と紺(#0B1530)が明るい画面ではほぼ同じに見えて区別できない。
  */
 @Composable
 private fun ThemeCircle(
-    color: Color,
+    surfaceColor: Color,
+    accentColor: Color,
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
     val outlineColor = MaterialTheme.colorScheme.outline
+    // 左上を背景色、右下を主役色にする。同じ位置で色を止めて境目をはっきり出す
+    val halfBrush = remember(surfaceColor, accentColor) {
+        Brush.linearGradient(
+            0f to surfaceColor,
+            0.5f to surfaceColor,
+            0.5f to accentColor,
+            1f to accentColor,
+        )
+    }
 
     Box(
         modifier = modifier
             .size(THEME_CIRCLE_SIZE)
-            .background(color, CircleShape)
+            .background(halfBrush, CircleShape)
             .border(
                 width = if (isSelected) 2.dp else 1.dp,
                 color = if (isSelected) primaryColor else outlineColor,
@@ -614,7 +633,7 @@ private fun DynamicThemeCircle(
 
     Box(
         modifier = modifier
-            .size(22.dp)
+            .size(THEME_CIRCLE_SIZE)
             .background(dynamicBrush, CircleShape)
             .border(
                 width = if (isSelected) 2.dp else 1.dp,

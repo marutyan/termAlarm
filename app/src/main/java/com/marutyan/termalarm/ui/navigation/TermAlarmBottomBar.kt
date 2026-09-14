@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,7 +37,7 @@ import com.marutyan.termalarm.ui.theme.customColors
 
 /**
  * 画面最下部に配置される横並びのナビゲーション帯。
- * 主要5画面（ターム、アラーム、記録、タイマー、ストップ）への切り替え機能を提供し、現在選択されている項目を主役色で強調表示する。
+ * 主要5画面（ターム、アラーム、記録、タイマー、ストップウォッチ）への切り替え機能を提供し、現在選択されている項目を主役色で強調表示する。
  */
 @Composable
 fun TermAlarmBottomBar(
@@ -112,6 +113,8 @@ private fun BottomBarItem(
         contentAlignment = Alignment.Center,
     ) {
         Column(
+            // 「ストップウォッチ」のような長い名前でも隣とくっつかないよう、左右を少し空ける
+            modifier = Modifier.padding(horizontal = 2.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -125,6 +128,8 @@ private fun BottomBarItem(
                 text = label,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
                 style = TextStyle(
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Normal,

@@ -34,9 +34,11 @@ class TimerViewModel(private val repository: TimerRepository, context: Context) 
     // PendingIntent発行やサービス起動にはApplication Contextで十分なため、生成時点で切り替えて保持する
     private val appContext: Context = context.applicationContext
 
-    // DBの変更が自動的に反映される一覧。残り時間そのものは画面側でtick(1秒ごと)ごとに再計算する
-    val timers: StateFlow<List<TimerState>> = repository.observeAll()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    // DBの変更が自動的に反映される一覧。残り時間そのものは画面側でtick(1秒ごと)ごとに再計算する。
+    // 読み込みが終わるまではnullを流す。先に空リストを流すと、画面が「0件」と判断して
+    // 新規作成の画面を一瞬出してしまうため、「まだ分からない」を空と区別できるようにしている
+    val timers: StateFlow<List<TimerState>?> = repository.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     // 指定した時分秒で新規タイマーを開始する。合計0秒は呼び出し側(画面)がボタンを無効化して防ぐ
     fun start(hours: Int, minutes: Int, seconds: Int) {

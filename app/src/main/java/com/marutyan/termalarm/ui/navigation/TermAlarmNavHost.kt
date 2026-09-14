@@ -60,6 +60,7 @@ import com.marutyan.termalarm.ui.theme.screenCloseEnter
 import com.marutyan.termalarm.ui.theme.screenCloseExit
 import com.marutyan.termalarm.ui.theme.screenOpenEnter
 import com.marutyan.termalarm.ui.theme.screenOpenExit
+import com.marutyan.termalarm.ui.theme.screenPredictivePopEnter
 import com.marutyan.termalarm.ui.theme.screenPredictivePopExit
 import com.marutyan.termalarm.ui.theme.tabFadeSpec
 import com.marutyan.termalarm.ui.timer.TimerScreen
@@ -184,7 +185,7 @@ fun TermAlarmNavHost(
                 // その後ろから、実寸より大きい戻り先の画面が縮みながら濃くなってくる
                 predictivePopEnterTransition = { _ ->
                     if (initialState.destination.route in SUB_SCREEN_ROUTES) {
-                        screenCloseEnter()
+                        screenPredictivePopEnter()
                     } else {
                         EnterTransition.None
                     }
