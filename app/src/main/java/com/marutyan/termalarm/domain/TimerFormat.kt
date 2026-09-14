@@ -89,3 +89,18 @@ private val AUTO_LABEL_PATTERN = Regex("""\d{1,2}:\d{2}(:\d{2})?""")
  */
 fun TimerState.userLabelOrNull(): String? =
     label.takeIf { it.isNotBlank() && !AUTO_LABEL_PATTERN.matches(it) }
+
+/**
+ * まだ動いているタイマーか。通知へ出すかどうかの判断に使う。
+ *
+ * 「停止」を押すと設定した長さへ戻って一覧に残るが、それはもう動いていない。
+ * 動いていないものを通知へ出すと、止めたはずのタイマーが「一時停止中」として
+ * 残り続け、通知そのものも消えない。
+ * 途中で一時停止しただけのものは、続きがあるので動いている扱いにする。
+ */
+fun isTimerActive(state: TimerState, nowElapsedRealtime: Long, nowWallClockMillis: Long): Boolean =
+    when (state.runState) {
+        TimerRunState.RUNNING, TimerRunState.FINISHED -> true
+        TimerRunState.PAUSED ->
+            remainingMillis(state, nowElapsedRealtime, nowWallClockMillis) < state.totalMillis
+    }

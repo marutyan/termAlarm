@@ -115,6 +115,31 @@ class TimerDisplaySyncTest {
     }
 
     @Test
+    fun `停止して設定した長さへ戻ったタイマーは通知へ出さない`() {
+        // 「停止」はリセットと同じで、設定した長さへ戻して一覧に残す。
+        // これを通知へ出していたため、止めたはずのものが「一時停止中」として残り、
+        // 通知そのものも消えなかった
+        val stopped = running(60_000L, remainingAtAnchor = 60_000L)
+            .copy(runState = TimerRunState.PAUSED)
+        assertFalse(isTimerActive(stopped, at(0), anchorWall))
+    }
+
+    @Test
+    fun `途中で一時停止しただけなら通知へ出す`() {
+        val paused = running(60_000L, remainingAtAnchor = 30_000L)
+            .copy(runState = TimerRunState.PAUSED)
+        assertTrue(isTimerActive(paused, at(0), anchorWall))
+    }
+
+    @Test
+    fun `動作中と鳴動中は通知へ出す`() {
+        assertTrue(isTimerActive(running(60_000L), at(0), anchorWall))
+        val finished = running(60_000L, remainingAtAnchor = 0L)
+            .copy(runState = TimerRunState.FINISHED)
+        assertTrue(isTimerActive(finished, at(5_000), anchorWall))
+    }
+
+    @Test
     fun `利用者が付けた名前はそのまま扱う`() {
         assertEquals("パスタ", running(60_000L).copy(label = "パスタ").userLabelOrNull())
         assertEquals("休憩 5:00", running(60_000L).copy(label = "休憩 5:00").userLabelOrNull())

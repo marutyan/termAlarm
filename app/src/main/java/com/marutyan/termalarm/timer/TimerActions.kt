@@ -118,19 +118,17 @@ object TimerActions {
      * 状態を変えた後に必ず行うこと。
      *
      * 数字が進むタイマー（動作中か、0を過ぎて数え上げているもの）が1件でもあれば、
-     * 秒ごとに通知を出し直すサービスを起こす。1件も無ければ止める。
-     * 一時停止中は数字が動かないので、サービスは要らない。
+     * 秒ごとに通知を出し直すサービスを起こす。
+     *
+     * 止めるのはサービス自身に任せる。通知を残すか消すかも同時に決める必要があり、
+     * 判断を2か所へ置くと、止めたはずの通知が残るような食い違いが起きる。
      */
     suspend fun afterChange(context: Context) {
         refreshNotification(context)
         val hasTicking = repository(context).observeAll().first().any {
             it.runState == TimerRunState.RUNNING || it.runState == TimerRunState.FINISHED
         }
-        if (hasTicking) {
-            TimerForegroundService.start(context)
-        } else {
-            TimerForegroundService.stop(context)
-        }
+        if (hasTicking) TimerForegroundService.start(context)
     }
 
     private fun repository(context: Context): TimerRepository =

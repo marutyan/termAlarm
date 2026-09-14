@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.sp
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
+import com.marutyan.termalarm.domain.isTimerActive
 import com.marutyan.termalarm.domain.isTimerOverdue
 import com.marutyan.termalarm.domain.timerDisplayText
 import com.marutyan.termalarm.domain.timerRemainingFraction
@@ -411,7 +412,7 @@ fun TimerCard(
             // リングからボタン行(上端417.1dp)までの間隔
             // 設定した長さのまま止まっているときは、延長もリセットも意味が無いので出さない。
             // 純正の時計アプリも、停止して元へ戻った状態ではボタンの行ごと消える
-            val isAtFullDuration = !isRunning && !isFinished && remaining >= timer.totalMillis
+            val isAtFullDuration = !isTimerActive(timer, nowElapsed, nowWall)
             if (!isAtFullDuration) {
             Spacer(modifier = Modifier.height(34.6.dp))
 

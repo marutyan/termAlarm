@@ -97,13 +97,15 @@ class TimerForegroundService : Service() {
         }
         if (!isTicking) {
             stopRingingAll()
-            // 通知そのものは残す。一時停止中のタイマーは一覧に残り、数字も動かない
+            // 通知をサービスから切り離してから出し直す。途中で一時停止しているタイマーがあれば
+            // そのまま残り、停止して設定した長さへ戻っただけなら消える
             stopForeground(STOP_FOREGROUND_DETACH)
+            TimerNotifications.refresh(this, timers)
             stopSelf()
             return null
         }
         syncRinging(timers)
-        promote(timers)
+        promote(TimerNotifications.activeTimers(timers))
         return timers
     }
 
@@ -188,11 +190,6 @@ class TimerForegroundService : Service() {
         /** 数字が進むタイマーがあるときに呼ぶ。既に動いていれば何も起きない */
         fun start(context: Context) {
             ContextCompat.startForegroundService(context, Intent(context, TimerForegroundService::class.java))
-        }
-
-        /** 数字が進むタイマーが無くなったときに呼ぶ */
-        fun stop(context: Context) {
-            context.stopService(Intent(context, TimerForegroundService::class.java))
         }
     }
 }

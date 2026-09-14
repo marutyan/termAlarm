@@ -15,6 +15,7 @@ import com.marutyan.termalarm.R
 import com.marutyan.termalarm.notification.NotificationChannels
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
+import com.marutyan.termalarm.domain.isTimerActive
 import com.marutyan.termalarm.domain.isTimerOverdue
 import com.marutyan.termalarm.domain.remainingMillis
 import com.marutyan.termalarm.domain.timerDisplayText
@@ -37,19 +38,33 @@ import com.marutyan.termalarm.ui.navigation.EXTRA_DEEPLINK_TAB
 object TimerNotifications {
 
     /**
-     * いまのタイマー一覧に合わせて通知を出し直す。1件も無ければ消す。
+     * いまのタイマー一覧に合わせて通知を出し直す。動いているものが1件も無ければ消す。
      * 動作中・一時停止中・鳴動中のどれでも同じ通知にまとめる（純正も1つにまとめている）。
      */
     fun refresh(context: Context, timers: List<TimerState>) {
         val manager = context.getSystemService(NotificationManager::class.java)
-        if (timers.isEmpty()) {
+        val active = activeTimers(timers)
+        if (active.isEmpty()) {
             manager.cancel(TIMER_FOREGROUND_NOTIFICATION_ID)
             return
         }
-        manager.notify(TIMER_FOREGROUND_NOTIFICATION_ID, build(context, timers))
+        manager.notify(TIMER_FOREGROUND_NOTIFICATION_ID, build(context, active))
     }
 
-    /** 通知そのものを作る。鳴動中のサービスが startForeground へ渡すためにも使う。 */
+    /**
+     * 通知へ出すタイマーだけを取り出す。
+     * 停止して設定した長さへ戻ったものは一覧には残るが、動いていないので通知へは出さない。
+     */
+    fun activeTimers(timers: List<TimerState>): List<TimerState> {
+        val nowElapsed = SystemClock.elapsedRealtime()
+        val nowWall = System.currentTimeMillis()
+        return timers.filter { isTimerActive(it, nowElapsed, nowWall) }
+    }
+
+    /**
+     * 通知そのものを作る。サービスがstartForegroundへ渡すためにも使う。
+     * 渡す一覧は[activeTimers]で絞ったものにすること。
+     */
     fun build(context: Context, timers: List<TimerState>): Notification {
         val nowElapsed = SystemClock.elapsedRealtime()
         val nowWall = System.currentTimeMillis()

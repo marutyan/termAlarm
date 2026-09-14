@@ -219,8 +219,8 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(7.dp))
 
-        // 2. 日付と曜日。15sp、薄い文字の色。左へ9dpずらす（等幅数字の余白のぶん）
-        // 「ターム」「次の鳴動」の小見出し(13sp)より一回りだけ大きくして、時刻の次に読ませる
+        // 2. 日付と曜日。17sp、薄い文字の色。左へ9dpずらす（等幅数字の余白のぶん）
+        // 「ターム」「次の鳴動」の小見出し(13sp)よりはっきり大きくして、時刻の次に読ませる
         val dayLabel = dayShortLabel(now.dayOfWeek)
         val dateString = remember(now, dayLabel) {
             now.format(DateTimeFormatter.ofPattern("MM.dd ", Locale.getDefault())) + dayLabel
@@ -229,7 +229,7 @@ fun HomeScreen(
             text = dateString,
             style = TextStyle(
                 fontFamily = IbmPlexMono,
-                fontSize = 15.sp,
+                fontSize = 17.sp,
                 color = MaterialTheme.customColors.subtleText,
             ),
             modifier = Modifier.padding(start = 9.dp),
