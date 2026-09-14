@@ -12,11 +12,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -42,21 +40,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -73,40 +62,20 @@ import com.marutyan.termalarm.ui.theme.timerAddFadeSpec
 import com.marutyan.termalarm.ui.theme.timerAddSlideSpec
 import kotlinx.coroutines.delay
 
-/**
- * 破線枠を描画するModifier拡張関数。
- * タイマー追加ボタンなどの破線輪郭線をデザイン通りに描画するために用いる。
- */
-private fun Modifier.dashedBorder(
-    width: Dp,
-    color: Color,
-    cornerRadius: Dp,
-    dashLength: Dp = 6.dp,
-    gapLength: Dp = 4.dp,
-): Modifier = drawBehind {
-    val stroke = Stroke(
-        width = width.toPx(),
-        pathEffect = PathEffect.dashPathEffect(
-            floatArrayOf(dashLength.toPx(), gapLength.toPx()),
-            0f,
-        ),
-    )
-    val halfWidth = width.toPx() / 2f
-    val r = cornerRadius.toPx()
-    drawRoundRect(
-        color = color,
-        topLeft = Offset(halfWidth, halfWidth),
-        size = Size(size.width - width.toPx(), size.height - width.toPx()),
-        cornerRadius = CornerRadius(r, r),
-        style = stroke,
-    )
-}
+/** 右下に追加ボタンを浮かせる際のサイズ(dp)。設計図 design/Timer.dc.html に合わせるために定義する。 */
+val TIMER_ADD_BUTTON_SIZE = 60.dp
+
+/** 右下に追加ボタンを浮かせる際の角丸(dp)。設計図の形状を再現するために定義する。 */
+val TIMER_ADD_BUTTON_CORNER_RADIUS = 20.dp
+
+/** 追加ボタン内部のプラスアイコンのサイズ(dp)。視認性を保つために定義する。 */
+val TIMER_ADD_ICON_SIZE = 26.dp
 
 /**
  * タイマータブの画面。design/Timer.dc.html を再現する。
- * 見出し「タイマー」(28sp、太さ300)、動作中タイマーのカード一覧(角丸16dp)、
- * 一覧下部の「タイマーを追加」破線ボタン(56dp)を配置する。
- * 追加ボタンを押したときだけテンキーによる追加画面(TimerAddScreen)を表示する。0件のときは追加ボタンだけを出す。
+ * 見出し「タイマー」(28sp、太さ300)、動作中タイマーの円形リングカード一覧(角丸20dp)、
+ * 画面右下に浮かせた「タイマーを追加」ボタン(60dp角、角丸20dp、主役の色)を配置する。
+ * 追加ボタンを押したときだけテンキーによる追加画面(TimerAddScreen)を表示する。0件のときは中央に案内を表示する。
  */
 @Composable
 fun TimerScreen(
@@ -124,7 +93,6 @@ fun TimerScreen(
         sortTimers(timers, nowElapsed, nowWall)
     }
 
-    // タイマーが1件も無いときは直接テンキー入力画面を表示する
     val showKeypad = showAddScreen
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
@@ -151,92 +119,98 @@ fun TimerScreen(
                     onClose = { showAddScreen = false },
                 )
             } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = statusBarTop + 12.dp, start = 18.dp, end = 18.dp, bottom = 26.dp),
-                ) {
-                    // 画面上部の帯: アプリ名と三点メニュー
-                    TermAlarmTopBar(
-                        onOpenSettings = onOpenSettings,
-                        onOpenPrivacyPolicy = onOpenPrivacyPolicy,
-                        onOpenAbout = onOpenAbout,
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // 見出し「タイマー」 (28sp、太さ300)
-                    Text(
-                        text = stringResource(R.string.tab_timer),
-                        style = TextStyle(
-                            fontFamily = FontFamily.Default,
-                            fontWeight = FontWeight.W300,
-                            fontSize = 28.sp,
-                            lineHeight = 36.sp,
-                            letterSpacing = (-0.01).em,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    LazyColumn(
-                        contentPadding = PaddingValues(bottom = 26.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxSize(),
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = statusBarTop + 74.dp, start = 20.dp, end = 20.dp, bottom = 24.dp),
                     ) {
-                        items(sortedTimers, key = { it.id }) { timer ->
-                            TimerCard(
-                                timer = timer,
-                                nowElapsed = nowElapsed,
-                                nowWall = nowWall,
-                                onPause = { viewModel.pause(timer.id) },
-                                onResume = { viewModel.resume(timer.id) },
-                                onReset = { viewModel.reset(timer.id) },
-                                onExtend = { viewModel.extendOneMinute(timer.id) },
-                                onDelete = { viewModel.delete(timer.id) },
-                                modifier = Modifier.animateItem(),
-                            )
-                        }
+                        // 画面上部の帯: アプリ名と三点メニュー
+                        TermAlarmTopBar(
+                            onOpenSettings = onOpenSettings,
+                            onOpenPrivacyPolicy = onOpenPrivacyPolicy,
+                            onOpenAbout = onOpenAbout,
+                        )
 
-                        // 「タイマーを追加」破線枠ボタン (高さ56dp、角丸14dp)
-                        item {
-                            val addInteraction = remember { MutableInteractionSource() }
-                            val addDesc = stringResource(R.string.timer_add)
-                            Surface(
-                                onClick = { showAddScreen = true },
-                                interactionSource = addInteraction,
-                                shape = RoundedCornerShape(14.dp),
-                                color = Color.Transparent,
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // 見出し「タイマー」 (28sp、太さ300)
+                        Text(
+                            text = stringResource(R.string.tab_timer),
+                            style = TextStyle(
+                                fontFamily = FontFamily.Default,
+                                fontWeight = FontWeight.W300,
+                                fontSize = 28.sp,
+                                lineHeight = 36.sp,
+                                letterSpacing = (-0.01).em,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        if (sortedTimers.isEmpty()) {
+                            // タイマーが1件も無いときの案内メッセージ
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .defaultMinSize(minHeight = 56.dp)
-                                    .dashedBorder(
-                                        width = 1.dp,
-                                        color = MaterialTheme.colorScheme.outline,
-                                        cornerRadius = 14.dp,
-                                    )
-                                    .semantics { contentDescription = addDesc }
-                                    .pressScaleEffect(addInteraction),
+                                    .weight(1f),
+                                contentAlignment = Alignment.Center,
                             ) {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(9.dp, Alignment.CenterHorizontally),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(vertical = 16.dp, horizontal = 16.dp),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Add,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.customColors.subtleText,
-                                        modifier = Modifier.size(16.dp),
-                                    )
-                                    Text(
-                                        text = addDesc,
-                                        style = TextStyle(fontSize = 14.sp),
-                                        color = MaterialTheme.customColors.subtleText,
+                                Text(
+                                    text = stringResource(R.string.timer_empty_hint),
+                                    style = TextStyle(fontSize = 15.sp),
+                                    color = MaterialTheme.customColors.subtleText,
+                                )
+                            }
+                        } else {
+                            LazyColumn(
+                                contentPadding = PaddingValues(bottom = 96.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
+                                items(sortedTimers, key = { it.id }) { timer ->
+                                    TimerCard(
+                                        timer = timer,
+                                        nowElapsed = nowElapsed,
+                                        nowWall = nowWall,
+                                        onPause = { viewModel.pause(timer.id) },
+                                        onResume = { viewModel.resume(timer.id) },
+                                        onReset = { viewModel.reset(timer.id) },
+                                        onExtend = { viewModel.extendOneMinute(timer.id) },
+                                        onDelete = { viewModel.delete(timer.id) },
+                                        modifier = Modifier.animateItem(),
                                     )
                                 }
                             }
+                        }
+                    }
+
+                    // 右下に浮かせた「タイマーを追加」ボタン (60dp角、角丸20dp、主役の色)
+                    val addInteraction = remember { MutableInteractionSource() }
+                    val addDesc = stringResource(R.string.timer_add)
+                    Surface(
+                        onClick = { showAddScreen = true },
+                        interactionSource = addInteraction,
+                        shape = RoundedCornerShape(TIMER_ADD_BUTTON_CORNER_RADIUS),
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 20.dp, bottom = 26.dp)
+                            .size(TIMER_ADD_BUTTON_SIZE)
+                            .semantics { contentDescription = addDesc }
+                            .pressScaleEffect(addInteraction),
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Add,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(TIMER_ADD_ICON_SIZE),
+                            )
                         }
                     }
                 }

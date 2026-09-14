@@ -121,14 +121,14 @@ fun AlarmsScreen(
     val alarms by viewModel.alarms.collectAsStateWithLifecycle()
     val timePattern = remember { clockTimePattern(false) }
 
-    // ステータスバーの下端に余白を空けるため、WindowInsets.statusBarsの高さを足す
+    // ステータスバーの下端から74dp空けるため、WindowInsets.statusBarsの高さを足す
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(top = statusBarTop + 12.dp, start = 18.dp, end = 18.dp, bottom = 26.dp),
+            .padding(top = statusBarTop + 74.dp, start = 20.dp, end = 20.dp, bottom = 24.dp),
     ) {
         // 画面上部の帯: アプリ名と三点メニュー
         TermAlarmTopBar(
@@ -137,7 +137,7 @@ fun AlarmsScreen(
             onOpenAbout = onOpenAbout,
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         // 1. 見出し「アラーム」。28sp、太さ300
         Text(

@@ -6,8 +6,8 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -88,7 +88,7 @@ const val EXTRA_DEEPLINK_END_TERM_ID = "com.marutyan.termalarm.ui.EXTRA_DEEPLINK
 
 /**
  * アプリ全体の画面遷移を管理するNavHost。
- * 左側に幅64dpの縦ナビ(TermAlarmNavRail)を配し、右側に主要画面または個別機能画面を横並びで表示する。
+ * 上部に主要画面または個別機能画面を表示し、主要5画面では下部に横並びの帯(TermAlarmBottomBar)を配して画面間を切り替える。
  */
 @Composable
 fun TermAlarmNavHost(
@@ -123,33 +123,27 @@ fun TermAlarmNavHost(
 
     val slidePx = with(LocalDensity.current) { SCREEN_SLIDE_DISTANCE_DP.dp.roundToPx() }
 
-    // 現在のバックスタックエントリからベースルートを判定し、縦ナビを表示すべき主要画面かを特定する
+    // 現在のバックスタックエントリからベースルートを判定し、下の帯を表示すべき主要画面かを特定する
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val baseRoute = currentRoute?.substringBefore("?")?.substringBefore("/")
     val currentNavItem = NavItem.entries.find { it.route == baseRoute }
 
-    // 6つの主要画面のいずれかを表示している場合に縦ナビを表示する
-    val showNavRail = currentNavItem != null
+    val mainNavItems = remember {
+        listOf(
+            NavItem.TERMS,
+            NavItem.STANDARD_ALARM,
+            NavItem.RECORD,
+            NavItem.TIMER,
+            NavItem.STOPWATCH,
+        )
+    }
 
-    Row(modifier = Modifier.fillMaxSize()) {
-        if (currentNavItem != null) {
-            TermAlarmNavRail(
-                selectedItem = currentNavItem,
-                onSelectItem = { item ->
-                    navController.navigate(item.route) {
-                        popUpTo(NavItem.TERMS.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-            )
-        }
-
+    Column(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxHeight(),
+                .fillMaxWidth(),
         ) {
             NavHost(
                 navController = navController,
@@ -396,6 +390,20 @@ fun TermAlarmNavHost(
                     PrivacyScreen(onBack = { navController.popBackStack() })
                 }
             }
+        }
+
+        // 5つの主要画面を表示している場合に下の帯を表示する
+        if (currentNavItem != null && currentNavItem in mainNavItems) {
+            TermAlarmBottomBar(
+                selectedItem = currentNavItem,
+                onSelectItem = { item ->
+                    navController.navigate(item.route) {
+                        popUpTo(NavItem.TERMS.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+            )
         }
     }
 }

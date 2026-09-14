@@ -62,6 +62,7 @@ fun RecordsScreen(
     onOpenAbout: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // ステータスバーの下端から74dp空けるため、WindowInsets.statusBarsの高さを足す
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
     Column(
@@ -69,10 +70,10 @@ fun RecordsScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(
-                top = statusBarTop + 12.dp,
-                start = 18.dp,
-                end = 18.dp,
-                bottom = 32.dp,
+                top = statusBarTop + 74.dp,
+                start = 20.dp,
+                end = 20.dp,
+                bottom = 24.dp,
             ),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {

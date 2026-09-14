@@ -7,7 +7,7 @@ import androidx.compose.ui.unit.dp
 import com.marutyan.termalarm.R
 
 /**
- * 縦ナビゲーションに配置される各画面項目の定義。
+ * ナビゲーションに配置される各画面項目の定義。
  * ルートパス、表示用アイコン、描画サイズ、アクセシビリティラベルを一元管理するために用いる。
  */
 enum class NavItem(
@@ -20,7 +20,7 @@ enum class NavItem(
     TERMS(
         route = "terms",
         icon = AlarmClockIcon,
-        iconSize = 24.dp,
+        iconSize = 23.dp,
         labelRes = R.string.nav_terms,
     ),
 
@@ -28,7 +28,7 @@ enum class NavItem(
     STANDARD_ALARM(
         route = "standard_alarm",
         icon = BellIcon,
-        iconSize = 24.dp,
+        iconSize = 23.dp,
         labelRes = R.string.nav_standard_alarm,
     ),
 
@@ -36,7 +36,7 @@ enum class NavItem(
     RECORD(
         route = "record",
         icon = ChartLineIcon,
-        iconSize = 24.dp,
+        iconSize = 23.dp,
         labelRes = R.string.nav_record,
     ),
 
@@ -44,7 +44,7 @@ enum class NavItem(
     TIMER(
         route = "timer",
         icon = HourglassIcon,
-        iconSize = 24.dp,
+        iconSize = 23.dp,
         labelRes = R.string.nav_timer,
     ),
 
@@ -52,7 +52,7 @@ enum class NavItem(
     STOPWATCH(
         route = "stopwatch",
         icon = StopwatchNavIcon,
-        iconSize = 24.dp,
+        iconSize = 23.dp,
         labelRes = R.string.nav_stopwatch,
     ),
 
@@ -60,7 +60,7 @@ enum class NavItem(
     SETTINGS(
         route = "settings",
         icon = SettingsGearIcon,
-        iconSize = 24.dp,
+        iconSize = 23.dp,
         labelRes = R.string.nav_settings,
     ),
 }

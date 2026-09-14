@@ -119,9 +119,9 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState())
             .padding(
                 top = statusBarTop + 74.dp,
-                start = 18.dp,
-                end = 18.dp,
-                bottom = 32.dp,
+                start = 20.dp,
+                end = 20.dp,
+                bottom = 24.dp,
             ),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {

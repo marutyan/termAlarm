@@ -42,12 +42,12 @@
     <!-- アラーム一覧画面。「今日はもう止める」の文言はringing_skip_todayを共用する -->
     <string name="menu_more">その他のメニュー</string>
 
-    <!-- 縦ナビゲーション項目 -->
+    <!-- ナビゲーション項目 -->
     <string name="nav_terms">ターム</string>
-    <string name="nav_standard_alarm">通常アラーム</string>
+    <string name="nav_standard_alarm">アラーム</string>
     <string name="nav_record">記録</string>
     <string name="nav_timer">タイマー</string>
-    <string name="nav_stopwatch">ストップウォッチ</string>
+    <string name="nav_stopwatch">ストップ</string>
     <string name="nav_settings">設定</string>
 
     <!-- ホーム画面 -->
@@ -182,12 +182,13 @@
     <string name="timer_backspace">削除</string>
     <string name="timer_cancel">取り消し</string>
     <!-- タイマー画面: 一覧が空のときの案内 -->
+    <string name="timer_empty_hint">タイマーを追加して開始できます</string>
     <!-- タイマー画面: 各カードの操作 -->
     <string name="timer_pause">一時停止</string>
     <string name="timer_resume">再開</string>
     <string name="timer_reset">リセット</string>
     <string name="timer_extend_one_minute">＋1分</string>
-    <string name="timer_extend_one_minute_button">＋1分</string>
+    <string name="timer_extend_one_minute_button">＋1:00</string>
     <string name="timer_delete">削除</string>
     <!-- タイマー画面: 完了(鳴動中)のタイマーを止めるボタン。停止するとそのタイマー自体を削除する -->
     <string name="timer_stop">停止</string>

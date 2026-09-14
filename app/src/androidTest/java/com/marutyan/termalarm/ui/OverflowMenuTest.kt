@@ -19,7 +19,7 @@ import com.marutyan.termalarm.ui.alarms.AlarmsViewModel
 import com.marutyan.termalarm.ui.home.HomeScreen
 import com.marutyan.termalarm.ui.home.HomeViewModel
 import com.marutyan.termalarm.ui.navigation.NavItem
-import com.marutyan.termalarm.ui.navigation.TermAlarmNavRail
+import com.marutyan.termalarm.ui.navigation.TermAlarmBottomBar
 import com.marutyan.termalarm.ui.records.RecordsScreen
 import com.marutyan.termalarm.ui.records.RecordsViewModel
 import com.marutyan.termalarm.ui.stopwatch.StopwatchScreen
@@ -91,11 +91,11 @@ class OverflowMenuTest {
         composeTestRule.onNodeWithText(string(R.string.menu_about)).assertExists()
     }
 
-    // 左の縦ナビに設定項目が存在せず、主要5機能のみが表示されることを検証する
+    // 下の帯に設定項目が存在せず、主要5機能のみが表示されることを検証する
     @Test
-    fun 左ナビに設定項目がなく5項目のみ表示される() {
+    fun 下の帯に設定項目がなく5項目のみ表示される() {
         composeTestRule.setContent {
-            TermAlarmNavRail(
+            TermAlarmBottomBar(
                 selectedItem = NavItem.TERMS,
                 onSelectItem = {},
             )
