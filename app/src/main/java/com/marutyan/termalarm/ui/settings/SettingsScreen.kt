@@ -62,6 +62,7 @@ import com.marutyan.termalarm.R
 import com.marutyan.termalarm.domain.AppSettings
 import com.marutyan.termalarm.domain.AppTheme
 import com.marutyan.termalarm.ui.theme.BlackSurface
+import com.marutyan.termalarm.ui.theme.DynamicThemePreviewColors
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
 import com.marutyan.termalarm.ui.theme.LightSurface
 import com.marutyan.termalarm.ui.theme.NavySurface
@@ -639,9 +640,7 @@ private fun DynamicThemeCircle(
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
     val outlineColor = MaterialTheme.colorScheme.outline
-    val dynamicBrush = Brush.linearGradient(
-        colors = listOf(Color(0xFFB79CE8), Color(0xFFE8A0B4), Color(0xFFF0C48A)),
-    )
+    val dynamicBrush = Brush.linearGradient(colors = DynamicThemePreviewColors)
 
     Box(
         modifier = modifier

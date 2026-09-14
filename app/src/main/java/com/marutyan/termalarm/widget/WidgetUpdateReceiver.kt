@@ -12,21 +12,22 @@ import kotlinx.coroutines.launch
 
 /**
  * ウィジェットの定期更新やシステムイベントを受信するブロードキャストレシーバー。
- * 1分ごとのタイマー、鳴動停止、端末再起動、時刻変更の契機でウィジェットを再描画し次回更新を予約するために用いる。
+ * 1分ごとのタイマー、鳴動停止、端末再起動、時刻変更、アプリ更新の契機で次回更新を予約しウィジェットを再描画するために用いる。
  */
 class WidgetUpdateReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent?) {
         val action = intent?.action ?: return
         val pendingResult = goAsync()
+        val appContext = context.applicationContext
 
         CoroutineScope(Dispatchers.Default).launch {
             try {
-                val glanceManager = GlanceAppWidgetManager(context)
+                val glanceManager = GlanceAppWidgetManager(appContext)
                 val glanceIds = glanceManager.getGlanceIds(TermAlarmWidget::class.java)
 
                 if (glanceIds.isEmpty()) {
-                    WidgetUpdateScheduler.cancelTick(context)
+                    WidgetUpdateScheduler.cancelTick(appContext)
                     return@launch
                 }
 
@@ -35,9 +36,10 @@ class WidgetUpdateReceiver : BroadcastReceiver() {
                     RingingService.ACTION_RINGING_FINISHED,
                     Intent.ACTION_BOOT_COMPLETED,
                     Intent.ACTION_TIME_CHANGED,
-                    Intent.ACTION_TIMEZONE_CHANGED -> {
-                        TermAlarmWidget().updateAll(context)
-                        WidgetUpdateScheduler.scheduleNextTick(context)
+                    Intent.ACTION_TIMEZONE_CHANGED,
+                    Intent.ACTION_MY_PACKAGE_REPLACED -> {
+                        WidgetUpdateScheduler.scheduleNextTick(appContext)
+                        runCatching { TermAlarmWidget().updateAll(appContext) }
                     }
                 }
             } finally {

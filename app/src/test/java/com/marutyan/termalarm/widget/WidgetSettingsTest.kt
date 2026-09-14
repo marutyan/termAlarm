@@ -1,7 +1,9 @@
 package com.marutyan.termalarm.widget
 
+import androidx.compose.ui.graphics.Color
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.preferencesOf
+import com.marutyan.termalarm.ui.theme.DynamicThemePreviewColors
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -50,4 +52,19 @@ class WidgetSettingsTest {
         val result = WidgetUpdateScheduler.nextMinuteEpochMillis(60_000L)
         assertEquals(120_000L, result)
     }
+
+    /**
+     * 端末の色（ダイナミックカラー）プレビュー用3色の固定値が仕様通り定義されているかを検証するテスト。
+     * 設定画面やウィジェットプレビューの表示色が意図せず変わるのを防ぐために用いる。
+     */
+    @Test
+    fun dynamicThemePreviewColors_containsExpectedThreeColors() {
+        val expected = listOf(
+            Color(0xFFB79CE8),
+            Color(0xFFE8A0B4),
+            Color(0xFFF0C48A),
+        )
+        assertEquals(expected, DynamicThemePreviewColors)
+    }
 }
+

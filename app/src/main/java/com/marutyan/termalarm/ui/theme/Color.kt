@@ -259,3 +259,14 @@ fun dynamicCustomColors(colorScheme: ColorScheme): CustomColors = CustomColors(
     scalePast = colorScheme.primaryContainer,
     scaleUpcoming = colorScheme.surfaceContainerHighest,
 )
+
+/**
+ * 端末の色（ダイナミックカラー）のプレビュー表示に用いる見本の3色。
+ * 設定画面やウィジェット配置設定で壁紙連動テーマのグラデーションを描画するために用いる。
+ */
+val DynamicThemePreviewColors: List<Color> = listOf(
+    Color(0xFFB79CE8),
+    Color(0xFFE8A0B4),
+    Color(0xFFF0C48A),
+)
+
