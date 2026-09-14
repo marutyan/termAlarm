@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 
 // 画面が入れ替わるときの時間(ミリ秒)。
@@ -64,6 +65,19 @@ const val CLOCK_MODE_TRANSITION_DURATION_MS = 300
 
 // アラーム一覧のスイッチ切り替え時に時刻等の色を遷移させる時間(ミリ秒)。急激な明度変化を和らげるために定義する。
 const val ALARM_COLOR_TRANSITION_DURATION_MS = 250
+
+// ホーム画面の「次の鳴動」セクションの開閉アニメーション時間(ミリ秒)。
+// 出現・消滅に合わせて下の一覧が滑らかに追従するよう定義する。
+const val HOME_NEXT_TRIGGER_TRANSITION_DURATION_MS = 300
+
+/**
+ * ホーム画面の「次の鳴動」セクションの垂直展開・縮小を補間するAnimationSpecを生成する。
+ * 上からの展開と上への縮小時に滑らかな加減速を適用するために用いる。
+ */
+fun homeNextTriggerExpandSpec(): TweenSpec<IntSize> = tween(
+    durationMillis = HOME_NEXT_TRIGGER_TRANSITION_DURATION_MS,
+    easing = FastOutSlowInEasing,
+)
 
 /**
  * タブ切り替え時のフェードイン・フェードアウトを補間するAnimationSpecを生成する。

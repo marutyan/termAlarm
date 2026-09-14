@@ -27,14 +27,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -71,7 +79,9 @@ import com.marutyan.termalarm.ui.permission.ExactAlarmPermissionBanner
 import com.marutyan.termalarm.ui.permission.NotificationPermissionBanner
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
 import com.marutyan.termalarm.ui.theme.customColors
+import com.marutyan.termalarm.ui.theme.homeNextTriggerExpandSpec
 import com.marutyan.termalarm.ui.theme.ibmPlexMonoFontFamily
+import com.marutyan.termalarm.ui.timer.isReduceMotionEnabled
 import java.time.DayOfWeek
 import java.time.Duration
 import java.time.LocalDateTime
@@ -219,139 +229,174 @@ fun HomeScreen(
         // 3. 34dp空ける
         Spacer(modifier = Modifier.height(34.dp))
 
-        // 進行中のタームがある場合のみ 4〜8 を表示する
-        if (activeSchedule != null && nextTriggerTime != null) {
-            val totalOccurrences = occurrenceCount(activeSchedule)
-            val remainingOccurrences = remainingOccurrenceCount(activeSchedule, nextTriggerTime) + 1
+    val context = LocalContext.current
+    val reduceMotion = remember(context) { isReduceMotionEnabled(context) }
 
-            // 4. 「次の鳴動」のラベル。11sp、字間0.15em、薄い文字の色
-            Text(
-                text = stringResource(R.string.home_next_trigger_label),
-                style = TextStyle(
-                    fontFamily = IbmPlexMono,
-                    fontSize = 11.sp,
-                    letterSpacing = 0.15.em,
-                    color = MaterialTheme.customColors.subtleText,
-                ),
+    val isNextTriggerVisible = activeSchedule != null && nextTriggerTime != null
+    var lastActiveSchedule by remember { mutableStateOf<AlarmSchedule?>(null) }
+    var lastNextTriggerTime by remember { mutableStateOf<ZonedDateTime?>(null) }
+    if (activeSchedule != null && nextTriggerTime != null) {
+        lastActiveSchedule = activeSchedule
+        lastNextTriggerTime = nextTriggerTime
+    }
+    val currentSchedule = activeSchedule ?: lastActiveSchedule
+    val currentNextTriggerTime = nextTriggerTime ?: lastNextTriggerTime
+
+    // 進行中のタームがある場合のみ 4〜8 を表示する。出入り時は上から開閉して下の一覧を滑らかに動かす
+    AnimatedVisibility(
+        visible = isNextTriggerVisible,
+        enter = if (reduceMotion) {
+            EnterTransition.None
+        } else {
+            expandVertically(
+                animationSpec = homeNextTriggerExpandSpec(),
+                expandFrom = Alignment.Top,
             )
+        },
+        exit = if (reduceMotion) {
+            ExitTransition.None
+        } else {
+            shrinkVertically(
+                animationSpec = homeNextTriggerExpandSpec(),
+                shrinkTowards = Alignment.Top,
+            )
+        },
+    ) {
+        if (currentSchedule != null && currentNextTriggerTime != null) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                val totalOccurrences = occurrenceCount(currentSchedule)
+                val remainingOccurrences = remainingOccurrenceCount(currentSchedule, currentNextTriggerTime) + 1
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 5. 次の鳴動時刻。44sp、太さ300、主役の色。右に「残り22回」を13sp
-            val nextTimeString = remember(nextTriggerTime, timePattern) {
-                nextTriggerTime.format(DateTimeFormatter.ofPattern(timePattern, Locale.getDefault()))
-            }
-
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
+                // 4. 「次の鳴動」のラベル。11sp、字間0.15em、薄い文字の色
                 Text(
-                    text = nextTimeString,
-                    modifier = Modifier.alignByBaseline(),
+                    text = stringResource(R.string.home_next_trigger_label),
                     style = TextStyle(
-                        fontFamily = ibmPlexMonoFontFamily(300),
-                        fontWeight = FontWeight.W300,
-                        fontSize = 44.sp,
-                        lineHeight = 44.sp,
-                        fontFeatureSettings = "tnum",
-                        letterSpacing = (-0.035).em,
-                        color = MaterialTheme.colorScheme.primary,
-                    ),
-                )
-                Text(
-                    text = stringResource(R.string.home_remaining_count, remainingOccurrences),
-                    modifier = Modifier.alignByBaseline(),
-                    style = TextStyle(
-                        fontSize = 13.sp,
+                        fontFamily = IbmPlexMono,
+                        fontSize = 11.sp,
+                        letterSpacing = 0.15.em,
                         color = MaterialTheme.customColors.subtleText,
                     ),
                 )
-            }
 
-            Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-            // 6. 範囲と間隔。13.5sp、副次の文字の色
-            val intervalSummary = remember(activeSchedule) {
-                if (activeSchedule.startIntervalMinutes == activeSchedule.endIntervalMinutes) {
-                    "${activeSchedule.startIntervalMinutes}分ごと"
-                } else {
-                    "${activeSchedule.startIntervalMinutes}〜${activeSchedule.endIntervalMinutes}分ごと"
+                // 5. 次の鳴動時刻。44sp、太さ300、主役の色。右に「残り22回」を13sp
+                val nextTimeString = remember(currentNextTriggerTime, timePattern) {
+                    currentNextTriggerTime.format(DateTimeFormatter.ofPattern(timePattern, Locale.getDefault()))
                 }
-            }
-            val rangeAndInterval = remember(activeSchedule, intervalSummary, timePattern) {
-                val startStr = formatClockMinutes(activeSchedule.startMinutes, timePattern)
-                val endStr = formatClockMinutes(activeSchedule.endMinutes, timePattern)
-                "$startStr \u2013 $endStr \u00b7 $intervalSummary"
-            }
-            Text(
-                text = rangeAndInterval,
-                style = TextStyle(
-                    fontFamily = IbmPlexMono,
-                    fontSize = 13.5.sp,
-                    fontFeatureSettings = "tnum",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-            )
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // 7. 鳴動の目盛。高さ12dp。鳴り終わった回・いま鳴っている回・これからの回で色を分ける
-            OccurrenceScale(
-                schedule = activeSchedule,
-                nextTriggerTime = nextTriggerTime,
-                totalOccurrences = totalOccurrences,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(12.dp),
-            )
-
-            // 8. 「このタームを終了」。セッションが開始済みで当日終了が可能な場合のみ表示する
-            if (canEndTodaySession(activeSchedule, now)) {
-                Spacer(modifier = Modifier.height(12.dp))
-
-                val subtleTextColor = MaterialTheme.customColors.subtleText
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(9.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = ripple(),
-                            onClick = { onEndTodayTerm(activeSchedule.id) },
-                        ),
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Canvas(modifier = Modifier.size(17.dp)) {
-                        val strokeWidth = 1.7.dp.toPx()
-                        val scale = size.width / 24f
-                        val center = Offset(size.width / 2f, size.height / 2f)
-                        drawCircle(
-                            color = subtleTextColor,
-                            radius = 9f * scale,
-                            center = center,
-                            style = Stroke(width = strokeWidth),
-                        )
-                        drawLine(
-                            color = subtleTextColor,
-                            start = Offset(8.5f * scale, 8.5f * scale),
-                            end = Offset(15.5f * scale, 15.5f * scale),
-                            strokeWidth = strokeWidth,
-                            cap = StrokeCap.Round,
-                        )
-                    }
                     Text(
-                        text = stringResource(R.string.home_end_term),
+                        text = nextTimeString,
+                        modifier = Modifier.alignByBaseline(),
                         style = TextStyle(
-                            fontSize = 13.5.sp,
-                            color = subtleTextColor,
+                            fontFamily = ibmPlexMonoFontFamily(300),
+                            fontWeight = FontWeight.W300,
+                            fontSize = 44.sp,
+                            lineHeight = 44.sp,
+                            fontFeatureSettings = "tnum",
+                            letterSpacing = (-0.035).em,
+                            color = MaterialTheme.colorScheme.primary,
+                        ),
+                    )
+                    Text(
+                        text = stringResource(R.string.home_remaining_count, remainingOccurrences),
+                        modifier = Modifier.alignByBaseline(),
+                        style = TextStyle(
+                            fontSize = 13.sp,
+                            color = MaterialTheme.customColors.subtleText,
                         ),
                     )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 6. 範囲と間隔。13.5sp、副次の文字の色
+                val intervalSummary = remember(currentSchedule) {
+                    if (currentSchedule.startIntervalMinutes == currentSchedule.endIntervalMinutes) {
+                        "${currentSchedule.startIntervalMinutes}分ごと"
+                    } else {
+                        "${currentSchedule.startIntervalMinutes}〜${currentSchedule.endIntervalMinutes}分ごと"
+                    }
+                }
+                val rangeAndInterval = remember(currentSchedule, intervalSummary, timePattern) {
+                    val startStr = formatClockMinutes(currentSchedule.startMinutes, timePattern)
+                    val endStr = formatClockMinutes(currentSchedule.endMinutes, timePattern)
+                    "$startStr \u2013 $endStr \u00b7 $intervalSummary"
+                }
+                Text(
+                    text = rangeAndInterval,
+                    style = TextStyle(
+                        fontFamily = IbmPlexMono,
+                        fontSize = 13.5.sp,
+                        fontFeatureSettings = "tnum",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // 7. 鳴動の目盛。高さ12dp。鳴り終わった回・いま鳴っている回・これからの回で色を分ける
+                OccurrenceScale(
+                    schedule = currentSchedule,
+                    nextTriggerTime = currentNextTriggerTime,
+                    totalOccurrences = totalOccurrences,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(12.dp),
+                )
+
+                // 8. 「このタームを終了」。セッションが開始済みで当日終了が可能な場合のみ表示する
+                if (canEndTodaySession(currentSchedule, now)) {
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val subtleTextColor = MaterialTheme.customColors.subtleText
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(9.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = ripple(),
+                                onClick = { onEndTodayTerm(currentSchedule.id) },
+                            ),
+                    ) {
+                        Canvas(modifier = Modifier.size(17.dp)) {
+                            val strokeWidth = 1.7.dp.toPx()
+                            val scale = size.width / 24f
+                            val center = Offset(size.width / 2f, size.height / 2f)
+                            drawCircle(
+                                color = subtleTextColor,
+                                radius = 9f * scale,
+                                center = center,
+                                style = Stroke(width = strokeWidth),
+                            )
+                            drawLine(
+                                color = subtleTextColor,
+                                start = Offset(8.5f * scale, 8.5f * scale),
+                                end = Offset(15.5f * scale, 15.5f * scale),
+                                strokeWidth = strokeWidth,
+                                cap = StrokeCap.Round,
+                            )
+                        }
+                        Text(
+                            text = stringResource(R.string.home_end_term),
+                            style = TextStyle(
+                                fontSize = 13.5.sp,
+                                color = subtleTextColor,
+                            ),
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+            }
         }
+    }
 
         // 9. 「ターム」の小見出し（タームが1件以上ある場合のみ表示）
         if (terms.isNotEmpty()) {
