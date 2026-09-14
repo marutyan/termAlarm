@@ -379,6 +379,7 @@ fun HomeScreen(
                     onToggleEnabled = { enabled ->
                         viewModel.toggleEnabled(schedule, enabled)
                     },
+                    onToggleDay = { day -> viewModel.toggleDay(schedule, day) },
                     onClick = { onEditTerm(schedule.id) },
                 )
             }
@@ -435,6 +436,18 @@ private fun OccurrenceScale(
     }
 }
 
+/** カードの曜日の丸の大きさ。設計図 design/Main.dc.html の26dpに合わせる。 */
+private val TERM_DAY_CIRCLE_SIZE = 26.dp
+
+/** 曜日を押せる範囲の横幅。丸は26dpのまま、指で狙える幅を確保するために広げる。 */
+private val TERM_DAY_TOUCH_WIDTH = 32.dp
+
+/** 曜日を押せる範囲の高さ。丸の外側にも余裕を持たせて押し外しを減らす。 */
+private val TERM_DAY_TOUCH_HEIGHT = 44.dp
+
+/** 曜日の押せる範囲どうしの間隔。見た目の丸の間が設計図の5dpに近くなる値とする。 */
+private val TERM_DAY_SPACING = 0.dp
+
 /**
  * 個別のターム情報を表示するカードComposable。
  * 左端の帯、時刻範囲、曜日の丸、要約、有効無効スイッチを包含する。
@@ -444,6 +457,7 @@ private fun TermCard(
     schedule: AlarmSchedule,
     timePattern: String,
     onToggleEnabled: (Boolean) -> Unit,
+    onToggleDay: (DayOfWeek) -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -486,7 +500,8 @@ private fun TermCard(
                 indication = ripple(),
                 onClick = onClick,
             )
-            .padding(top = 14.dp, bottom = 14.dp, end = 14.dp),
+            // 上下の余白は中身の側へ付ける。行に付けると左の帯もそのぶん短くなる
+            .padding(end = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // 左端の4dpの帯
@@ -506,7 +521,7 @@ private fun TermCard(
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(vertical = 2.dp),
+                .padding(vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
             // 時刻の範囲 19sp
@@ -514,16 +529,16 @@ private fun TermCard(
                 text = timeRangeText,
                 style = TextStyle(
                     fontFamily = IbmPlexMono,
-                    fontSize = 19.sp,
-                    lineHeight = 20.sp,
+                    fontSize = 21.sp,
+                    lineHeight = 22.sp,
                     fontFeatureSettings = "tnum",
                     color = timeColor,
                 ),
             )
 
-            // 曜日の丸 26dp
+            // 曜日の丸。カードの上でそのまま押して繰り返す曜日を切り替える
             Row(
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                horizontalArrangement = Arrangement.spacedBy(TERM_DAY_SPACING),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val daysOfWeek = remember {
@@ -551,29 +566,42 @@ private fun TermCard(
                         else -> subtleTextColor
                     }
 
+                    val dayDesc = stringResource(R.string.home_term_day_description, dayShortLabel(day))
                     Box(
                         modifier = Modifier
-                            .size(26.dp)
-                            .background(circleBg, CircleShape),
+                            .size(width = TERM_DAY_TOUCH_WIDTH, height = TERM_DAY_TOUCH_HEIGHT)
+                            .semantics { contentDescription = dayDesc }
+                            .clickable(
+                                interactionSource = remember(day) { MutableInteractionSource() },
+                                indication = ripple(bounded = false, radius = 22.dp),
+                                onClick = { onToggleDay(day) },
+                            ),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            text = dayShortLabel(day),
-                            style = TextStyle(
-                                fontSize = 11.5.sp,
-                                color = circleFg,
-                                fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
-                            ),
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(TERM_DAY_CIRCLE_SIZE)
+                                .background(circleBg, CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = dayShortLabel(day),
+                                style = TextStyle(
+                                    fontSize = 13.sp,
+                                    color = circleFg,
+                                    fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
+                                ),
+                            )
+                        }
                     }
                 }
             }
 
-            // 間隔と回数 12sp
+            // 間隔と回数
             Text(
                 text = summaryText,
                 style = TextStyle(
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = subtleTextColor,
                 ),
             )

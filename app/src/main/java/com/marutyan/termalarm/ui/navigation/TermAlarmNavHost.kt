@@ -157,7 +157,9 @@ fun TermAlarmNavHost(
             ) {
                 // 1. ターム（ホーム画面）
                 composable(NavItem.TERMS.route) {
-                    val viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory(repository))
+                    val homeContext = LocalContext.current.applicationContext
+                    val viewModel: HomeViewModel =
+                        viewModel(factory = HomeViewModelFactory(repository, homeContext))
                     val terms by viewModel.terms.collectAsStateWithLifecycle()
                     val activity = context as? Activity
                     val initialTermEndId = remember {

@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.marutyan.termalarm.R
+import com.marutyan.termalarm.domain.REMAINING_DISPLAY_ROUND_UP_MILLIS
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
 import com.marutyan.termalarm.domain.overdueMillis
@@ -109,7 +110,7 @@ val TIMER_ACTION_ICON_SIZE = 27.dp
  * 一時停止・再開の印を、円の中心からどれだけ下へずらすか。
  * 残り時間を中心に置いたうえで、その下へ重ならずに収まる位置とする。
  */
-val TIMER_ACTION_ICON_CENTER_OFFSET = 44.dp
+val TIMER_ACTION_ICON_CENTER_OFFSET = 54.dp
 
 /**
  * 端末の「アニメーションを減らす」または「アニメーションの無効化」が有効になっているかを判定する。
@@ -351,7 +352,7 @@ fun TimerCard(
                 )
                 val toggleAction = {
                     when {
-                        isFinished -> onDelete()
+                        isFinished -> onReset()
                         isRunning -> onPause()
                         else -> onResume()
                     }
@@ -381,14 +382,14 @@ fun TimerCard(
                         style = TextStyle(
                             fontFamily = IbmPlexMono,
                             fontWeight = FontWeight.W200,
-                            fontSize = 54.sp,
-                            lineHeight = 54.sp,
+                            fontSize = 60.sp,
+                            lineHeight = 60.sp,
                             letterSpacing = (-0.03).em,
                             fontFeatureSettings = "tnum",
                         ),
                         autoSize = TextAutoSize.StepBased(
                             minFontSize = 28.sp,
-                            maxFontSize = 54.sp,
+                            maxFontSize = 60.sp,
                             stepSize = 1.sp,
                         ),
                         maxLines = 1,
@@ -618,9 +619,8 @@ fun TimerResetIcon(
  * design/Timer.dc.html に合わせ、1時間未満は「1:47」のようにM:SS、1時間以上は「H:MM:SS」とする。
  */
 internal fun formatTimerRemaining(millis: Long): String {
-    // 切り上げる。切り捨てると、まだ1秒近く残っているのに0:00と出て、
-    // リングの残りや実際に鳴る時刻とずれて見える
-    val totalSeconds = ((millis + 999) / 1000).coerceAtLeast(0L)
+    // 切り上げる。理由と通知との揃え方は REMAINING_DISPLAY_ROUND_UP_MILLIS の説明にある
+    val totalSeconds = ((millis + REMAINING_DISPLAY_ROUND_UP_MILLIS) / 1000).coerceAtLeast(0L)
     val hours = totalSeconds / 3600
     val minutes = (totalSeconds % 3600) / 60
     val seconds = totalSeconds % 60

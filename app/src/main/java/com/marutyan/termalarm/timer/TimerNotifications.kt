@@ -16,6 +16,7 @@ import com.marutyan.termalarm.notification.NotificationChannels
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
 import com.marutyan.termalarm.domain.overdueMillis
+import com.marutyan.termalarm.domain.REMAINING_DISPLAY_ROUND_UP_MILLIS
 import com.marutyan.termalarm.domain.remainingMillis
 import com.marutyan.termalarm.ui.alarmlist.TermAlarmTab
 import com.marutyan.termalarm.ui.navigation.EXTRA_DEEPLINK_TAB
@@ -166,14 +167,16 @@ object TimerNotifications {
         val remaining = remainingMillis(timer, nowElapsed, nowWall)
         val value = if (timer.runState == TimerRunState.PAUSED) {
             Notification.Metric.TimeDifference.forPausedTimer(
-                Duration.ofMillis(remaining),
+                // システムは切り捨てて数えるので、画面の切り上げに合わせて繰り上げ幅を足す
+                Duration.ofMillis(remaining + REMAINING_DISPLAY_ROUND_UP_MILLIS),
                 Notification.Metric.TimeDifference.FORMAT_CHRONOMETER,
             )
         } else {
             // 残り時間が尽きる時刻。鳴動中はすでに過ぎているので、過去の時刻になる
             val zero = when (timer.runState) {
                 TimerRunState.FINISHED -> nowElapsed - overdueMillis(timer, nowElapsed, nowWall)
-                else -> nowElapsed + remaining
+                // 画面は切り上げ、システムは切り捨てなので、終わりの時刻を繰り上げ幅だけ後ろへずらす
+                else -> nowElapsed + remaining + REMAINING_DISPLAY_ROUND_UP_MILLIS
             }
             Notification.Metric.TimeDifference.forTimer(
                 zero,
@@ -198,7 +201,8 @@ object TimerNotifications {
         if (main.runState == TimerRunState.PAUSED) return
         val remaining = when (main.runState) {
             TimerRunState.FINISHED -> -overdueMillis(main, nowElapsed, nowWall)
-            else -> remainingMillis(main, nowElapsed, nowWall)
+            // 画面の切り上げに合わせる。数え上げ(FINISHED)は切り捨てのままでよい
+            else -> remainingMillis(main, nowElapsed, nowWall) + REMAINING_DISPLAY_ROUND_UP_MILLIS
         }
         builder.setWhen(nowWall + remaining)
             .setUsesChronometer(true)
