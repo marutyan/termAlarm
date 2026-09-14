@@ -36,6 +36,12 @@ val NavyOutlineVariant = Color(0xFF1E3163)
 /** NAVY配色の弱い枠線色。控えめな境界線を引くために用いる。 */
 val NavyOutline = Color(0xFF27407C)
 
+/** NAVY配色の一段持ち上げた面の色。カードの上に置くキーなど、地より浮いて見せたい部分に用いる。 */
+val NavySurfaceContainerHigh = Color(0xFF1A2C58)
+
+/** NAVY配色の最も持ち上げた面の色。さらに手前にある部分に用いる。 */
+val NavySurfaceContainerHighest = Color(0xFF203866)
+
 /** NAVY配色の罫線色。リストや区切り線の描画に用いる。 */
 val NavyDivider = Color(0xFF172A55)
 
@@ -79,6 +85,12 @@ val LightOutlineVariant = Color(0xFFE4E9F2)
 
 /** LIGHT配色の弱い枠線色。控えめな境界線を引くために用いる。 */
 val LightOutline = Color(0xFFCBD5E6)
+
+/** LIGHT配色の一段持ち上げた面の色。白いカードの上に置くキーなどを、地と区別して見せるために用いる。 */
+val LightSurfaceContainerHigh = Color(0xFFD9E0EE)
+
+/** LIGHT配色の最も持ち上げた面の色。さらに手前にある部分に用いる。 */
+val LightSurfaceContainerHighest = Color(0xFFCFD8E9)
 
 /** LIGHT配色の罫線色。明るい画面での区切り線描画に用いる。 */
 val LightDivider = Color(0xFFE4E9F2)
@@ -124,6 +136,12 @@ val BlackOutlineVariant = Color(0xFF1F1F1F)
 /** BLACK配色の弱い枠線色。控えめな境界線を引くために用いる。 */
 val BlackOutline = Color(0xFF262626)
 
+/** BLACK配色の一段持ち上げた面の色。カードの上に置くキーなど、地より浮いて見せたい部分に用いる。 */
+val BlackSurfaceContainerHigh = Color(0xFF181818)
+
+/** BLACK配色の最も持ち上げた面の色。さらに手前にある部分に用いる。 */
+val BlackSurfaceContainerHighest = Color(0xFF202020)
+
 /** BLACK配色の罫線色。暗色画面での区切り線描画に用いる。 */
 val BlackDivider = Color(0xFF161616)
 
@@ -165,6 +183,8 @@ val NavyColorScheme: ColorScheme = darkColorScheme(
     background = NavySurface,
     surface = NavySurface,
     surfaceContainer = NavySurfaceContainer,
+    surfaceContainerHigh = NavySurfaceContainerHigh,
+    surfaceContainerHighest = NavySurfaceContainerHighest,
     outline = NavyOutline,
     outlineVariant = NavyOutlineVariant,
     onSurface = NavyOnSurface,
@@ -188,6 +208,8 @@ val LightColorScheme: ColorScheme = lightColorScheme(
     background = LightSurface,
     surface = LightSurface,
     surfaceContainer = LightSurfaceContainer,
+    surfaceContainerHigh = LightSurfaceContainerHigh,
+    surfaceContainerHighest = LightSurfaceContainerHighest,
     outline = LightOutline,
     outlineVariant = LightOutlineVariant,
     onSurface = LightOnSurface,
@@ -211,6 +233,8 @@ val BlackColorScheme: ColorScheme = darkColorScheme(
     background = BlackSurface,
     surface = BlackSurface,
     surfaceContainer = BlackSurfaceContainer,
+    surfaceContainerHigh = BlackSurfaceContainerHigh,
+    surfaceContainerHighest = BlackSurfaceContainerHighest,
     outline = BlackOutline,
     outlineVariant = BlackOutlineVariant,
     onSurface = BlackOnSurface,
