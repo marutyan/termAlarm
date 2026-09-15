@@ -297,28 +297,28 @@
     <!-- ウィジェットの概要説明。ホーム画面のウィジェット一覧で機能と表示内容をユーザーに示すために必要 -->
     <string name="widget_description">時刻と次の鳴動を出す時計</string>
 
-    <!-- ウィジェット設定画面。ホーム画面への設置時に配色・アクセント・書体・太さ・背景をカスタマイズするために必要 -->
+    <!-- ウィジェット設定画面のタイトルと決定ボタン -->
     <string name="widget_config_title">ウィジェットの見た目</string>
-    <string name="widget_config_color">色</string>
-    <string name="widget_config_color_light">白</string>
-    <string name="widget_config_color_dark">黒</string>
-    <string name="widget_config_color_system">端末の色</string>
-    <string name="widget_config_accent">色を付ける場所</string>
-    <string name="widget_config_accent_time">時刻</string>
-    <string name="widget_config_accent_next">次の鳴動</string>
-    <string name="widget_config_accent_date">月日</string>
-    <string name="widget_config_font">書体</string>
-    <string name="widget_config_font_standard">標準</string>
-    <string name="widget_config_font_monospace">等幅</string>
-    <string name="widget_config_font_serif">明朝</string>
-    <string name="widget_config_weight">太さ</string>
-    <string name="widget_config_weight_normal">標準</string>
-    <string name="widget_config_weight_medium">やや太い</string>
-    <string name="widget_config_weight_bold">太字</string>
-    <string name="widget_config_background">背景</string>
-    <string name="widget_config_solid">無地</string>
-    <string name="widget_config_transparent">透明</string>
     <string name="widget_config_decide">決定</string>
+
+    <!-- ウィジェット設定画面: 背景スタイルの選択肢（透過 / 背景付き） -->
+    <string name="widget_config_background_transparent">透過</string>
+    <string name="widget_config_background_filled">背景付き</string>
+
+    <!-- ウィジェット設定画面: 時刻の色の選択肢（白 / 黒 / システム） -->
+    <string name="widget_config_time_color_white">白</string>
+    <string name="widget_config_time_color_black">黒</string>
+    <string name="widget_config_time_color_system">システム</string>
+
+    <!-- ウィジェット設定画面: 書体の選択肢（Sans Serif / Monospace / Serif） -->
+    <string name="widget_config_font_sans">Sans Serif</string>
+    <string name="widget_config_font_mono">Monospace</string>
+    <string name="widget_config_font_serif">Serif</string>
+
+    <!-- ウィジェット設定画面: 文字の太さの選択肢（Normal / Medium / Bold） -->
+    <string name="widget_config_weight_normal">Normal</string>
+    <string name="widget_config_weight_medium">Medium</string>
+    <string name="widget_config_weight_bold">Bold</string>
 
     <!-- ウィジェット一覧の見本に出す文字。実際の値ではなく、見た目を伝えるための例 -->
     <string name="widget_preview_date">9月16日(水)</string>

@@ -9,6 +9,11 @@
 
     previewLayoutで、一覧に出す見本に実際の見た目を使う。指定しないと白い枠に
     アプリのアイコンが出るだけになり、何が置かれるのか分からない。
+
+    widgetFeaturesにreconfigurableを指定することで、ホーム画面でウィジェットを長押しした際に
+    再設定ボタンを表示し、配置後でも見た目の設定画面（configureで指定したWidgetConfigActivity）を
+    再度開けるようにする。ウィジェットを削除して置き直す手間なく、配色や部位ごとの色、背景などの
+    設定を変更できるようにするために必要。
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="40dp"
@@ -25,4 +30,5 @@
     android:description="@string/widget_description"
     android:previewLayout="@layout/widget_preview"
     android:initialLayout="@layout/glance_default_loading_layout"
-    android:configure="com.marutyan.termalarm.widget.WidgetConfigActivity" />
+    android:configure="com.marutyan.termalarm.widget.WidgetConfigActivity"
+    android:widgetFeatures="reconfigurable" />
