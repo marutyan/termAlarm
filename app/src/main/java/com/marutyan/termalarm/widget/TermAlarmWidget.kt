@@ -1,27 +1,27 @@
 package com.marutyan.termalarm.widget
 
 import android.content.Context
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
+import android.content.Intent
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.Preferences
+import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
-import androidx.glance.currentState
-import androidx.glance.state.GlanceStateDefinition
-import androidx.glance.state.PreferencesGlanceStateDefinition
-import androidx.datastore.preferences.core.Preferences
 import androidx.glance.appwidget.SizeMode
-import android.content.Intent
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
+import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
@@ -29,13 +29,16 @@ import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.text.FontWeight
+import androidx.glance.layout.size
+import androidx.glance.layout.width
+import androidx.glance.state.GlanceStateDefinition
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.marutyan.termalarm.MainActivity
+import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.Repositories
 import com.marutyan.termalarm.domain.nextTrigger
-import com.marutyan.termalarm.domain.remainingOccurrenceCount
 import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -46,53 +49,18 @@ private data class WidgetContent(
     val date: String,
     val time: String,
     val nextTime: String?,
-    val remaining: Int,
 )
 
-// 日付と曜日の書式。「09.11 金」のように、月日を先に置いて曜日を後ろへ添える
-private val DATE_FORMAT = DateTimeFormatter.ofPattern("MM.dd E")
+// 日付と曜日の書式。「9月16日(水)」のように月日と曜日を並べる
+private val DATE_FORMAT = DateTimeFormatter.ofPattern("M月d日(E)")
 
 // 時刻の書式。秒はウィジェットでは出さない。1分ごとの更新で足りるため
 private val TIME_FORMAT = DateTimeFormatter.ofPattern("H:mm")
 
 /**
- * 置かれた大きさごとの見せ方。
- *
- * ホーム画面のます目は端末ごとに大きさが違うため、ます目の数ではなく実際の寸法で決める。
- * 小さいほど中身を削り、残ったものを大きく見せる。
- */
-private enum class WidgetLayoutSize {
-    /** 1行しか置けない大きさ。時刻だけを出す */
-    COMPACT,
-
-    /** 日付と時刻、次の鳴動まで置ける大きさ */
-    MEDIUM,
-
-    /** 余裕があり、文字を大きくできる大きさ */
-    LARGE,
-    ;
-
-    companion object {
-        // 高さで段を決める。横幅は文字の大きさだけに効かせる
-        fun of(width: Dp, height: Dp): WidgetLayoutSize = when {
-            height < 86.dp -> COMPACT
-            height < 150.dp || width < 150.dp -> MEDIUM
-            else -> LARGE
-        }
-    }
-}
-
-// 段ごとの時刻の文字の大きさ。小さいます目でも読めるところまで落とす
-private fun timeFontSize(size: WidgetLayoutSize, width: Dp): TextUnit = when (size) {
-    WidgetLayoutSize.COMPACT -> if (width < 110.dp) 24.sp else 30.sp
-    WidgetLayoutSize.MEDIUM -> if (width < 110.dp) 28.sp else 40.sp
-    WidgetLayoutSize.LARGE -> 56.sp
-}
-
-/**
  * ホーム画面へ置く時計ウィジェット。
- * 現在時刻を大きく出し、次に鳴る時刻と残り回数を小さく添える。
- * 置ける大きさは横1つ分×縦1つ分から5×3までで、中身は大きさに応じて並べ替える。
+ * 現在時刻を大きく出し、月日・曜日と次に鳴る時刻を添える。
+ * 画面の寸法に合わせて文字の大きさを滑らかに計算し、どんな大きさでも崩れないようにする。
  */
 class TermAlarmWidget : GlanceAppWidget() {
 
@@ -109,8 +77,16 @@ class TermAlarmWidget : GlanceAppWidget() {
             GlanceTheme {
                 val prefs = currentState<Preferences>()
                 val palette = widgetPalette(prefs)
+                val accentTarget = widgetAccentTarget(prefs)
                 val fontStyle = widgetFontStyle(prefs)
-                WidgetBody(content, palette, fontStyle)
+                val fontWeight = widgetFontWeight(prefs)
+                WidgetBody(
+                    content = content,
+                    palette = palette,
+                    accentTarget = accentTarget,
+                    fontStyle = fontStyle,
+                    fontWeight = fontWeight,
+                )
             }
         }
     }
@@ -128,21 +104,36 @@ class TermAlarmWidget : GlanceAppWidget() {
             date = LocalDateTime.now().format(DATE_FORMAT),
             time = LocalDateTime.now().format(TIME_FORMAT),
             nextTime = next?.second?.format(TIME_FORMAT),
-            remaining = next?.let { remainingOccurrenceCount(it.first, now) } ?: 0,
         )
     }
 }
 
-// ウィジェットの中身。押すとアプリが開く。置かれた大きさで中身を変える
-@androidx.compose.runtime.Composable
+// ウィジェットの中身。押すとアプリが開く。置かれた大きさに合わせて文字サイズを計算し、3つの要素を描画する
+@Composable
 private fun WidgetBody(
     content: WidgetContent,
     palette: WidgetPalette,
+    accentTarget: WidgetAccentTarget,
     fontStyle: WidgetFontStyle,
+    fontWeight: WidgetFontWeight,
 ) {
     val size = LocalSize.current
-    val layout = WidgetLayoutSize.of(size.width, size.height)
-    val padding = if (layout == WidgetLayoutSize.COMPACT) 8.dp else 14.dp
+    val padding = minOf(14f, size.height.value * 0.12f).dp
+    val h = (size.height.value - padding.value * 2f).dp
+    val w = (size.width.value - padding.value * 2f).dp
+
+    val showDate = h >= 62.dp
+    val showNextRing = h >= 92.dp && content.nextTime != null
+
+    val timeAvailableHeight = (h.value - (if (showDate) 20f else 0f) - (if (showNextRing) 22f else 0f)).dp
+    val timeFontSize = minOf(timeAvailableHeight.value * 0.80f, w.value / 2.9f).coerceIn(14f, 96f).sp
+    val secondaryFontSize = (timeFontSize.value * 0.30f).coerceIn(10f, 18f).sp
+    val iconSize = (secondaryFontSize.value * 1.05f).dp
+
+    val dateColor = palette.colorOf(WidgetAccentTarget.DATE, accentTarget)
+    val timeColor = palette.colorOf(WidgetAccentTarget.TIME, accentTarget)
+    val nextRingColor = palette.colorOf(WidgetAccentTarget.NEXT_RING, accentTarget)
+
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -153,54 +144,47 @@ private fun WidgetBody(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 狭いときは日付を省く。時刻が読めることを優先する
-        if (layout != WidgetLayoutSize.COMPACT) {
+        if (showDate) {
             Text(
                 text = content.date,
-                style = TextStyle(color = palette.subtleText, fontSize = 13.sp, fontFamily = fontStyle.family),
+                style = TextStyle(
+                    color = dateColor,
+                    fontSize = secondaryFontSize,
+                    fontFamily = fontStyle.family,
+                    fontWeight = fontWeight.glanceWeight,
+                ),
             )
             Spacer(GlanceModifier.height(2.dp))
         }
         Text(
             text = content.time,
             style = TextStyle(
-                color = palette.text,
-                fontSize = timeFontSize(layout, size.width),
-                fontWeight = FontWeight.Normal,
+                color = timeColor,
+                fontSize = timeFontSize,
                 fontFamily = fontStyle.family,
+                fontWeight = fontWeight.glanceWeight,
             ),
         )
-        if (content.nextTime != null && layout != WidgetLayoutSize.COMPACT) {
+        if (showNextRing && content.nextTime != null) {
             Spacer(GlanceModifier.height(4.dp))
-            // 横が狭いと残り回数まで入らない。次に鳴る時刻だけを残す
-            NextRingRow(
-                nextTime = content.nextTime,
-                remaining = if (size.width >= 150.dp) content.remaining else 0,
-                palette = palette,
-                fontStyle = fontStyle,
-            )
-        }
-    }
-}
-
-// 次に鳴る時刻と残り回数の行。次の鳴動が無いタームしか無い場合は呼ばれない
-@androidx.compose.runtime.Composable
-private fun NextRingRow(
-    nextTime: String,
-    remaining: Int,
-    palette: WidgetPalette,
-    fontStyle: WidgetFontStyle,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = nextTime,
-            style = TextStyle(color = palette.accent, fontSize = 14.sp, fontFamily = fontStyle.family),
-        )
-        if (remaining > 0) {
-            Text(
-                text = "  残り${remaining}回",
-                style = TextStyle(color = palette.subtleText, fontSize = 13.sp, fontFamily = fontStyle.family),
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Image(
+                    provider = ImageProvider(R.drawable.ic_widget_alarm),
+                    contentDescription = null,
+                    modifier = GlanceModifier.size(iconSize),
+                    colorFilter = ColorFilter.tint(nextRingColor),
+                )
+                Spacer(GlanceModifier.width(4.dp))
+                Text(
+                    text = content.nextTime,
+                    style = TextStyle(
+                        color = nextRingColor,
+                        fontSize = secondaryFontSize,
+                        fontFamily = fontStyle.family,
+                        fontWeight = fontWeight.glanceWeight,
+                    ),
+                )
+            }
         }
     }
 }
