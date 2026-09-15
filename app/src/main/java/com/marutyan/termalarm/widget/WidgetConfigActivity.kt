@@ -8,7 +8,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -42,30 +41,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.lifecycle.lifecycleScope
 import com.marutyan.termalarm.R
-import com.marutyan.termalarm.ui.theme.BlackOnSurface
-import com.marutyan.termalarm.ui.theme.BlackPrimary
-import com.marutyan.termalarm.ui.theme.BlackSubtleText
 import com.marutyan.termalarm.ui.theme.BlackSurface
 import com.marutyan.termalarm.ui.theme.DynamicThemePreviewColors
-import com.marutyan.termalarm.ui.theme.LightOnSurface
-import com.marutyan.termalarm.ui.theme.LightPrimary
-import com.marutyan.termalarm.ui.theme.LightSubtleText
-import com.marutyan.termalarm.ui.theme.LightSurface
-import com.marutyan.termalarm.ui.theme.NavyOnSurface
 import com.marutyan.termalarm.ui.theme.NavyOutline
 import com.marutyan.termalarm.ui.theme.NavyPrimary
 import com.marutyan.termalarm.ui.theme.NavySubtleText
@@ -76,7 +72,8 @@ import kotlinx.coroutines.launch
 
 /**
  * ウィジェットを置くときに出す設定画面。
- * 配色、色を付ける場所、書体、太さ、背景をここで選ばせ、選んだ内容をウィジェットごとに保存する。
+ * 背景、時刻の色、書体、太さをここで選ばせ、選んだ内容をウィジェットごとに保存する。
+ * ウィジェット追加時にシステムから起動され、初期設定を確定させる役割を持つ。
  */
 class WidgetConfigActivity : ComponentActivity() {
 
@@ -98,8 +95,8 @@ class WidgetConfigActivity : ComponentActivity() {
 
         setContent {
             ConfigScreen(
-                onDecide = { colorScheme, accentTarget, fontStyle, fontWeight, transparent ->
-                    save(appWidgetId, colorScheme, accentTarget, fontStyle, fontWeight, transparent)
+                onDecide = { backgroundStyle, timeColor, fontStyle, fontWeight ->
+                    save(appWidgetId, backgroundStyle, timeColor, fontStyle, fontWeight)
                 },
             )
         }
@@ -108,23 +105,22 @@ class WidgetConfigActivity : ComponentActivity() {
     /**
      * 選んだ内容をウィジェットごとの設定へ保存し、ウィジェットを描き直してから画面を閉じる。
      * 設定の変更を即座にウィジェットへ反映するために用いる。
+     * 設定値の永続化とウィジェット更新スケジュールの起動を行う役割を持つ。
      */
     private fun save(
         appWidgetId: Int,
-        colorScheme: WidgetColorScheme,
-        accentTarget: WidgetAccentTarget,
+        backgroundStyle: WidgetBackgroundStyle,
+        timeColor: WidgetTimeColor,
         fontStyle: WidgetFontStyle,
         fontWeight: WidgetFontWeight,
-        transparent: Boolean,
     ) {
         lifecycleScope.launch {
             val glanceId = GlanceAppWidgetManager(this@WidgetConfigActivity).getGlanceIdBy(appWidgetId)
             updateAppWidgetState(this@WidgetConfigActivity, glanceId) { prefs ->
-                prefs[WIDGET_COLOR_SCHEME_KEY] = colorScheme.name
-                prefs[WIDGET_ACCENT_TARGET_KEY] = accentTarget.name
+                prefs[WIDGET_BACKGROUND_STYLE_KEY] = backgroundStyle.name
+                prefs[WIDGET_TIME_COLOR_KEY] = timeColor.name
                 prefs[WIDGET_FONT_STYLE_KEY] = fontStyle.name
                 prefs[WIDGET_FONT_WEIGHT_KEY] = fontWeight.name
-                prefs[WIDGET_TRANSPARENT_KEY] = transparent
             }
             TermAlarmWidget().update(this@WidgetConfigActivity, glanceId)
             WidgetUpdateScheduler.scheduleNextTick(this@WidgetConfigActivity)
@@ -135,18 +131,23 @@ class WidgetConfigActivity : ComponentActivity() {
 }
 
 /**
- * 配色、色を付ける場所、書体、太さ、背景を選ぶ画面。
- * アプリ本体の設定とは別にウィジェット単体でカスタマイズできるようにするために用いる。
+ * 背景、時刻の色、書体、太さを選ぶ画面。
+ * アプリ本体の設定とは別にウィジェット単体で外観を調整できるようにするために用いる。
+ * 各項目の選択状態を保持し、見本と決定ボタンへの受け渡しを仲介する役割を持つ。
  */
 @Composable
 private fun ConfigScreen(
-    onDecide: (WidgetColorScheme, WidgetAccentTarget, WidgetFontStyle, WidgetFontWeight, Boolean) -> Unit,
+    onDecide: (
+        WidgetBackgroundStyle,
+        WidgetTimeColor,
+        WidgetFontStyle,
+        WidgetFontWeight,
+    ) -> Unit,
 ) {
-    var colorScheme by remember { mutableStateOf(WidgetColorScheme.DARK) }
-    var accentTarget by remember { mutableStateOf(WidgetAccentTarget.NEXT_RING) }
+    var backgroundStyle by remember { mutableStateOf(WidgetBackgroundStyle.FILLED) }
+    var timeColor by remember { mutableStateOf(WidgetTimeColor.WHITE) }
     var fontStyle by remember { mutableStateOf(WidgetFontStyle.STANDARD) }
     var fontWeight by remember { mutableStateOf(WidgetFontWeight.NORMAL) }
-    var transparent by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -158,76 +159,63 @@ private fun ConfigScreen(
     ) {
         // 画面が縦に狭いときでも決定ボタンへ届くよう、選ぶところだけを送れるようにする
         Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-            Text(
-                text = stringResource(R.string.widget_config_title),
-                color = NavyOnSurface,
-                fontSize = 24.sp,
-            )
-            Spacer(Modifier.height(20.dp))
-
             // 置いたときの見た目をそのまま見せる。選ぶたびに変わるので、決める前に確かめられる
             WidgetPreview(
-                colorScheme = colorScheme,
-                accentTarget = accentTarget,
+                backgroundStyle = backgroundStyle,
+                timeColor = timeColor,
                 fontStyle = fontStyle,
                 fontWeight = fontWeight,
-                transparent = transparent,
             )
-            Spacer(Modifier.height(24.dp))
 
-            SectionLabel(stringResource(R.string.widget_config_color))
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(32.dp))
+
+            // 背景のボタン2つ（透過 / 背景付き）
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                ChoiceButton(
+                    text = stringResource(R.string.widget_config_background_transparent),
+                    selected = backgroundStyle == WidgetBackgroundStyle.TRANSPARENT,
+                    modifier = Modifier.weight(1f),
+                ) { backgroundStyle = WidgetBackgroundStyle.TRANSPARENT }
+                ChoiceButton(
+                    text = stringResource(R.string.widget_config_background_filled),
+                    selected = backgroundStyle == WidgetBackgroundStyle.FILLED,
+                    modifier = Modifier.weight(1f),
+                ) { backgroundStyle = WidgetBackgroundStyle.FILLED }
+            }
+
+            Spacer(Modifier.height(32.dp))
+
+            // 時刻の色の丸3つ（白 / 黒 / システム）
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 ColorChoice(
-                    color = LightSurface,
-                    contentDescription = stringResource(R.string.widget_config_color_light),
-                    selected = colorScheme == WidgetColorScheme.LIGHT,
-                ) { colorScheme = WidgetColorScheme.LIGHT }
+                    color = Color.White,
+                    contentDescription = stringResource(R.string.widget_config_time_color_white),
+                    selected = timeColor == WidgetTimeColor.WHITE,
+                ) { timeColor = WidgetTimeColor.WHITE }
                 ColorChoice(
-                    color = BlackSurface,
-                    contentDescription = stringResource(R.string.widget_config_color_dark),
-                    selected = colorScheme == WidgetColorScheme.DARK,
-                ) { colorScheme = WidgetColorScheme.DARK }
+                    color = Color.Black,
+                    contentDescription = stringResource(R.string.widget_config_time_color_black),
+                    selected = timeColor == WidgetTimeColor.BLACK,
+                ) { timeColor = WidgetTimeColor.BLACK }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     DynamicColorChoice(
-                        contentDescription = stringResource(R.string.widget_config_color_system),
-                        selected = colorScheme == WidgetColorScheme.SYSTEM,
-                    ) { colorScheme = WidgetColorScheme.SYSTEM }
+                        contentDescription = stringResource(R.string.widget_config_time_color_system),
+                        selected = timeColor == WidgetTimeColor.SYSTEM,
+                    ) { timeColor = WidgetTimeColor.SYSTEM }
                 }
             }
 
-            Spacer(Modifier.height(28.dp))
-            SectionLabel(stringResource(R.string.widget_config_accent))
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                ChoiceButton(
-                    text = stringResource(R.string.widget_config_accent_time),
-                    selected = accentTarget == WidgetAccentTarget.TIME,
-                    modifier = Modifier.weight(1f),
-                ) { accentTarget = WidgetAccentTarget.TIME }
-                ChoiceButton(
-                    text = stringResource(R.string.widget_config_accent_next),
-                    selected = accentTarget == WidgetAccentTarget.NEXT_RING,
-                    modifier = Modifier.weight(1f),
-                ) { accentTarget = WidgetAccentTarget.NEXT_RING }
-                ChoiceButton(
-                    text = stringResource(R.string.widget_config_accent_date),
-                    selected = accentTarget == WidgetAccentTarget.DATE,
-                    modifier = Modifier.weight(1f),
-                ) { accentTarget = WidgetAccentTarget.DATE }
-            }
+            Spacer(Modifier.height(32.dp))
 
-            Spacer(Modifier.height(28.dp))
-            SectionLabel(stringResource(R.string.widget_config_font))
-            Spacer(Modifier.height(12.dp))
+            // 書体のボタン3つ（Sans Serif / Monospace / Serif）
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 ChoiceButton(
-                    text = stringResource(R.string.widget_config_font_standard),
+                    text = stringResource(R.string.widget_config_font_sans),
                     selected = fontStyle == WidgetFontStyle.STANDARD,
                     modifier = Modifier.weight(1f),
                 ) { fontStyle = WidgetFontStyle.STANDARD }
                 ChoiceButton(
-                    text = stringResource(R.string.widget_config_font_monospace),
+                    text = stringResource(R.string.widget_config_font_mono),
                     selected = fontStyle == WidgetFontStyle.MONOSPACE,
                     modifier = Modifier.weight(1f),
                 ) { fontStyle = WidgetFontStyle.MONOSPACE }
@@ -238,9 +226,9 @@ private fun ConfigScreen(
                 ) { fontStyle = WidgetFontStyle.SERIF }
             }
 
-            Spacer(Modifier.height(28.dp))
-            SectionLabel(stringResource(R.string.widget_config_weight))
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(32.dp))
+
+            // 太さのボタン3つ（Normal / Medium / Bold）
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 ChoiceButton(
                     text = stringResource(R.string.widget_config_weight_normal),
@@ -258,22 +246,6 @@ private fun ConfigScreen(
                     modifier = Modifier.weight(1f),
                 ) { fontWeight = WidgetFontWeight.BOLD }
             }
-
-            Spacer(Modifier.height(28.dp))
-            SectionLabel(stringResource(R.string.widget_config_background))
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                ChoiceButton(
-                    text = stringResource(R.string.widget_config_solid),
-                    selected = !transparent,
-                    modifier = Modifier.weight(1f),
-                ) { transparent = false }
-                ChoiceButton(
-                    text = stringResource(R.string.widget_config_transparent),
-                    selected = transparent,
-                    modifier = Modifier.weight(1f),
-                ) { transparent = true }
-            }
         }
 
         Spacer(Modifier.height(16.dp))
@@ -282,7 +254,14 @@ private fun ConfigScreen(
                 .fillMaxWidth()
                 .height(52.dp)
                 .background(NavyPrimary, RoundedCornerShape(26.dp))
-                .clickable { onDecide(colorScheme, accentTarget, fontStyle, fontWeight, transparent) },
+                .clickable {
+                    onDecide(
+                        backgroundStyle,
+                        timeColor,
+                        fontStyle,
+                        fontWeight,
+                    )
+                },
             contentAlignment = Alignment.Center,
         ) {
             Text(text = stringResource(R.string.widget_config_decide), color = NavySurface, fontSize = 15.sp)
@@ -293,33 +272,66 @@ private fun ConfigScreen(
 /**
  * 置いたときの見た目の見本。
  *
- * 選んだ配色・色を付ける場所・書体・太さ・背景をそのまま当てて、
+ * 選んだ背景の出し方・時刻の色・書体・太さをそのまま当てて、
  * ウィジェットと同じ3段（月日と曜日・時刻・時計アイコン＋次に鳴る時刻）を描く。
  * 設定画面上で仕上がりを事前に確認できるようにするために用いる。
- *
- * 透明を選んだときは壁紙の上に乗るため、薄い枠線で「背景が無い」ことを示す。
+ * 選択状態の即時フィードバックを提供する役割を持つ。
  */
 @Composable
 private fun WidgetPreview(
-    colorScheme: WidgetColorScheme,
-    accentTarget: WidgetAccentTarget,
+    backgroundStyle: WidgetBackgroundStyle,
+    timeColor: WidgetTimeColor,
     fontStyle: WidgetFontStyle,
     fontWeight: WidgetFontWeight,
-    transparent: Boolean,
 ) {
-    val colors = previewColors(colorScheme, transparent)
     val family = when (fontStyle) {
         WidgetFontStyle.STANDARD -> FontFamily.SansSerif
         WidgetFontStyle.MONOSPACE -> FontFamily.Monospace
         WidgetFontStyle.SERIF -> FontFamily.Serif
     }
-    val weight = when (fontWeight) {
-        WidgetFontWeight.MEDIUM -> FontWeight.Medium
+    val timeWeight = when (fontWeight) {
         WidgetFontWeight.NORMAL -> FontWeight.Normal
+        WidgetFontWeight.MEDIUM -> FontWeight.Medium
         WidgetFontWeight.BOLD -> FontWeight.Bold
     }
+    val secondaryWeight = when (secondaryFontWeight(fontWeight)) {
+        WidgetFontWeight.NORMAL -> FontWeight.Normal
+        WidgetFontWeight.MEDIUM -> FontWeight.Medium
+        WidgetFontWeight.BOLD -> FontWeight.Bold
+    }
+    val timeFontSize = 40.sp
+    val secondaryFontSize = secondaryFontSizeSp(timeFontSize.value).sp
+    val iconSize = nextRingIconSizeDp(secondaryFontSize.value).dp
+    // ウィジェット本体と同じずらし方・濃さの影にする
+    val shadowOffsetPx = with(LocalDensity.current) { WIDGET_SHADOW_OFFSET_DP.dp.toPx() }
+    val textShadow = Shadow(
+        color = Color.Black.copy(alpha = WIDGET_SHADOW_ALPHA),
+        offset = Offset(shadowOffsetPx, shadowOffsetPx),
+        blurRadius = 0f,
+    )
+    val context = LocalContext.current
+    val timeTextColor = when (timeColor) {
+        WidgetTimeColor.WHITE -> Color.White
+        WidgetTimeColor.BLACK -> Color.Black
+        WidgetTimeColor.SYSTEM -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (isSystemInDarkTheme()) dynamicDarkColorScheme(context).primary else dynamicLightColorScheme(context).primary
+            } else {
+                Color.White
+            }
+        }
+    }
+    val backgroundColor = when (backgroundStyle) {
+        WidgetBackgroundStyle.TRANSPARENT -> Color.Transparent
+        WidgetBackgroundStyle.FILLED -> BlackSurface
+    }
+    val borderColor = when (backgroundStyle) {
+        WidgetBackgroundStyle.TRANSPARENT -> NavyOutline
+        WidgetBackgroundStyle.FILLED -> Color.Transparent
+    }
+
     // 見本の後ろは、壁紙の代わりの控えめな斜めのぼかし。
-    // 背景に「透明」を選んだときに、後ろが透けることが伝わるようにする
+    // 背景が透過のときに後ろが透けることが伝わるようにする
     val wallpaperLike = Brush.linearGradient(
         colors = listOf(NavySurfaceContainerHigh, NavySurfaceContainer),
     )
@@ -335,10 +347,10 @@ private fun WidgetPreview(
             modifier = Modifier
                 .width(176.dp)
                 .height(118.dp)
-                .background(colors.background, RoundedCornerShape(22.dp))
+                .background(backgroundColor, RoundedCornerShape(22.dp))
                 .border(
                     width = 1.dp,
-                    color = if (transparent) NavyOutline else Color.Transparent,
+                    color = borderColor,
                     shape = RoundedCornerShape(22.dp),
                 )
                 .padding(horizontal = 16.dp, vertical = 14.dp),
@@ -347,35 +359,35 @@ private fun WidgetPreview(
         ) {
             Text(
                 text = stringResource(R.string.widget_preview_date),
-                color = colors.colorOf(WidgetAccentTarget.DATE, accentTarget),
-                fontSize = 13.sp,
+                color = Color.White,
+                fontSize = secondaryFontSize,
                 fontFamily = family,
-                fontWeight = weight,
+                fontWeight = secondaryWeight,
+                style = TextStyle(shadow = textShadow),
             )
-            Spacer(Modifier.height(2.dp))
             Text(
                 text = stringResource(R.string.widget_preview_time),
-                color = colors.colorOf(WidgetAccentTarget.TIME, accentTarget),
-                fontSize = 40.sp,
+                color = timeTextColor,
+                fontSize = timeFontSize,
                 fontFamily = family,
-                fontWeight = weight,
+                fontWeight = timeWeight,
+                style = TextStyle(shadow = textShadow),
             )
-            Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                val nextRingColor = colors.colorOf(WidgetAccentTarget.NEXT_RING, accentTarget)
                 Icon(
                     painter = painterResource(R.drawable.ic_widget_alarm),
                     contentDescription = null,
-                    tint = nextRingColor,
-                    modifier = Modifier.size(14.dp),
+                    tint = Color.White,
+                    modifier = Modifier.size(iconSize),
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
                     text = stringResource(R.string.widget_preview_next_time),
-                    color = nextRingColor,
-                    fontSize = 14.sp,
+                    color = Color.White,
+                    fontSize = secondaryFontSize,
                     fontFamily = family,
-                    fontWeight = weight,
+                    fontWeight = secondaryWeight,
+                    style = TextStyle(shadow = textShadow),
                 )
             }
         }
@@ -383,101 +395,36 @@ private fun WidgetPreview(
 }
 
 /**
- * 見本に使う4色。
- * ウィジェット本体のWidgetPaletteと同じ構成を保持し、設定画面の見本表示に用いる。
- */
-private data class PreviewColors(
-    val background: Color,
-    val text: Color,
-    val subtleText: Color,
-    val accent: Color,
-)
-
-/**
- * 見本の部位ごとの文字色を解決する。
- * 選ばれているアクセント色適用の部位にアクセント色を割り当て、それ以外は通常色または控えめな色を割り当てるために用いる。
- */
-private fun PreviewColors.colorOf(part: WidgetAccentTarget, accentTarget: WidgetAccentTarget): Color {
-    if (part == accentTarget) return accent
-    return when (part) {
-        WidgetAccentTarget.TIME -> text
-        WidgetAccentTarget.NEXT_RING,
-        WidgetAccentTarget.DATE -> subtleText
-    }
-}
-
-/**
- * 選んだ配色と背景透明度から見本用の色群を生成する。
- * ウィジェット本体のwidgetPaletteと同じ色の決め方を再現し、見本と実物の見た目を一致させるために用いる。
- */
-@Composable
-private fun previewColors(colorScheme: WidgetColorScheme, transparent: Boolean): PreviewColors {
-    val base = when {
-        colorScheme == WidgetColorScheme.SYSTEM && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            val scheme = if (isSystemInDarkTheme()) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            PreviewColors(
-                background = scheme.surface,
-                text = scheme.onSurface,
-                subtleText = scheme.onSurfaceVariant,
-                accent = scheme.primary,
-            )
-        }
-        colorScheme == WidgetColorScheme.LIGHT -> PreviewColors(
-            background = LightSurface,
-            text = LightOnSurface,
-            subtleText = LightSubtleText,
-            accent = LightPrimary,
-        )
-        else -> PreviewColors(
-            background = BlackSurface,
-            text = BlackOnSurface,
-            subtleText = BlackSubtleText,
-            accent = BlackPrimary,
-        )
-    }
-    if (!transparent) return base
-    // 壁紙の明るさは分からないため、透明のときは明るい配色でも白系の文字にする（本体と同じ）
-    return base.copy(
-        background = Color.Transparent,
-        text = BlackOnSurface,
-        subtleText = BlackOnSurface,
-    )
-}
-
-/**
- * まとまりの見出し。
- * 各設定項目の意味を簡潔に示すために用いる。
- */
-@Composable
-private fun SectionLabel(text: String) {
-    Text(text = text, color = NavySubtleText, fontSize = 13.sp)
-}
-
-/**
- * 配色の選択肢。
- * 固定色そのものを丸で見せ、選択中の項目に輪を付けるとともに、読み上げ用のラベルを提供するために用いる。
+ * 固定色の選択肢の丸。
+ * 白や黒などの単色を円形で表示し、選択状態の枠線と読み上げ用ラベルを提供するために用いる。
+ * 時刻の色の選択肢としてユーザーに視覚的な候補を提示する役割を持つ。
  */
 @Composable
 private fun ColorChoice(
     color: Color,
-    contentDescription: String,
+    contentDescription: String?,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    val semanticsModifier = if (contentDescription != null) {
+        Modifier.semantics { this.contentDescription = contentDescription }
+    } else {
+        Modifier
+    }
     Box(
         modifier = Modifier
             .size(48.dp)
             .background(color, CircleShape)
             .border(if (selected) 3.dp else 1.dp, if (selected) NavyPrimary else NavyOutline, CircleShape)
             .clickable(onClick = onClick)
-            .semantics { this.contentDescription = contentDescription },
+            .then(semanticsModifier),
     )
 }
 
 /**
- * 端末の色（ダイナミックカラー）を表す虹色グラデーションの選択肢。
- * Android 12以降でのみ表示し、壁紙連動の配色を選択できるようにするとともに、読み上げ用のラベルを提供するために用いる。
+ * 端末の色（ダイナミックカラー）を表す虹色グラデーションの選択肢の丸。
+ * Android 12以降でのみ表示し、壁紙連動の時刻色を選択できるようにするとともに、読み上げ用のラベルを提供するために用いる。
+ * システムカラーを時刻の色として選ばせるための選択肢を提供する役割を持つ。
  */
 @Composable
 private fun DynamicColorChoice(
@@ -497,8 +444,9 @@ private fun DynamicColorChoice(
 }
 
 /**
- * 色を付ける場所、書体、太さ、背景の選択肢ボタン。
+ * 背景、書体、太さの選択肢ボタン。
  * タップ可能な領域（高さ48dp）を確保し、選択状態を色と枠線で表すために用いる。
+ * 複数の選択肢から1つを選ばせるボタングループの各要素を表示する役割を持つ。
  */
 @Composable
 private fun ChoiceButton(text: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {

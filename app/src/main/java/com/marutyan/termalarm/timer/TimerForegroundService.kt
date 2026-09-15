@@ -180,8 +180,15 @@ class TimerForegroundService : Service() {
             return
         }
         if (preparedPlayer != null) return
-        preparedPlayer = SoundFadeIn.prepareRinging(this, settings.alarmSoundUri)
+        preparedPlayer = SoundFadeIn.prepareRinging(this, timerSoundUri())
     }
+
+    /**
+     * タイマーが鳴るときの音。
+     * 選んでいなければアラームと同じ音へ落とす。純正の時計アプリと同じく別々に選べるが、
+     * わざわざ選ばない利用者には、これまでどおりアラームの音で鳴らす。
+     */
+    private fun timerSoundUri(): String? = settings.timerSoundUri ?: settings.alarmSoundUri
 
     private fun releasePreparedPlayer() {
         preparedPlayer?.let { runCatching { it.release() } }
@@ -191,7 +198,7 @@ class TimerForegroundService : Service() {
     private fun startRingingFor(id: Long) {
         // 開いてあるものがあればそれを使う。無ければここで開く
         val player = preparedPlayer?.also { preparedPlayer = null }
-            ?: SoundFadeIn.prepareRinging(this, settings.alarmSoundUri)
+            ?: SoundFadeIn.prepareRinging(this, timerSoundUri())
             ?: return
         // タイマーは0になった瞬間に鳴らす。「徐々に音量を上げる」はアラームの設定で、
         // これをタイマーへ効かせると、鳴っているのに数秒間ほとんど聞こえず、

@@ -56,6 +56,14 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // room-testingは端末上のassetsからスキーマJSONを読む。
+    // 出力先のapp/schemas/を計測テストのassetsへ含めないと、移行テストがファイルを見つけられない
+    sourceSets {
+        getByName("androidTest") {
+            assets.srcDirs("$projectDir/schemas")
+        }
+    }
 }
 
 // RoomのスキーマJSON出力先。マイグレーション検証のためコミット対象としてapp/schemas/へ残す
@@ -64,6 +72,13 @@ ksp {
 }
 
 dependencies {
+    constraints {
+        // room-testingが使うkotlinx-serialization-jsonは1.8.1で、coreも同じ版を要求する。
+        // AndroidGradlePluginは計測テストの依存版をアプリ側へ揃えるため、
+        // lifecycle経由で入る1.7.3のままだと移行テストがAbstractMethodErrorで落ちる
+        implementation(libs.kotlinx.serialization.core)
+    }
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -87,8 +102,8 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    // room-testingはスキーマJSONの解析にkotlinx-serializationを使う
     androidTestImplementation(libs.androidx.room.testing)
-    // room-testingが読むスキーマJSONの解析に使う
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

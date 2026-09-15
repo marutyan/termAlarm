@@ -17,6 +17,9 @@ enum class AppTheme {
  */
 data class AppSettings(
     val alarmSoundUri: String? = null, // null ならシステム既定のアラーム音
+    // タイマーが鳴るときの音。nullならアラームと同じ音を使う。
+    // 純正の時計アプリもタイマーとアラームで別々に選べるため、分けて持つ
+    val timerSoundUri: String? = null,
     val vibration: Boolean = true, // 鳴動時に振動するか。既定 true
     val fadeInSeconds: Int = 5, // 1回の鳴動の中で音量を上げきるまでの秒数。既定5
     val silenceAfterMinutes: Int? = null, // 放置したとき自動で止まるまでの分数。null なら止めない。既定 null
