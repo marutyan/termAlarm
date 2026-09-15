@@ -4,10 +4,9 @@
          抜いたときに、前景の円と背景の境目が見えないよう同じ色にする -->
     <color name="ic_launcher_background">#FF2B59B9</color>
 
-    <!-- ウィジェット一覧に出す見本の色。既定の配色(黒)と同じ値にする。
+    <!-- ウィジェット一覧に出す見本の色。月日と次の鳴動は白で固定、時刻の既定値も白のため、
+         見本の文字とアイコンは白にする。背景は既定の黒にする。
          Composeの色定義はXMLから参照できないため、見本の分だけここへ写している -->
     <color name="widget_preview_surface">#FF0A0A0A</color>
     <color name="widget_preview_on_surface">#FFF2F2F2</color>
-    <color name="widget_preview_subtle_text">#FF9A9A9A</color>
-    <color name="widget_preview_accent">#FFA3E635</color>
 </resources>

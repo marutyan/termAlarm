@@ -3,6 +3,9 @@ package com.marutyan.termalarm.widget
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
@@ -23,11 +26,11 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.currentState
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
@@ -35,6 +38,7 @@ import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 import com.marutyan.termalarm.MainActivity
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.data.Repositories
@@ -76,16 +80,11 @@ class TermAlarmWidget : GlanceAppWidget() {
             // GlanceThemeの既定が端末のダイナミックカラーなので、色を渡さずそのまま使う
             GlanceTheme {
                 val prefs = currentState<Preferences>()
-                val palette = widgetPalette(prefs)
-                val accentTarget = widgetAccentTarget(prefs)
-                val fontStyle = widgetFontStyle(prefs)
-                val fontWeight = widgetFontWeight(prefs)
                 WidgetBody(
                     content = content,
-                    palette = palette,
-                    accentTarget = accentTarget,
-                    fontStyle = fontStyle,
-                    fontWeight = fontWeight,
+                    prefs = prefs,
+                    fontStyle = widgetFontStyle(prefs),
+                    fontWeight = widgetFontWeight(prefs),
                 )
             }
         }
@@ -108,83 +107,282 @@ class TermAlarmWidget : GlanceAppWidget() {
     }
 }
 
-// ウィジェットの中身。押すとアプリが開く。置かれた大きさに合わせて文字サイズを計算し、3つの要素を描画する
+/**
+ * 月日や次の鳴動時刻に適用する文字の太さを決める関数。
+ * 選ばれた太さが標準のときだけ見やすさのためにMEDIUMへ上げ、MEDIUMとBOLDはそのまま使う。
+ * ウィジェット本体と設定画面の見本で同じ決め方を使うため、ここ1か所へまとめている。
+ */
+fun secondaryFontWeight(weight: WidgetFontWeight): WidgetFontWeight {
+    return when (weight) {
+        WidgetFontWeight.NORMAL -> WidgetFontWeight.MEDIUM
+        WidgetFontWeight.MEDIUM -> WidgetFontWeight.MEDIUM
+        WidgetFontWeight.BOLD -> WidgetFontWeight.BOLD
+    }
+}
+
+/**
+ * 添える文字（月日・次の鳴動）の大きさをspの数値で求める関数。
+ * 時刻に対する割合と下限・上限を、ウィジェット本体と設定画面の見本で同じにするために必要となる。
+ */
+fun secondaryFontSizeSp(timeFontSizeSp: Float): Float =
+    (timeFontSizeSp * SECONDARY_FONT_RATIO).coerceIn(11f, 26f)
+
+/**
+ * 時計アイコンの大きさをdpの数値で求める関数。
+ * 添える文字よりほんの少し大きくする決め方を、本体と見本で同じにするために必要となる。
+ */
+fun nextRingIconSizeDp(secondaryFontSizeSp: Float): Float = secondaryFontSizeSp * ICON_TO_SECONDARY_RATIO
+
+// 時計アイコンは添える文字より少しだけ大きくすると、文字と並べたときに釣り合って見える
+private const val ICON_TO_SECONDARY_RATIO = 1.05f
+
+// 1行が占める高さは、その文字の大きさのおよそ1.45倍になる。入る大きさを解くときに使う。
+// 日本語の書体は英数字より行が高く、1.2倍で見積もっていたときは合計が入りきらなかった
+private const val LINE_HEIGHT_RATIO = 1.45f
+
+// 月日と次の鳴動の大きさ。時刻に対するこの割合にする
+private const val SECONDARY_FONT_RATIO = 0.38f
+
+// 時刻「12:34」の横幅は、その文字の大きさのおよそ2.75倍になる
+private const val TIME_WIDTH_RATIO = 2.75f
+
+// 月日「9月16日(水)」の横幅比（全角3文字＋半角5文字ぶん）。文字の大きさのおよそ5.2倍を使う。
+// 横並びのときに右の列へ月日が収まる上限サイズを解くために必要となる。
+private const val DATE_WIDTH_RATIO = 5.2f
+
+// 横並びのときに左の時刻と右の列（月日・次の鳴動）の間にあける空白(dp)。
+// 左右がくっついて読みにくくなるのを防ぎ、右の列で使える幅の計算と行間の余白描画で同じ間隔を共有する役割を持つ。
+private const val HORIZONTAL_SPACING_DP = 10f
+private val HORIZONTAL_SPACING = HORIZONTAL_SPACING_DP.dp
+
+// 文字の影をずらす量(dp)と濃さ。純正の時計アプリがごく薄い影を落としているのに合わせる。
+// 設定画面の見本も同じ影にするため、外へ公開している
+const val WIDGET_SHADOW_OFFSET_DP = 1f
+const val WIDGET_SHADOW_ALPHA = 0.55f
+
+private val SHADOW_OFFSET = WIDGET_SHADOW_OFFSET_DP.dp
+
+// 影の色。本体の文字と同じ形を黒で敷くために使う
+private val SHADOW_COLOR = ColorProvider(Color.Black.copy(alpha = WIDGET_SHADOW_ALPHA))
+
+/**
+ * ウィジェット1枚ぶんの描画に必要な、大きさと色をまとめた型。
+ * 影の層と本体の層で色だけを差し替えて同じ中身を2回描くため、
+ * 引数の数を増やさずに両方の層へ同じ寸法を渡す役割を持つ。
+ */
+private data class WidgetLayerStyle(
+    val timeFontSize: TextUnit,
+    val secondaryFontSize: TextUnit,
+    val iconSize: Dp,
+    val fontStyle: WidgetFontStyle,
+    val timeWeight: WidgetFontWeight,
+    val secondaryWeight: WidgetFontWeight,
+    val timeColor: ColorProvider,
+    val secondaryColor: ColorProvider,
+)
+
+/**
+ * ウィジェットの中身を描画するComposable。
+ * 押すとアプリ本体が開く。置かれた領域の幅と高さに応じて横並び・縦並びを切り替え、
+ * 余白と文字の大きさを滑らかに調整する。
+ */
 @Composable
 private fun WidgetBody(
     content: WidgetContent,
-    palette: WidgetPalette,
-    accentTarget: WidgetAccentTarget,
+    prefs: Preferences,
     fontStyle: WidgetFontStyle,
     fontWeight: WidgetFontWeight,
 ) {
+    // アプリ起動用Intentの生成に用いるContextを取得する
+    val context = LocalContext.current
+
+    // ウィジェットが配置された領域の寸法を取得し、外枠余白と有効な描画領域を計算する
     val size = LocalSize.current
-    val padding = minOf(14f, size.height.value * 0.12f).dp
-    val h = (size.height.value - padding.value * 2f).dp
-    val w = (size.width.value - padding.value * 2f).dp
+    val padding = minOf(10f, size.height.value * 0.08f).dp
+    val h = (size.height.value - padding.value * 2f - WIDGET_SHADOW_OFFSET_DP)
+    val w = (size.width.value - padding.value * 2f - WIDGET_SHADOW_OFFSET_DP)
+    // 幅が高さに比べて2倍以上の横長形状であれば横並びにする
+    val isHorizontal = (w / h) >= 2.0f
 
-    val showDate = h >= 62.dp
-    val showNextRing = h >= 92.dp && content.nextTime != null
-
-    val timeAvailableHeight = (h.value - (if (showDate) 20f else 0f) - (if (showNextRing) 22f else 0f)).dp
-    val timeFontSize = minOf(timeAvailableHeight.value * 0.80f, w.value / 2.9f).coerceIn(14f, 96f).sp
-    val secondaryFontSize = (timeFontSize.value * 0.30f).coerceIn(10f, 18f).sp
-    val iconSize = (secondaryFontSize.value * 1.05f).dp
-
-    val dateColor = palette.colorOf(WidgetAccentTarget.DATE, accentTarget)
-    val timeColor = palette.colorOf(WidgetAccentTarget.TIME, accentTarget)
-    val nextRingColor = palette.colorOf(WidgetAccentTarget.NEXT_RING, accentTarget)
-
-    Column(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(palette.background)
-            .cornerRadius(22.dp)
-            .padding(horizontal = padding, vertical = padding)
-            .clickable(actionStartActivity(Intent(LocalContext.current, MainActivity::class.java))),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (showDate) {
-            Text(
-                text = content.date,
-                style = TextStyle(
-                    color = dateColor,
-                    fontSize = secondaryFontSize,
-                    fontFamily = fontStyle.family,
-                    fontWeight = fontWeight.glanceWeight,
-                ),
-            )
-            Spacer(GlanceModifier.height(2.dp))
+    val showDate: Boolean
+    val showNextRing: Boolean
+    val timeFontSize = if (isHorizontal) {
+        // 横に並べる場合：左に時刻、右に月日と次の鳴動を縦へ積む
+        val leftAvailableWidth = w * 0.58f
+        val rightAvailableWidth = w - leftAvailableWidth - HORIZONTAL_SPACING_DP
+        // 右側は、h >= 40f なら月日と次の鳴動の両方、そうでなければ次の鳴動だけを出す。
+        // 次に鳴る時刻が無い場合は月日だけを出す。
+        showDate = content.nextTime == null || h >= 40f
+        showNextRing = content.nextTime != null
+        val heightLimit = h / LINE_HEIGHT_RATIO
+        val leftWidthLimit = leftAvailableWidth / TIME_WIDTH_RATIO
+        val maxTimeFontSize = if (showDate) {
+            val rightWidthLimit = rightAvailableWidth / (DATE_WIDTH_RATIO * SECONDARY_FONT_RATIO)
+            minOf(heightLimit, leftWidthLimit, rightWidthLimit)
+        } else {
+            minOf(heightLimit, leftWidthLimit)
         }
-        Text(
-            text = content.time,
-            style = TextStyle(
-                color = timeColor,
-                fontSize = timeFontSize,
-                fontFamily = fontStyle.family,
-                fontWeight = fontWeight.glanceWeight,
-            ),
+        maxTimeFontSize.coerceIn(12f, 160f).sp
+    } else {
+        // 縦に並べる場合（既定）：上から月日、時刻、次の鳴動の順で並べる
+        showDate = h >= 56f
+        showNextRing = h >= 84f && content.nextTime != null
+        // 3つの行がちょうど収まる時刻の大きさを解いて求める。
+        // 月日と次の鳴動は時刻のSECONDARY_FONT_RATIO倍なので、必要な高さは
+        // 時刻の大きさ × 行の高さの比 × (1 + 添える行のぶん) になる
+        val rows = 1f +
+            (if (showDate) SECONDARY_FONT_RATIO else 0f) +
+            (if (showNextRing) SECONDARY_FONT_RATIO else 0f)
+        minOf(h / (LINE_HEIGHT_RATIO * rows), w / TIME_WIDTH_RATIO).coerceIn(12f, 160f).sp
+    }
+
+    // 時刻の大きさに合わせて添える文字（月日・次の鳴動）と時計アイコンの大きさを決定する
+    val secondaryFontSize = secondaryFontSizeSp(timeFontSize.value).sp
+    val iconSize = nextRingIconSizeDp(secondaryFontSize.value).dp
+    val secondaryWeight = secondaryFontWeight(fontWeight)
+
+    // 第4版の共通契約に基づき、背景色・時刻の色・月日と次の鳴動の色を取得する
+    val backgroundColor = widgetBackgroundProvider(widgetBackgroundStyle(prefs))
+    val selectedTimeColor = widgetTimeColor(prefs)
+    val timeColor = widgetTimeColorProvider(selectedTimeColor)
+    val secondaryColor = widgetSecondaryColorProvider()
+
+    val baseStyle = WidgetLayerStyle(
+        timeFontSize = timeFontSize,
+        secondaryFontSize = secondaryFontSize,
+        iconSize = iconSize,
+        fontStyle = fontStyle,
+        timeWeight = fontWeight,
+        secondaryWeight = secondaryWeight,
+        timeColor = timeColor,
+        secondaryColor = secondaryColor,
+    )
+    // 影の層は、本体と同じ中身を黒一色で描く。ただし時刻が黒のときは同じ色で重なり滲むため透明にする
+    val shadowTimeColor = if (selectedTimeColor == WidgetTimeColor.BLACK) {
+        ColorProvider(Color.Transparent)
+    } else {
+        SHADOW_COLOR
+    }
+    val shadowStyle = baseStyle.copy(timeColor = shadowTimeColor, secondaryColor = SHADOW_COLOR)
+
+    // 背景色・角丸・余白・タップ時のアプリ起動アクションを設定した共通修飾子
+    val rootModifier = GlanceModifier
+        .fillMaxSize()
+        .background(backgroundColor)
+        .cornerRadius(22.dp)
+        .padding(horizontal = padding, vertical = padding)
+        .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
+
+    // 影は文字ごとではなく画面全体を2枚重ねて出す。
+    // 文字1つずつをBoxで包むと、その行が縦並びの中で押し出されて出なくなるため
+    // ただし、同じ文字列を持つ層が2枚重なるため、TalkBackなどの読み上げが月日・時刻・次の鳴動を2回読む費用がある。
+    Box(modifier = rootModifier) {
+        // 2枚の層は同じ大きさのまま、置く位置だけが影のぶんずれるようにする。
+        // 片方へ左上の余白、もう片方へ右下の余白を同じだけ入れると、ずれが正確にSHADOW_OFFSETになる
+        WidgetLayer(
+            content = content,
+            style = shadowStyle,
+            isHorizontal = isHorizontal,
+            showDate = showDate,
+            showNextRing = showNextRing,
+            modifier = GlanceModifier.fillMaxSize()
+                .padding(start = SHADOW_OFFSET, top = SHADOW_OFFSET),
         )
-        if (showNextRing && content.nextTime != null) {
-            Spacer(GlanceModifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    provider = ImageProvider(R.drawable.ic_widget_alarm),
-                    contentDescription = null,
-                    modifier = GlanceModifier.size(iconSize),
-                    colorFilter = ColorFilter.tint(nextRingColor),
-                )
-                Spacer(GlanceModifier.width(4.dp))
-                Text(
-                    text = content.nextTime,
-                    style = TextStyle(
-                        color = nextRingColor,
-                        fontSize = secondaryFontSize,
-                        fontFamily = fontStyle.family,
-                        fontWeight = fontWeight.glanceWeight,
-                    ),
-                )
+        WidgetLayer(
+            content = content,
+            style = baseStyle,
+            isHorizontal = isHorizontal,
+            showDate = showDate,
+            showNextRing = showNextRing,
+            modifier = GlanceModifier.fillMaxSize()
+                .padding(end = SHADOW_OFFSET, bottom = SHADOW_OFFSET),
+        )
+    }
+}
+
+/**
+ * 月日・時刻・次の鳴動を並べる1枚ぶんの層を描くComposable。
+ * 影の層と本体の層でまったく同じ並びを使う必要があるため、並べ方をここ1か所へまとめている。
+ */
+@Composable
+private fun WidgetLayer(
+    content: WidgetContent,
+    style: WidgetLayerStyle,
+    isHorizontal: Boolean,
+    showDate: Boolean,
+    showNextRing: Boolean,
+    modifier: GlanceModifier,
+) {
+    val dateStyle = TextStyle(
+        color = style.secondaryColor,
+        fontSize = style.secondaryFontSize,
+        fontFamily = style.fontStyle.family,
+        fontWeight = style.secondaryWeight.glanceWeight,
+    )
+    val timeStyle = TextStyle(
+        color = style.timeColor,
+        fontSize = style.timeFontSize,
+        fontFamily = style.fontStyle.family,
+        fontWeight = style.timeWeight.glanceWeight,
+    )
+
+    if (isHorizontal) {
+        // 横並び配置：左に時刻、右に月日と次の鳴動を配置し、左右の間をあける
+        Row(
+            modifier = modifier,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = content.time, style = timeStyle)
+            Spacer(GlanceModifier.width(HORIZONTAL_SPACING))
+            Column(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalAlignment = Alignment.Start,
+            ) {
+                if (showDate) {
+                    Text(text = content.date, style = dateStyle)
+                }
+                if (showNextRing && content.nextTime != null) {
+                    NextRingRow(time = content.nextTime, style = dateStyle, iconSize = style.iconSize)
+                }
             }
         }
+    } else {
+        // 縦並び配置（既定）：上から月日、時刻、次の鳴動の順で並べ、余白を詰める
+        Column(
+            modifier = modifier,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (showDate) {
+                Text(text = content.date, style = dateStyle)
+            }
+            Text(text = content.time, style = timeStyle)
+            if (showNextRing && content.nextTime != null) {
+                NextRingRow(time = content.nextTime, style = dateStyle, iconSize = style.iconSize)
+            }
+        }
+    }
+}
+
+/**
+ * 時計アイコンと次に鳴る時刻を横へ並べるComposable。
+ * 縦並びと横並びの両方で同じ見た目にするため、1か所へまとめている。
+ */
+@Composable
+private fun NextRingRow(
+    time: String,
+    style: TextStyle,
+    iconSize: Dp,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Image(
+            provider = ImageProvider(R.drawable.ic_widget_alarm),
+            contentDescription = null,
+            modifier = GlanceModifier.size(iconSize),
+            colorFilter = ColorFilter.tint(style.color),
+        )
+        Spacer(GlanceModifier.width(4.dp))
+        Text(text = time, style = style)
     }
 }

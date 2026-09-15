@@ -17,8 +17,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/widget_preview_date"
-        android:textColor="@color/widget_preview_subtle_text"
-        android:textSize="13sp" />
+        android:textColor="@color/widget_preview_on_surface"
+        android:textSize="13sp"
+        android:shadowColor="#8C000000"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="0.01" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -26,7 +30,11 @@
         android:layout_marginTop="2dp"
         android:text="@string/widget_preview_time"
         android:textColor="@color/widget_preview_on_surface"
-        android:textSize="40sp" />
+        android:textSize="40sp"
+        android:shadowColor="#8C000000"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="0.01" />
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -39,7 +47,7 @@
             android:layout_width="14dp"
             android:layout_height="14dp"
             android:src="@drawable/ic_widget_alarm"
-            android:tint="@color/widget_preview_accent"
+            android:tint="@color/widget_preview_on_surface"
             android:contentDescription="@null" />
 
         <TextView
@@ -47,7 +55,11 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="6dp"
             android:text="@string/widget_preview_next_time"
-            android:textColor="@color/widget_preview_accent"
-            android:textSize="14sp" />
+            android:textColor="@color/widget_preview_on_surface"
+            android:textSize="14sp"
+            android:shadowColor="#8C000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="0.01" />
     </LinearLayout>
 </LinearLayout>
