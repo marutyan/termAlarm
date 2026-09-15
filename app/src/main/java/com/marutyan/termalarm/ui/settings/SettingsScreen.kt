@@ -1,5 +1,6 @@
 package com.marutyan.termalarm.ui.settings
 
+import android.app.Activity
 import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
@@ -93,18 +94,6 @@ private enum class SettingsPickerType {
  * アラーム・見た目・このアプリの3つのまとまりに整理して表示する。
  * 各項目タップ時にdesign/SettingsPicker.dc.htmlに基づく中央ポップアップを開いて即時選択を提供する。
  */
-/**
- * 端末の音を選ぶ画面を開くIntentを作る。
- * アラームの音とタイマーの音で同じ作りにするため、ここだけで組み立てる。
- */
-private fun soundPickerIntent(currentUri: String?): Intent =
-    Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
-        putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
-        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
-        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
-        currentUri?.let { putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, it.toUri()) }
-    }
-
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
@@ -116,6 +105,13 @@ fun SettingsScreen(
     val context = LocalContext.current
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
+    // タイマーの音選択で「アラームと同じ」へ戻す基準となる、現在のアラーム音のUri。
+    // ピッカーのデフォルト行に渡す値と、選択結果がアラーム音と同じかを判定する比較対象を1か所に揃えるために保持する。
+    // settings.alarmSoundUriがnullの場合は端末既定のアラーム音が鳴る仕様であるため、
+    // RingtoneManager.getDefaultUriで取得した既定音のUriを採用し、既定音選択時も正しく一致判定できるようにしている。
+    val currentAlarmSoundUri = settings.alarmSoundUri?.toUri()
+        ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+
     var currentPicker by rememberSaveable { mutableStateOf<SettingsPickerType?>(null) }
 
     // いま選んでいるのがアラームの音かタイマーの音か。ピッカーは1つを使い回すため、
@@ -126,6 +122,7 @@ fun SettingsScreen(
     val soundPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
+        if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
         val uri = result.data?.let { intent ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
@@ -135,7 +132,8 @@ fun SettingsScreen(
             }
         }
         if (pickingTimerSound) {
-            viewModel.setTimerSoundUri(uri?.toString())
+            val timerUri = if (uri == currentAlarmSoundUri) null else uri?.toString()
+            viewModel.setTimerSoundUri(timerUri)
         } else {
             viewModel.setAlarmSoundUri(uri?.toString())
         }
@@ -269,7 +267,12 @@ fun SettingsScreen(
                 isLast = true,
                 onClick = {
                     pickingTimerSound = true
-                    soundPickerLauncher.launch(soundPickerIntent(settings.timerSoundUri))
+                    soundPickerLauncher.launch(
+                        soundPickerIntent(
+                            currentUri = settings.timerSoundUri,
+                            defaultUri = currentAlarmSoundUri,
+                        )
+                    )
                 },
             )
         }
@@ -341,6 +344,22 @@ fun SettingsScreen(
         }
     }
 }
+
+/**
+ * 端末の音を選ぶ画面を開くIntentを作る。
+ * アラームの音とタイマーの音で同じ作りにするため、ここだけで組み立てる。
+ */
+private fun soundPickerIntent(
+    currentUri: String?,
+    defaultUri: Uri? = null,
+): Intent =
+    Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+        putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+        currentUri?.let { putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, it.toUri()) }
+        defaultUri?.let { putExtra(RingtoneManager.EXTRA_RINGTONE_DEFAULT_URI, it) }
+    }
 
 /**
  * 設定画面のセクション見出しテキスト。

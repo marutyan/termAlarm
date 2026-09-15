@@ -2,6 +2,7 @@ package com.marutyan.termalarm.widget
 
 import android.app.Activity
 import android.appwidget.AppWidgetManager
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -15,6 +16,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -37,6 +39,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -56,8 +59,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.lifecycle.lifecycleScope
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.ui.theme.BlackSurface
@@ -95,6 +101,7 @@ class WidgetConfigActivity : ComponentActivity() {
 
         setContent {
             ConfigScreen(
+                appWidgetId = appWidgetId,
                 onDecide = { backgroundStyle, timeColor, fontStyle, fontWeight ->
                     save(appWidgetId, backgroundStyle, timeColor, fontStyle, fontWeight)
                 },
@@ -131,12 +138,46 @@ class WidgetConfigActivity : ComponentActivity() {
 }
 
 /**
+ * ウィジェット設定画面で扱う4つの設定項目をまとめた保持クラス。
+ * 保存済み設定の読み出し結果を画面の初期選択状態へ一括で引き渡すために必要となる。
+ * DataStoreから読み出した設定値を受け渡し、UIの初期状態を構築する役割を持つ。
+ */
+private data class InitialWidgetConfig(
+    val backgroundStyle: WidgetBackgroundStyle,
+    val timeColor: WidgetTimeColor,
+    val fontStyle: WidgetFontStyle,
+    val fontWeight: WidgetFontWeight,
+)
+
+/**
+ * 指定されたウィジェットIDに保存されている設定をDataStoreから非同期に読み出す関数。
+ * 設定画面の初期表示で既存の設定値を復元し、再設定時に未変更の項目が既定値へ戻るのを防ぐために必要となる。
+ * Glanceの状態管理機構からPreferencesを取得して各設定項目へ変換し、失敗時は既定値へと安全にフォールバックする役割を持つ。
+ */
+private suspend fun loadWidgetConfig(context: Context, appWidgetId: Int): InitialWidgetConfig {
+    val prefs = try {
+        val glanceId = GlanceAppWidgetManager(context).getGlanceIdBy(appWidgetId)
+        getAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId)
+    } catch (e: Exception) {
+        // 設定の読み取りに失敗した場合は空のPreferencesから既定値を導出し、既定値の設定で初期化を続行する
+        emptyPreferences()
+    }
+    return InitialWidgetConfig(
+        backgroundStyle = widgetBackgroundStyle(prefs),
+        timeColor = widgetTimeColor(prefs),
+        fontStyle = widgetFontStyle(prefs),
+        fontWeight = widgetFontWeight(prefs),
+    )
+}
+
+/**
  * 背景、時刻の色、書体、太さを選ぶ画面。
- * アプリ本体の設定とは別にウィジェット単体で外観を調整できるようにするために用いる。
- * 各項目の選択状態を保持し、見本と決定ボタンへの受け渡しを仲介する役割を持つ。
+ * 保存済み設定の読み込みを待ち、読み込み完了後に設定選択UIを表示するために用いる。
+ * 設定値の非同期取得と読み込み完了後の画面描画を制御する役割を持つ。
  */
 @Composable
 private fun ConfigScreen(
+    appWidgetId: Int,
     onDecide: (
         WidgetBackgroundStyle,
         WidgetTimeColor,
@@ -144,10 +185,10 @@ private fun ConfigScreen(
         WidgetFontWeight,
     ) -> Unit,
 ) {
-    var backgroundStyle by remember { mutableStateOf(WidgetBackgroundStyle.FILLED) }
-    var timeColor by remember { mutableStateOf(WidgetTimeColor.WHITE) }
-    var fontStyle by remember { mutableStateOf(WidgetFontStyle.STANDARD) }
-    var fontWeight by remember { mutableStateOf(WidgetFontWeight.NORMAL) }
+    val context = LocalContext.current
+    val initialConfig by produceState<InitialWidgetConfig?>(initialValue = null, appWidgetId) {
+        value = loadWidgetConfig(context, appWidgetId)
+    }
 
     Column(
         modifier = Modifier
@@ -157,115 +198,142 @@ private fun ConfigScreen(
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .padding(horizontal = 20.dp, vertical = 24.dp),
     ) {
-        // 画面が縦に狭いときでも決定ボタンへ届くよう、選ぶところだけを送れるようにする
-        Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-            // 置いたときの見た目をそのまま見せる。選ぶたびに変わるので、決める前に確かめられる
-            WidgetPreview(
-                backgroundStyle = backgroundStyle,
-                timeColor = timeColor,
-                fontStyle = fontStyle,
-                fontWeight = fontWeight,
-            )
+        val config = initialConfig ?: return@Column
+        ConfigContent(
+            initialConfig = config,
+            onDecide = onDecide,
+        )
+    }
+}
 
-            Spacer(Modifier.height(32.dp))
+/**
+ * 読み込み完了後の設定変更フォームと見本を表示する画面コンポーネント。
+ * 初期設定値を受け取ってユーザーの選択操作に応じた状態管理を行い、決定ボタンの押下を処理するために必要となる。
+ * ウィジェットの外観設定UI（見本、各種選択肢、決定ボタン）を描画し、選ばれた値を保存処理へ引き渡す役割を持つ。
+ */
+@Composable
+private fun ColumnScope.ConfigContent(
+    initialConfig: InitialWidgetConfig,
+    onDecide: (
+        WidgetBackgroundStyle,
+        WidgetTimeColor,
+        WidgetFontStyle,
+        WidgetFontWeight,
+    ) -> Unit,
+) {
+    var backgroundStyle by remember { mutableStateOf(initialConfig.backgroundStyle) }
+    var timeColor by remember { mutableStateOf(initialConfig.timeColor) }
+    var fontStyle by remember { mutableStateOf(initialConfig.fontStyle) }
+    var fontWeight by remember { mutableStateOf(initialConfig.fontWeight) }
 
-            // 背景のボタン2つ（透過 / 背景付き）
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                ChoiceButton(
-                    text = stringResource(R.string.widget_config_background_transparent),
-                    selected = backgroundStyle == WidgetBackgroundStyle.TRANSPARENT,
-                    modifier = Modifier.weight(1f),
-                ) { backgroundStyle = WidgetBackgroundStyle.TRANSPARENT }
-                ChoiceButton(
-                    text = stringResource(R.string.widget_config_background_filled),
-                    selected = backgroundStyle == WidgetBackgroundStyle.FILLED,
-                    modifier = Modifier.weight(1f),
-                ) { backgroundStyle = WidgetBackgroundStyle.FILLED }
-            }
+    // 画面が縦に狭いときでも決定ボタンへ届くよう、選ぶところだけを送れるようにする
+    Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+        // 置いたときの見た目をそのまま見せる。選ぶたびに変わるので、決める前に確かめられる
+        WidgetPreview(
+            backgroundStyle = backgroundStyle,
+            timeColor = timeColor,
+            fontStyle = fontStyle,
+            fontWeight = fontWeight,
+        )
 
-            Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(32.dp))
 
-            // 時刻の色の丸3つ（白 / 黒 / システム）
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                ColorChoice(
-                    color = Color.White,
-                    contentDescription = stringResource(R.string.widget_config_time_color_white),
-                    selected = timeColor == WidgetTimeColor.WHITE,
-                ) { timeColor = WidgetTimeColor.WHITE }
-                ColorChoice(
-                    color = Color.Black,
-                    contentDescription = stringResource(R.string.widget_config_time_color_black),
-                    selected = timeColor == WidgetTimeColor.BLACK,
-                ) { timeColor = WidgetTimeColor.BLACK }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    DynamicColorChoice(
-                        contentDescription = stringResource(R.string.widget_config_time_color_system),
-                        selected = timeColor == WidgetTimeColor.SYSTEM,
-                    ) { timeColor = WidgetTimeColor.SYSTEM }
-                }
-            }
+        // 背景のボタン2つ（透過 / 背景付き）
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            ChoiceButton(
+                text = stringResource(R.string.widget_config_background_transparent),
+                selected = backgroundStyle == WidgetBackgroundStyle.TRANSPARENT,
+                modifier = Modifier.weight(1f),
+            ) { backgroundStyle = WidgetBackgroundStyle.TRANSPARENT }
+            ChoiceButton(
+                text = stringResource(R.string.widget_config_background_filled),
+                selected = backgroundStyle == WidgetBackgroundStyle.FILLED,
+                modifier = Modifier.weight(1f),
+            ) { backgroundStyle = WidgetBackgroundStyle.FILLED }
+        }
 
-            Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(32.dp))
 
-            // 書体のボタン3つ（Sans Serif / Monospace / Serif）
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                ChoiceButton(
-                    text = stringResource(R.string.widget_config_font_sans),
-                    selected = fontStyle == WidgetFontStyle.STANDARD,
-                    modifier = Modifier.weight(1f),
-                ) { fontStyle = WidgetFontStyle.STANDARD }
-                ChoiceButton(
-                    text = stringResource(R.string.widget_config_font_mono),
-                    selected = fontStyle == WidgetFontStyle.MONOSPACE,
-                    modifier = Modifier.weight(1f),
-                ) { fontStyle = WidgetFontStyle.MONOSPACE }
-                ChoiceButton(
-                    text = stringResource(R.string.widget_config_font_serif),
-                    selected = fontStyle == WidgetFontStyle.SERIF,
-                    modifier = Modifier.weight(1f),
-                ) { fontStyle = WidgetFontStyle.SERIF }
-            }
-
-            Spacer(Modifier.height(32.dp))
-
-            // 太さのボタン3つ（Normal / Medium / Bold）
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                ChoiceButton(
-                    text = stringResource(R.string.widget_config_weight_normal),
-                    selected = fontWeight == WidgetFontWeight.NORMAL,
-                    modifier = Modifier.weight(1f),
-                ) { fontWeight = WidgetFontWeight.NORMAL }
-                ChoiceButton(
-                    text = stringResource(R.string.widget_config_weight_medium),
-                    selected = fontWeight == WidgetFontWeight.MEDIUM,
-                    modifier = Modifier.weight(1f),
-                ) { fontWeight = WidgetFontWeight.MEDIUM }
-                ChoiceButton(
-                    text = stringResource(R.string.widget_config_weight_bold),
-                    selected = fontWeight == WidgetFontWeight.BOLD,
-                    modifier = Modifier.weight(1f),
-                ) { fontWeight = WidgetFontWeight.BOLD }
+        // 時刻の色の丸3つ（白 / 黒 / システム）
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            ColorChoice(
+                color = Color.White,
+                contentDescription = stringResource(R.string.widget_config_time_color_white),
+                selected = timeColor == WidgetTimeColor.WHITE,
+            ) { timeColor = WidgetTimeColor.WHITE }
+            ColorChoice(
+                color = Color.Black,
+                contentDescription = stringResource(R.string.widget_config_time_color_black),
+                selected = timeColor == WidgetTimeColor.BLACK,
+            ) { timeColor = WidgetTimeColor.BLACK }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                DynamicColorChoice(
+                    contentDescription = stringResource(R.string.widget_config_time_color_system),
+                    selected = timeColor == WidgetTimeColor.SYSTEM,
+                ) { timeColor = WidgetTimeColor.SYSTEM }
             }
         }
 
-        Spacer(Modifier.height(16.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .background(NavyPrimary, RoundedCornerShape(26.dp))
-                .clickable {
-                    onDecide(
-                        backgroundStyle,
-                        timeColor,
-                        fontStyle,
-                        fontWeight,
-                    )
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(text = stringResource(R.string.widget_config_decide), color = NavySurface, fontSize = 15.sp)
+        Spacer(Modifier.height(32.dp))
+
+        // 書体のボタン3つ（Sans Serif / Monospace / Serif）
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            ChoiceButton(
+                text = stringResource(R.string.widget_config_font_sans),
+                selected = fontStyle == WidgetFontStyle.STANDARD,
+                modifier = Modifier.weight(1f),
+            ) { fontStyle = WidgetFontStyle.STANDARD }
+            ChoiceButton(
+                text = stringResource(R.string.widget_config_font_mono),
+                selected = fontStyle == WidgetFontStyle.MONOSPACE,
+                modifier = Modifier.weight(1f),
+            ) { fontStyle = WidgetFontStyle.MONOSPACE }
+            ChoiceButton(
+                text = stringResource(R.string.widget_config_font_serif),
+                selected = fontStyle == WidgetFontStyle.SERIF,
+                modifier = Modifier.weight(1f),
+            ) { fontStyle = WidgetFontStyle.SERIF }
         }
+
+        Spacer(Modifier.height(32.dp))
+
+        // 太さのボタン3つ（Normal / Medium / Bold）
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            ChoiceButton(
+                text = stringResource(R.string.widget_config_weight_normal),
+                selected = fontWeight == WidgetFontWeight.NORMAL,
+                modifier = Modifier.weight(1f),
+            ) { fontWeight = WidgetFontWeight.NORMAL }
+            ChoiceButton(
+                text = stringResource(R.string.widget_config_weight_medium),
+                selected = fontWeight == WidgetFontWeight.MEDIUM,
+                modifier = Modifier.weight(1f),
+            ) { fontWeight = WidgetFontWeight.MEDIUM }
+            ChoiceButton(
+                text = stringResource(R.string.widget_config_weight_bold),
+                selected = fontWeight == WidgetFontWeight.BOLD,
+                modifier = Modifier.weight(1f),
+            ) { fontWeight = WidgetFontWeight.BOLD }
+        }
+    }
+
+    Spacer(Modifier.height(16.dp))
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp)
+            .background(NavyPrimary, RoundedCornerShape(26.dp))
+            .clickable {
+                onDecide(
+                    backgroundStyle,
+                    timeColor,
+                    fontStyle,
+                    fontWeight,
+                )
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text = stringResource(R.string.widget_config_decide), color = NavySurface, fontSize = 15.sp)
     }
 }
 

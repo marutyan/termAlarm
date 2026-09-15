@@ -146,6 +146,15 @@ private const val SECONDARY_FONT_RATIO = 0.38f
 // 時刻「12:34」の横幅は、その文字の大きさのおよそ2.75倍になる
 private const val TIME_WIDTH_RATIO = 2.75f
 
+// 月日「9月16日(水)」の横幅比（全角3文字＋半角5文字ぶん）。文字の大きさのおよそ5.2倍を使う。
+// 横並びのときに右の列へ月日が収まる上限サイズを解くために必要となる。
+private const val DATE_WIDTH_RATIO = 5.2f
+
+// 横並びのときに左の時刻と右の列（月日・次の鳴動）の間にあける空白(dp)。
+// 左右がくっついて読みにくくなるのを防ぎ、右の列で使える幅の計算と行間の余白描画で同じ間隔を共有する役割を持つ。
+private const val HORIZONTAL_SPACING_DP = 10f
+private val HORIZONTAL_SPACING = HORIZONTAL_SPACING_DP.dp
+
 // 文字の影をずらす量(dp)と濃さ。純正の時計アプリがごく薄い影を落としているのに合わせる。
 // 設定画面の見本も同じ影にするため、外へ公開している
 const val WIDGET_SHADOW_OFFSET_DP = 1f
@@ -190,8 +199,8 @@ private fun WidgetBody(
     // ウィジェットが配置された領域の寸法を取得し、外枠余白と有効な描画領域を計算する
     val size = LocalSize.current
     val padding = minOf(10f, size.height.value * 0.08f).dp
-    val h = (size.height.value - padding.value * 2f)
-    val w = (size.width.value - padding.value * 2f)
+    val h = (size.height.value - padding.value * 2f - WIDGET_SHADOW_OFFSET_DP)
+    val w = (size.width.value - padding.value * 2f - WIDGET_SHADOW_OFFSET_DP)
     // 幅が高さに比べて2倍以上の横長形状であれば横並びにする
     val isHorizontal = (w / h) >= 2.0f
 
@@ -200,13 +209,20 @@ private fun WidgetBody(
     val timeFontSize = if (isHorizontal) {
         // 横に並べる場合：左に時刻、右に月日と次の鳴動を縦へ積む
         val leftAvailableWidth = w * 0.58f
+        val rightAvailableWidth = w - leftAvailableWidth - HORIZONTAL_SPACING_DP
         // 右側は、h >= 40f なら月日と次の鳴動の両方、そうでなければ次の鳴動だけを出す。
         // 次に鳴る時刻が無い場合は月日だけを出す。
         showDate = content.nextTime == null || h >= 40f
         showNextRing = content.nextTime != null
-        // 左は時刻1行だけなので、高さをそのまま1行ぶんとして使う
-        minOf(h / LINE_HEIGHT_RATIO, leftAvailableWidth / TIME_WIDTH_RATIO)
-            .coerceIn(12f, 160f).sp
+        val heightLimit = h / LINE_HEIGHT_RATIO
+        val leftWidthLimit = leftAvailableWidth / TIME_WIDTH_RATIO
+        val maxTimeFontSize = if (showDate) {
+            val rightWidthLimit = rightAvailableWidth / (DATE_WIDTH_RATIO * SECONDARY_FONT_RATIO)
+            minOf(heightLimit, leftWidthLimit, rightWidthLimit)
+        } else {
+            minOf(heightLimit, leftWidthLimit)
+        }
+        maxTimeFontSize.coerceIn(12f, 160f).sp
     } else {
         // 縦に並べる場合（既定）：上から月日、時刻、次の鳴動の順で並べる
         showDate = h >= 56f
@@ -227,7 +243,8 @@ private fun WidgetBody(
 
     // 第4版の共通契約に基づき、背景色・時刻の色・月日と次の鳴動の色を取得する
     val backgroundColor = widgetBackgroundProvider(widgetBackgroundStyle(prefs))
-    val timeColor = widgetTimeColorProvider(widgetTimeColor(prefs))
+    val selectedTimeColor = widgetTimeColor(prefs)
+    val timeColor = widgetTimeColorProvider(selectedTimeColor)
     val secondaryColor = widgetSecondaryColorProvider()
 
     val baseStyle = WidgetLayerStyle(
@@ -240,8 +257,13 @@ private fun WidgetBody(
         timeColor = timeColor,
         secondaryColor = secondaryColor,
     )
-    // 影の層は、本体と同じ中身を黒一色で描く
-    val shadowStyle = baseStyle.copy(timeColor = SHADOW_COLOR, secondaryColor = SHADOW_COLOR)
+    // 影の層は、本体と同じ中身を黒一色で描く。ただし時刻が黒のときは同じ色で重なり滲むため透明にする
+    val shadowTimeColor = if (selectedTimeColor == WidgetTimeColor.BLACK) {
+        ColorProvider(Color.Transparent)
+    } else {
+        SHADOW_COLOR
+    }
+    val shadowStyle = baseStyle.copy(timeColor = shadowTimeColor, secondaryColor = SHADOW_COLOR)
 
     // 背景色・角丸・余白・タップ時のアプリ起動アクションを設定した共通修飾子
     val rootModifier = GlanceModifier
@@ -253,6 +275,7 @@ private fun WidgetBody(
 
     // 影は文字ごとではなく画面全体を2枚重ねて出す。
     // 文字1つずつをBoxで包むと、その行が縦並びの中で押し出されて出なくなるため
+    // ただし、同じ文字列を持つ層が2枚重なるため、TalkBackなどの読み上げが月日・時刻・次の鳴動を2回読む費用がある。
     Box(modifier = rootModifier) {
         // 2枚の層は同じ大きさのまま、置く位置だけが影のぶんずれるようにする。
         // 片方へ左上の余白、もう片方へ右下の余白を同じだけ入れると、ずれが正確にSHADOW_OFFSETになる
@@ -304,14 +327,14 @@ private fun WidgetLayer(
     )
 
     if (isHorizontal) {
-        // 横並び配置：左に時刻、右に月日と次の鳴動を配置し、左右の間を10dpあける
+        // 横並び配置：左に時刻、右に月日と次の鳴動を配置し、左右の間をあける
         Row(
             modifier = modifier,
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(text = content.time, style = timeStyle)
-            Spacer(GlanceModifier.width(10.dp))
+            Spacer(GlanceModifier.width(HORIZONTAL_SPACING))
             Column(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalAlignment = Alignment.Start,
@@ -357,7 +380,7 @@ private fun NextRingRow(
             provider = ImageProvider(R.drawable.ic_widget_alarm),
             contentDescription = null,
             modifier = GlanceModifier.size(iconSize),
-            colorFilter = ColorFilter.tint(style.color ?: ColorProvider(Color.White)),
+            colorFilter = ColorFilter.tint(style.color),
         )
         Spacer(GlanceModifier.width(4.dp))
         Text(text = time, style = style)

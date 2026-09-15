@@ -12,7 +12,7 @@
 
     widgetFeaturesにreconfigurableを指定することで、ホーム画面でウィジェットを長押しした際に
     再設定ボタンを表示し、配置後でも見た目の設定画面（configureで指定したWidgetConfigActivity）を
-    再度開けるようにする。ウィジェットを削除して置き直す手間なく、配色や部位ごとの色、背景などの
+    再度開けるようにする。ウィジェットを削除して置き直す手間なく、背景の出し方、時刻の色、書体、太さの
     設定を変更できるようにするために必要。
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
