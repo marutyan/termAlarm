@@ -69,7 +69,6 @@
     <string name="alarms_title">アラーム</string>
     <string name="alarms_subtitle">指定した時刻に1回だけ鳴ります</string>
     <string name="alarms_add_alarm">アラームを追加</string>
-    <string name="alarms_repeat_today_only">きょうだけ</string>
     <string name="alarms_switch_description">%1$sのアラームの有効無効切り替え</string>
 
     <!-- プレースホルダ画面 -->

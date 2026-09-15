@@ -220,7 +220,9 @@ private fun AlarmCard(
     val timeText = remember(schedule.startMinutes, timePattern) {
         formatClockMinutes(schedule.startMinutes, timePattern)
     }
-    val repeatDaysText = formatRepeatDays(schedule.repeatDays)
+    // 曜日を選んでいないアラームは1回だけ鳴る。その旨を書いた行を出すと、
+    // 曜日が並ぶ行と高さが揃うだけで何も伝わらないため、行ごと出さない
+    val repeatDaysText = if (schedule.repeatDays.isEmpty()) null else formatRepeatDays(schedule.repeatDays)
 
     Row(
         modifier = modifier
@@ -243,9 +245,12 @@ private fun AlarmCard(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             // 時刻32sp・太さ200・等幅数字、右にラベル13sp
+            // ラベルは時刻の右下へそろえる。上ぞろえだと小さな文字が肩に乗って見え、
+            // カード全体が上へ寄っているように感じられるため
             FlowRow(
                 verticalArrangement = Arrangement.Bottom,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
+                itemVerticalAlignment = Alignment.Bottom,
             ) {
                 Text(
                     text = timeText,
@@ -269,21 +274,22 @@ private fun AlarmCard(
                             lineHeight = 18.sp,
                             color = subtleTextColor,
                         ),
-                        modifier = Modifier.padding(bottom = 2.dp),
                     )
                 }
             }
 
-            // 下に曜日12sp
-            Text(
-                text = repeatDaysText,
-                style = TextStyle(
-                    fontFamily = IbmPlexMono,
-                    fontSize = 13.sp,
-                    lineHeight = 16.sp,
-                    color = subtleTextColor,
-                ),
-            )
+            // 下に曜日13sp。曜日を選んでいないときはこの行ごと無い
+            if (repeatDaysText != null) {
+                Text(
+                    text = repeatDaysText,
+                    style = TextStyle(
+                        fontFamily = IbmPlexMono,
+                        fontSize = 13.sp,
+                        lineHeight = 16.sp,
+                        color = subtleTextColor,
+                    ),
+                )
+            }
         }
 
         // 右端に切り替えスイッチ 44×26dp（タッチターゲット44dp以上を確保）
@@ -388,14 +394,11 @@ private fun AddAlarmButton(
 }
 
 /**
- * 繰り返しの曜日セットを表示用テキストに変換する関数。
- * 空集合の場合は「きょうだけ」、それ以外は月曜から日曜の順でスペース区切りの短縮曜日名を返す。
+ * 繰り返しの曜日を、月曜から日曜の順に並べた文字へ変える。
+ * 曜日を選んでいない場合は呼び出し側が行ごと出さないため、ここでは空集合を考えない。
  */
 @Composable
 private fun formatRepeatDays(repeatDays: Set<DayOfWeek>): String {
-    if (repeatDays.isEmpty()) {
-        return stringResource(R.string.alarms_repeat_today_only)
-    }
     val mon = stringResource(R.string.day_monday_short)
     val tue = stringResource(R.string.day_tuesday_short)
     val wed = stringResource(R.string.day_wednesday_short)
