@@ -5,8 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.MediaPlayer
-import android.media.RingtoneManager
-import android.net.Uri
 import android.os.IBinder
 import android.os.SystemClock
 import android.os.Vibrator
@@ -19,7 +17,8 @@ import com.marutyan.termalarm.data.TimerRepository
 import com.marutyan.termalarm.domain.AppSettings
 import com.marutyan.termalarm.domain.TimerRunState
 import com.marutyan.termalarm.domain.TimerState
-import com.marutyan.termalarm.domain.millisUntilNextSecondBoundary
+import com.marutyan.termalarm.domain.millisUntilNextTimerEvent
+import com.marutyan.termalarm.domain.remainingMillis
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -59,6 +58,9 @@ class TimerForegroundService : Service() {
 
     // 鳴動中のタイマーidごとの再生。複数同時に鳴る場合があるためidで持つ
     private val ringingPlayers = mutableMapOf<Long, MediaPlayer>()
+
+    // 0になる少し前に開いておく音。開くのに時間がかかるため、鳴らす直前に開くと出遅れる
+    private var preparedPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
     private var settings: AppSettings = AppSettings()
 
@@ -74,17 +76,7 @@ class TimerForegroundService : Service() {
             launch { repository().observeAll().collect { runTick() } }
             while (isActive) {
                 val timers = runTick() ?: break
-                // 次に数字が変わる瞬間まで待つ。通知は少し先の時刻で作るので、
-                // 待ち時間も同じ先の時刻で数える。少し過ぎてから起きないと、
-                // 同じ秒のまま起きてしまい1秒飛ばすことがある
-                val lead = TimerNotifications.DISPLAY_LEAD_MILLIS
-                delay(
-                    millisUntilNextSecondBoundary(
-                        timers,
-                        SystemClock.elapsedRealtime() + lead,
-                        System.currentTimeMillis() + lead,
-                    ) + TICK_OVERSHOOT_MILLIS,
-                )
+                delay(nextTickDelay(timers))
             }
         }
     }
@@ -102,6 +94,16 @@ class TimerForegroundService : Service() {
         scope.launch { runTick() }
         return START_NOT_STICKY
     }
+
+    // 次の見回りまで待つ時間。数え方はdomainのmillisUntilNextTimerEventにある。
+    // 少し過ぎてから起きないと、同じ瞬間のまま起きて空振りする
+    private fun nextTickDelay(timers: List<TimerState>): Long =
+        millisUntilNextTimerEvent(
+            timers = timers,
+            nowElapsedRealtime = SystemClock.elapsedRealtime(),
+            nowWallClockMillis = System.currentTimeMillis(),
+            displayLeadMillis = TimerNotifications.DISPLAY_LEAD_MILLIS,
+        ) + TICK_OVERSHOOT_MILLIS
 
     /** 見回りを1つずつ順番に行う。秒の更新と保存の通知が重なっても、二重に走らせない */
     private suspend fun runTick(): List<TimerState>? = tickMutex.withLock { tickOnce() }
@@ -128,6 +130,7 @@ class TimerForegroundService : Service() {
             return null
         }
         syncRinging(timers)
+        prepareSoundIfSoon(timers)
         promote(TimerNotifications.activeTimers(timers).ifEmpty { timers })
         return timers
     }
@@ -159,15 +162,41 @@ class TimerForegroundService : Service() {
         (ringingPlayers.keys - finishedIds).toList().forEach { stopRingingFor(it) }
     }
 
+    /**
+     * 0になる少し前に音源を開いておく。
+     *
+     * 音源を開く処理は読み込みを伴い、数百ミリ秒かかることがある。
+     * 0になってから開くと、そのぶん鳴り始めが遅れて、表示とずれて聞こえる。
+     */
+    private fun prepareSoundIfSoon(timers: List<TimerState>) {
+        val nowElapsed = SystemClock.elapsedRealtime()
+        val nowWall = System.currentTimeMillis()
+        val soonest = timers
+            .filter { it.runState == TimerRunState.RUNNING }
+            .minOfOrNull { remainingMillis(it, nowElapsed, nowWall) }
+        if (soonest == null || soonest > PREPARE_SOUND_BEFORE_MILLIS) {
+            // もうすぐ鳴るものが無くなったら手放す。一時停止や停止で予定が消えることがある
+            releasePreparedPlayer()
+            return
+        }
+        if (preparedPlayer != null) return
+        preparedPlayer = SoundFadeIn.prepareRinging(this, settings.alarmSoundUri)
+    }
+
+    private fun releasePreparedPlayer() {
+        preparedPlayer?.let { runCatching { it.release() } }
+        preparedPlayer = null
+    }
+
     private fun startRingingFor(id: Long) {
-        // 音とバイブはアラームとタイマーで共通化する
-        val uri = settings.alarmSoundUri?.let(Uri::parse)
-            ?: RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM)
+        // 開いてあるものがあればそれを使う。無ければここで開く
+        val player = preparedPlayer?.also { preparedPlayer = null }
+            ?: SoundFadeIn.prepareRinging(this, settings.alarmSoundUri)
             ?: return
         // タイマーは0になった瞬間に鳴らす。「徐々に音量を上げる」はアラームの設定で、
         // これをタイマーへ効かせると、鳴っているのに数秒間ほとんど聞こえず、
         // 「マイナス数秒で鳴り始めた」ように感じられる
-        val player = SoundFadeIn.startRinging(this, scope, uri, fadeInSeconds = 0) ?: return
+        SoundFadeIn.beginRinging(scope, player, fadeInSeconds = 0)
         ringingPlayers[id] = player
         if (settings.vibration) startVibrationIfNeeded()
     }
@@ -199,6 +228,7 @@ class TimerForegroundService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         tickJob?.cancel()
+        releasePreparedPlayer()
         ringingPlayers.values.forEach { player -> runCatching { player.stop() }; player.release() }
         ringingPlayers.clear()
         vibrator?.cancel()
@@ -209,6 +239,9 @@ class TimerForegroundService : Service() {
     companion object {
         // 次の秒へ変わる瞬間より、このぶんだけ後に起きる。ちょうどに起きると同じ秒のままになる
         private const val TICK_OVERSHOOT_MILLIS = 20L
+
+        // 鳴る何ミリ秒前から音源を開いておくか。開くのに数百ミリ秒かかることがある
+        private const val PREPARE_SOUND_BEFORE_MILLIS = 3_000L
 
         /** 数字が進むタイマーがあるときに呼ぶ。既に動いていれば何も起きない */
         fun start(context: Context) {

@@ -306,4 +306,10 @@
     <string name="widget_config_font_monospace">等幅</string>
     <string name="widget_config_font_serif">明朝</string>
     <string name="widget_config_decide">決定</string>
+
+    <!-- ウィジェット一覧の見本に出す文字。実際の値ではなく、見た目を伝えるための例 -->
+    <string name="widget_preview_date">09.16 水</string>
+    <string name="widget_preview_time">7:30</string>
+    <string name="widget_preview_next_time">7:35</string>
+    <string name="widget_preview_remaining">残り18回</string>
 </resources>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ウィジェット一覧に出す見本。置いたときと同じ見た目を先に見せるために使う。
+    実際のウィジェットはGlanceで描くが、一覧の見本は静的なレイアウトしか置けないため、
+    同じ並び（日付・時刻・次の鳴動）をここへ作る。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="@drawable/widget_preview_background"
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="14dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_preview_date"
+        android:textColor="@color/widget_preview_subtle_text"
+        android:textSize="13sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="@string/widget_preview_time"
+        android:textColor="@color/widget_preview_on_surface"
+        android:textSize="40sp" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/widget_preview_next_time"
+            android:textColor="@color/widget_preview_accent"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="@string/widget_preview_remaining"
+            android:textColor="@color/widget_preview_subtle_text"
+            android:textSize="13sp" />
+    </LinearLayout>
+</LinearLayout>

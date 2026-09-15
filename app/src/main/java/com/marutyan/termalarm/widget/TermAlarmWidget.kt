@@ -1,12 +1,15 @@
 package com.marutyan.termalarm.widget
 
 import android.content.Context
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.LocalContext
+import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.currentState
@@ -53,9 +56,43 @@ private val DATE_FORMAT = DateTimeFormatter.ofPattern("MM.dd E")
 private val TIME_FORMAT = DateTimeFormatter.ofPattern("H:mm")
 
 /**
+ * 置かれた大きさごとの見せ方。
+ *
+ * ホーム画面のます目は端末ごとに大きさが違うため、ます目の数ではなく実際の寸法で決める。
+ * 小さいほど中身を削り、残ったものを大きく見せる。
+ */
+private enum class WidgetLayoutSize {
+    /** 1行しか置けない大きさ。時刻だけを出す */
+    COMPACT,
+
+    /** 日付と時刻、次の鳴動まで置ける大きさ */
+    MEDIUM,
+
+    /** 余裕があり、文字を大きくできる大きさ */
+    LARGE,
+    ;
+
+    companion object {
+        // 高さで段を決める。横幅は文字の大きさだけに効かせる
+        fun of(width: Dp, height: Dp): WidgetLayoutSize = when {
+            height < 86.dp -> COMPACT
+            height < 150.dp || width < 150.dp -> MEDIUM
+            else -> LARGE
+        }
+    }
+}
+
+// 段ごとの時刻の文字の大きさ。小さいます目でも読めるところまで落とす
+private fun timeFontSize(size: WidgetLayoutSize, width: Dp): TextUnit = when (size) {
+    WidgetLayoutSize.COMPACT -> if (width < 110.dp) 24.sp else 30.sp
+    WidgetLayoutSize.MEDIUM -> if (width < 110.dp) 28.sp else 40.sp
+    WidgetLayoutSize.LARGE -> 56.sp
+}
+
+/**
  * ホーム画面へ置く時計ウィジェット。
  * 現在時刻を大きく出し、次に鳴る時刻と残り回数を小さく添える。
- * 小さい大きさのときは残り回数を省き、時刻と次の鳴動時刻だけにする。
+ * 置ける大きさは横1つ分×縦1つ分から5×3までで、中身は大きさに応じて並べ替える。
  */
 class TermAlarmWidget : GlanceAppWidget() {
 
@@ -96,40 +133,52 @@ class TermAlarmWidget : GlanceAppWidget() {
     }
 }
 
-// ウィジェットの中身。押すとアプリが開く
+// ウィジェットの中身。押すとアプリが開く。置かれた大きさで中身を変える
 @androidx.compose.runtime.Composable
 private fun WidgetBody(
     content: WidgetContent,
     palette: WidgetPalette,
     fontStyle: WidgetFontStyle,
 ) {
+    val size = LocalSize.current
+    val layout = WidgetLayoutSize.of(size.width, size.height)
+    val padding = if (layout == WidgetLayoutSize.COMPACT) 8.dp else 14.dp
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(palette.background)
             .cornerRadius(22.dp)
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .padding(horizontal = padding, vertical = padding)
             .clickable(actionStartActivity(Intent(LocalContext.current, MainActivity::class.java))),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = content.date,
-            style = TextStyle(color = palette.subtleText, fontSize = 13.sp, fontFamily = fontStyle.family),
-        )
-        Spacer(GlanceModifier.height(2.dp))
+        // 狭いときは日付を省く。時刻が読めることを優先する
+        if (layout != WidgetLayoutSize.COMPACT) {
+            Text(
+                text = content.date,
+                style = TextStyle(color = palette.subtleText, fontSize = 13.sp, fontFamily = fontStyle.family),
+            )
+            Spacer(GlanceModifier.height(2.dp))
+        }
         Text(
             text = content.time,
             style = TextStyle(
                 color = palette.text,
-                fontSize = 44.sp,
+                fontSize = timeFontSize(layout, size.width),
                 fontWeight = FontWeight.Normal,
                 fontFamily = fontStyle.family,
             ),
         )
-        if (content.nextTime != null) {
+        if (content.nextTime != null && layout != WidgetLayoutSize.COMPACT) {
             Spacer(GlanceModifier.height(4.dp))
-            NextRingRow(content.nextTime, content.remaining, palette, fontStyle)
+            // 横が狭いと残り回数まで入らない。次に鳴る時刻だけを残す
+            NextRingRow(
+                nextTime = content.nextTime,
+                remaining = if (size.width >= 150.dp) content.remaining else 0,
+                palette = palette,
+                fontStyle = fontStyle,
+            )
         }
     }
 }
