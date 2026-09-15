@@ -1,0 +1,29 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!--
+        ウィジェット表示用の目覚まし時計アイコン。
+        一覧の見本やウィジェット上で、次の鳴動時刻を示す目印として用いる。
+        配置先に応じて色を変えられるよう、装飾のない白のストロークのみで描く。
+    -->
+    <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M12,13m-8,0a8,8 0,1 1,16,0a8,8 0,1 1,-16,0" />
+    <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M12,9 L12,13 L15,13" />
+    <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M5,3 L2,6 M19,3 L22,6 M6.5,18.5 L4,21 M17.5,18.5 L20,21" />
+</vector>

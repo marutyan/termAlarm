@@ -35,19 +35,19 @@
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/widget_preview_next_time"
-            android:textColor="@color/widget_preview_accent"
-            android:textSize="14sp" />
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:src="@drawable/ic_widget_alarm"
+            android:tint="@color/widget_preview_accent"
+            android:contentDescription="@null" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="@string/widget_preview_remaining"
-            android:textColor="@color/widget_preview_subtle_text"
-            android:textSize="13sp" />
+            android:layout_marginStart="6dp"
+            android:text="@string/widget_preview_next_time"
+            android:textColor="@color/widget_preview_accent"
+            android:textSize="14sp" />
     </LinearLayout>
 </LinearLayout>

@@ -2,21 +2,23 @@
 <!--
     時計ウィジェットの大きさと更新間隔。
 
-    既定は純正の時計ウィジェットと同じ2×2で、横1つ分×縦1つ分から5×3まで広げられる。
-    中身は置かれた大きさに応じてTermAlarmWidgetが並べ替える。
+    既定は純正の時計ウィジェットと同じ2×2で配置される。
+    置ける範囲を最小40dp(1×1マス相当)から最大640×480dpまで広げているのは、
+    狭い場所では時刻だけの最小表示に、タブレットなどの広い画面では大きく引き伸ばして
+    見やすく配置できるよう、TermAlarmWidgetが大きさに応じて中身を切り替えられるようにするため。
 
     previewLayoutで、一覧に出す見本に実際の見た目を使う。指定しないと白い枠に
     アプリのアイコンが出るだけになり、何が置かれるのか分からない。
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="57dp"
+    android:minWidth="40dp"
     android:minHeight="40dp"
     android:targetCellWidth="2"
     android:targetCellHeight="2"
-    android:minResizeWidth="57dp"
+    android:minResizeWidth="40dp"
     android:minResizeHeight="40dp"
-    android:maxResizeWidth="340dp"
-    android:maxResizeHeight="200dp"
+    android:maxResizeWidth="640dp"
+    android:maxResizeHeight="480dp"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="1800000"
     android:widgetCategory="home_screen"
