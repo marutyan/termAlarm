@@ -296,8 +296,7 @@
     <!-- ウィジェットの概要説明。ホーム画面のウィジェット一覧で機能と表示内容をユーザーに示すために必要 -->
     <string name="widget_description">時刻と次の鳴動を出す時計</string>
 
-    <!-- ウィジェット設定画面のタイトルと決定ボタン -->
-    <string name="widget_config_title">ウィジェットの見た目</string>
+    <!-- ウィジェット設定画面の決定ボタン -->
     <string name="widget_config_decide">決定</string>
 
     <!-- ウィジェット設定画面: 背景スタイルの選択肢（透過 / 背景付き） -->

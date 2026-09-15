@@ -76,7 +76,7 @@ dependencies {
         // room-testingが使うkotlinx-serialization-jsonは1.8.1で、coreも同じ版を要求する。
         // AndroidGradlePluginは計測テストの依存版をアプリ側へ揃えるため、
         // lifecycle経由で入る1.7.3のままだと移行テストがAbstractMethodErrorで落ちる
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.1")
+        implementation(libs.kotlinx.serialization.core)
     }
 
     implementation(libs.androidx.core.ktx)
