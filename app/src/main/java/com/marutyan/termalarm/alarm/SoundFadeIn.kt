@@ -3,7 +3,9 @@ package com.marutyan.termalarm.alarm
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.media.RingtoneManager
 import android.net.Uri
+import android.provider.Settings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -36,32 +38,57 @@ object SoundFadeIn {
     fun startRinging(
         context: Context,
         scope: CoroutineScope,
-        uri: Uri,
+        preferredUri: String?,
         fadeInSeconds: Number,
     ): MediaPlayer? {
-        val player = MediaPlayer().apply {
-            // マナーモードでも鳴る必要があるため、通知/メディアではなくALARM用途を明示する
-            setAudioAttributes(alarmAudioAttributes())
-            isLooping = true
-            // 鳴り始めの音量。0にすると鳴っているか分からない
-            setVolume(START_VOLUME, START_VOLUME)
-        }
-        val started = runCatching {
-            player.setDataSource(context, uri)
-            player.prepare()
-            player.start()
-        }.isSuccess
-        if (!started) {
+        val player = prepareRinging(context, preferredUri) ?: return null
+        beginRinging(scope, player, fadeInSeconds)
+        return player
+    }
+
+    /**
+     * 音源を開いて、あとは鳴らすだけの状態にする。鳴らし始めるのは[beginRinging]。
+     *
+     * 開く処理(prepare)は音源の読み込みを伴い、数百ミリ秒かかることがある。
+     * 0になってから開くとそのぶん鳴り始めが遅れるため、呼び出し側は少し前に開いておける。
+     *
+     * 選ばれている音を開けないときは、端末の既定の音、端末に組み込みの音、の順に試す。
+     * 選んだ音がロックを解除しないと読めない場所にあると、再起動した直後に開けない。
+     * 音が出ないと寝ている人は気づけないため、必ず何かを鳴らせるようにする。
+     */
+    fun prepareRinging(context: Context, preferredUri: String?): MediaPlayer? {
+        val candidates = listOfNotNull(
+            preferredUri?.let(Uri::parse),
+            RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_ALARM),
+            Settings.System.DEFAULT_ALARM_ALERT_URI,
+        ).distinct()
+        for (uri in candidates) {
+            val player = MediaPlayer().apply {
+                // マナーモードでも鳴る必要があるため、通知/メディアではなくALARM用途を明示する
+                setAudioAttributes(alarmAudioAttributes())
+                isLooping = true
+                // 鳴り始めの音量。0にすると鳴っているか分からない
+                setVolume(START_VOLUME, START_VOLUME)
+            }
+            val opened = runCatching {
+                player.setDataSource(context, uri)
+                player.prepare()
+            }.isSuccess
+            if (opened) return player
             runCatching { player.release() }
-            return null
         }
+        return null
+    }
+
+    /** [prepareRinging]で用意した音を鳴らし始め、指定の秒数かけて音量を上げる。 */
+    fun beginRinging(scope: CoroutineScope, player: MediaPlayer, fadeInSeconds: Number) {
+        runCatching { player.start() }
         val duration = durationMillisOrNull(fadeInSeconds)
         if (duration == null) {
-            player.setVolume(1f, 1f)
+            runCatching { player.setVolume(1f, 1f) }
         } else {
             start(scope, player, duration)
         }
-        return player
     }
 
     /**

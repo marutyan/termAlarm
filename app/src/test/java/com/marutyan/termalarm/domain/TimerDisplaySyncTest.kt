@@ -144,4 +144,33 @@ class TimerDisplaySyncTest {
         assertEquals("パスタ", running(60_000L).copy(label = "パスタ").userLabelOrNull())
         assertEquals("休憩 5:00", running(60_000L).copy(label = "休憩 5:00").userLabelOrNull())
     }
+
+    @Test
+    fun `0になる瞬間にも見回る`() {
+        // 表示の区切りだけで待つと、通知の先取り(60ms)のぶん0の手前で起きてしまい、
+        // まだ0ではないので鳴らさず、次に起きるのが1秒後になっていた
+        val timer = running(60_000L)
+        val lead = 60L
+        // 残り1060ms。表示の区切りは1000ms後で、0になるのは1060ms後。早い方に合わせる
+        assertEquals(1000L, millisUntilNextTimerEvent(listOf(timer), at(58_940), anchorWall, lead))
+        // 残り60ms。表示の区切りはこの先1秒だが、0になるのは60ms後なので、そちらへ合わせる
+        assertEquals(60L, millisUntilNextTimerEvent(listOf(timer), at(59_940), anchorWall, lead))
+    }
+
+    @Test
+    fun `0を過ぎたら表示の区切りだけで見回る`() {
+        val timer = running(60_000L)
+        val lead = 60L
+        // すでに0のものは、この見回りで鳴動中へ移る。待ち時間を0にすると短い間隔で回り続ける
+        assertEquals(
+            940L,
+            millisUntilNextTimerEvent(listOf(timer), at(60_000), anchorWall, lead),
+        )
+    }
+
+    @Test
+    fun `一時停止中だけなら1秒ごとに見回る`() {
+        val paused = running(60_000L).copy(runState = TimerRunState.PAUSED)
+        assertEquals(1000L, millisUntilNextTimerEvent(listOf(paused), at(0), anchorWall, 60L))
+    }
 }

@@ -175,3 +175,36 @@ fun millisUntilNextSecondBoundary(
     }.minOrNull() ?: 1000L
     return next.coerceIn(1L, 1000L)
 }
+
+/**
+ * 次に見回るまでのミリ秒。
+ *
+ * 見たいものが2つある。
+ * 1つは「表示の秒が変わる瞬間」。通知は届くまでに少し遅れるため、[displayLeadMillis]だけ早く起きる。
+ * もう1つは「残りが0になる瞬間」。鳴らすかどうかは実際の時刻で決めるので、先取りした時刻では判定できない。
+ *
+ * 表示の区切りだけで待っていたときは、先取りのぶん0の手前で起きてしまい、
+ * まだ0ではないので鳴らさず、次に起きるのが1秒後になっていた。
+ * 「0になってから1秒ほど待って鳴り始める」ように見えたのはこれが原因。
+ */
+fun millisUntilNextTimerEvent(
+    timers: List<TimerState>,
+    nowElapsedRealtime: Long,
+    nowWallClockMillis: Long,
+    displayLeadMillis: Long,
+): Long {
+    val untilDisplayChange = millisUntilNextSecondBoundary(
+        timers,
+        nowElapsedRealtime + displayLeadMillis,
+        nowWallClockMillis + displayLeadMillis,
+    )
+    // まだ残っているものだけを見る。すでに0のものはこの見回りで鳴動中へ移るため、
+    // 待ち時間を0にすると、移すまでの間ずっと短い間隔で回り続けてしまう
+    val untilDue = timers
+        .filter { it.runState == TimerRunState.RUNNING }
+        .map { remainingMillis(it, nowElapsedRealtime, nowWallClockMillis) }
+        .filter { it > 0L }
+        .minOrNull()
+        ?: Long.MAX_VALUE
+    return minOf(untilDisplayChange, untilDue).coerceAtLeast(0L)
+}
