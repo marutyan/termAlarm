@@ -27,6 +27,7 @@ class SettingsViewModel(
     }
 
     fun setAlarmSoundUri(uri: String?) = update { it.copy(alarmSoundUri = uri) }
+    fun setTimerSoundUri(uri: String?) = update { it.copy(timerSoundUri = uri) }
     fun setVibration(enabled: Boolean) = update { it.copy(vibration = enabled) }
     fun setFadeInSeconds(seconds: Int) = update { it.copy(fadeInSeconds = seconds) }
     fun setSilenceAfterMinutes(minutes: Int?) = update { it.copy(silenceAfterMinutes = minutes) }

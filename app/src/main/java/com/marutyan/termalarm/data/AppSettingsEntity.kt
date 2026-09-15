@@ -15,6 +15,8 @@ data class AppSettingsEntity(
     @PrimaryKey
     val id: Int = SINGLE_ROW_ID,
     val alarmSoundUri: String?,
+    // タイマーが鳴るときの音。nullならアラームと同じ音を使う
+    val timerSoundUri: String?,
     val vibration: Boolean,
     val fadeInSeconds: Int,
     val silenceAfterMinutes: Int?,
@@ -30,6 +32,7 @@ data class AppSettingsEntity(
 // enum⇔文字列の変換で未知の値(異なるバージョン間の互換切れ等)に当たった場合は既定値へ倒す
 internal fun AppSettingsEntity.toDomain(): AppSettings = AppSettings(
     alarmSoundUri = alarmSoundUri,
+    timerSoundUri = timerSoundUri,
     vibration = vibration,
     fadeInSeconds = fadeInSeconds,
     silenceAfterMinutes = silenceAfterMinutes,
@@ -40,6 +43,7 @@ internal fun AppSettingsEntity.toDomain(): AppSettings = AppSettings(
 
 internal fun AppSettings.toEntity(): AppSettingsEntity = AppSettingsEntity(
     alarmSoundUri = alarmSoundUri,
+    timerSoundUri = timerSoundUri,
     vibration = vibration,
     fadeInSeconds = fadeInSeconds,
     silenceAfterMinutes = silenceAfterMinutes,

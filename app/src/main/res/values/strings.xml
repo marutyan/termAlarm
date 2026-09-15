@@ -324,4 +324,9 @@
     <string name="widget_preview_date">9月16日(水)</string>
     <string name="widget_preview_time">7:30</string>
     <string name="widget_preview_next_time">7:35</string>
+
+    <!-- タイマーの設定。アラームとは別の音を選べる -->
+    <string name="settings_section_timer">タイマー</string>
+    <string name="settings_timer_sound_item_title">音</string>
+    <string name="settings_timer_sound_same_as_alarm">アラームと同じ</string>
 </resources>

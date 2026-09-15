@@ -5,6 +5,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
  * アプリ唯一のRoomデータベース。アラーム、タイマー、ストップウォッチ、アプリ全体の設定の状態を持つ。
@@ -13,7 +15,7 @@ import androidx.room.TypeConverters
  * 既存の開発端末に古いversionのデータベースが残っていてもversion不整合でクラッシュしないよう、
  * ファイル名を alarm_schedule.db から termalarm.db へ変更した。
  * fallbackToDestructiveMigration は、公開後にマイグレーションを書き忘れた際に利用者のデータを黙って消してしまうため使わない。
- * version 1 を出荷した後は、これまでと同じく1つずつマイグレーションを足していく方針とする。
+ * スキーマを変えるたびに、1つずつマイグレーションを足していく。
  *
  * exportSchema = true にして app/schemas/ のJSONをコミットしている。次にスキーマを変えるときは、
  * 直前のバージョンのJSONと比べてMigrationを書く。
@@ -29,7 +31,7 @@ import androidx.room.TypeConverters
         AppSettingsEntity::class,
         RingRecordEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -54,8 +56,21 @@ abstract class AlarmDatabase : RoomDatabase() {
                     storageContext(context),
                     AlarmDatabase::class.java,
                     DATABASE_NAME,
-                ).build().also { instance = it }
+                ).addMigrations(MIGRATION_1_2).build().also { instance = it }
             }
+
+        /**
+         * タイマー専用の音を保存する列を足す移行。
+         *
+         * 以前はタイマーもアラームと同じ音しか鳴らせなかった。純正の時計アプリと同じく
+         * 別々に選べるようにするため、列を1つ足す。既存の行はNULL、つまり
+         * 「アラームと同じ音を使う」として扱われる。
+         */
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE app_settings ADD COLUMN timerSoundUri TEXT")
+            }
+        }
 
         /**
          * データベースを置く場所を返す。端末のロックを解除する前でも読める

@@ -131,6 +131,7 @@ class SettingsRepositoryTest {
     fun `未知のenum文字列は既定値へ倒す`() {
         val entity = AppSettingsEntity(
             alarmSoundUri = null,
+            timerSoundUri = null,
             vibration = true,
             fadeInSeconds = 5,
             silenceAfterMinutes = null,

@@ -93,6 +93,18 @@ private enum class SettingsPickerType {
  * アラーム・見た目・このアプリの3つのまとまりに整理して表示する。
  * 各項目タップ時にdesign/SettingsPicker.dc.htmlに基づく中央ポップアップを開いて即時選択を提供する。
  */
+/**
+ * 端末の音を選ぶ画面を開くIntentを作る。
+ * アラームの音とタイマーの音で同じ作りにするため、ここだけで組み立てる。
+ */
+private fun soundPickerIntent(currentUri: String?): Intent =
+    Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+        putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+        currentUri?.let { putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, it.toUri()) }
+    }
+
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
@@ -106,7 +118,11 @@ fun SettingsScreen(
 
     var currentPicker by rememberSaveable { mutableStateOf<SettingsPickerType?>(null) }
 
-    // システムのアラーム音選択ピッカー
+    // いま選んでいるのがアラームの音かタイマーの音か。ピッカーは1つを使い回すため、
+    // 戻ってきた結果をどちらへ入れるかをここで覚えておく
+    var pickingTimerSound by rememberSaveable { mutableStateOf(false) }
+
+    // システムの音選択ピッカー。アラームとタイマーの両方で使う
     val soundPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
@@ -118,7 +134,11 @@ fun SettingsScreen(
                 intent.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
             }
         }
-        viewModel.setAlarmSoundUri(uri?.toString())
+        if (pickingTimerSound) {
+            viewModel.setTimerSoundUri(uri?.toString())
+        } else {
+            viewModel.setAlarmSoundUri(uri?.toString())
+        }
     }
 
     Column(
@@ -172,13 +192,8 @@ fun SettingsScreen(
                 value = currentSoundTitle,
                 isLast = false,
                 onClick = {
-                    val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
-                        putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
-                        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
-                        putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
-                        settings.alarmSoundUri?.let { putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, it.toUri()) }
-                    }
-                    soundPickerLauncher.launch(intent)
+                    pickingTimerSound = false
+                    soundPickerLauncher.launch(soundPickerIntent(settings.alarmSoundUri))
                 },
             )
 
@@ -238,7 +253,28 @@ fun SettingsScreen(
             )
         }
 
-        // 2. 見た目 セクション
+        // 2. タイマー セクション。アラームとは別の音を選べる
+        SettingsSectionHeader(text = stringResource(R.string.settings_section_timer), topPadding = 10.dp)
+        SettingsCard {
+            // 選んでいなければアラームと同じ音で鳴るため、そのことが分かる表記にする
+            val timerSoundTitle = if (settings.timerSoundUri == null) {
+                stringResource(R.string.settings_timer_sound_same_as_alarm)
+            } else {
+                soundLabel(context, settings.timerSoundUri)
+            }
+            SettingsRow(
+                icon = SettingsSoundIcon,
+                title = stringResource(R.string.settings_timer_sound_item_title),
+                value = timerSoundTitle,
+                isLast = true,
+                onClick = {
+                    pickingTimerSound = true
+                    soundPickerLauncher.launch(soundPickerIntent(settings.timerSoundUri))
+                },
+            )
+        }
+
+        // 3. 見た目 セクション
         SettingsSectionHeader(text = stringResource(R.string.settings_section_appearance), topPadding = 10.dp)
         SettingsCard {
             SettingsThemeRow(
