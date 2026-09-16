@@ -20,6 +20,8 @@
     <string name="ringing_next_occurrence">次は %1$s</string>
     <string name="ringing_next_none">この回で終了</string>
     <string name="ringing_end_term">タームを終了</string>
+    <!-- 鳴動画面: ターム終了カードに添える長押し操作の案内テキスト -->
+    <string name="ringing_end_term_hint">長押しで終了</string>
     <!-- 鳴動中の通知本文。「7:05（日）・あと24回」のように、鳴っている時刻とタームの残り回数を並べる -->
     <string name="ringing_notification_text_with_remaining">%1$s・あと%2$d回</string>
 
@@ -104,9 +106,9 @@
 
     <!-- ミッション選択ダイアログ -->
     <string name="challenge_timing_never">なし</string>
-    <string name="challenge_timing_never_desc">押すだけで停止します</string>
-    <string name="challenge_timing_end_only">ターム終了時だけ</string>
-    <string name="challenge_timing_end_only_desc">最後の1回だけミッションを出します。途中は押すだけで停止します</string>
+    <string name="challenge_timing_never_desc">押すと停止します</string>
+    <string name="challenge_timing_end_only">ターム終了時のみ</string>
+    <string name="challenge_timing_end_only_desc">最後の1回のみミッションを出します。途中は押すと停止します</string>
     <string name="challenge_timing_every_time">毎回</string>
     <string name="challenge_timing_every_time_desc">鳴動のたびにミッションを出します</string>
     <string name="challenge_difficulty">難易度</string>

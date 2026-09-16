@@ -42,6 +42,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.core.snap
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -58,6 +59,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -122,6 +125,136 @@ val TIMER_ACTION_ICON_SIZE = 27.dp
  * 残り時間を中心に置いたうえで、その下へ重ならずに収まる位置とする。
  */
 val TIMER_ACTION_ICON_CENTER_OFFSET = 64.dp
+
+/**
+ * 2件以上のタイマーを2列グリッドで並べる際の画面左右の余白(dp)。
+ * 純正時計アプリの実測値14dpに基づき、端のカードと画面縁との適正な距離を保つために定義する。
+ */
+val COMPACT_GRID_HORIZONTAL_PADDING = 14.dp
+
+/**
+ * 2列グリッドにおける列間の水平余白(dp)。
+ * 純正時計アプリの実測値30dpに基づき、左右のカードが近すぎず一覧しやすい間隔を確保するために定義する。
+ */
+val COMPACT_GRID_COLUMN_SPACING = 30.dp
+
+/**
+ * 2列グリッドにおける行間の垂直余白(dp)。
+ * 縦スクロール時に上下のカード間の境界を明確にするために定義する。
+ */
+val COMPACT_GRID_ROW_SPACING = 16.dp
+
+/**
+ * 小さいカードの設計基準幅比率。
+ * 純正時計アプリの実測値213dpに基づき、カードのアスペクト比を計算するために定義する。
+ */
+const val COMPACT_TIMER_CARD_WIDTH_RATIO = 213f
+
+/**
+ * 小さいカードの設計基準高さ比率。
+ * 純正時計アプリの実測値287dpに基づき、カードのアスペクト比を計算するために定義する。
+ */
+const val COMPACT_TIMER_CARD_HEIGHT_RATIO = 287f
+
+/**
+ * 小さいカードの縦横比(高さ ÷ 幅)。
+ * 実測値「幅213dp、高さ287dp」に基づき、利用可能幅から求めた幅に応じて高さを比例計算するために用いる。
+ */
+const val COMPACT_TIMER_CARD_ASPECT_RATIO = COMPACT_TIMER_CARD_HEIGHT_RATIO / COMPACT_TIMER_CARD_WIDTH_RATIO
+
+/**
+ * 小さいカードの角丸の半径(dp)。
+ * 純正時計アプリの実測値24dpに基づき、2列表示時に適した丸みを付与するために定義する。
+ */
+val COMPACT_TIMER_CARD_CORNER_RADIUS = 24.dp
+
+/**
+ * 小さいカードの中央の円の直径比率(カード幅に対する比率)。
+ * 純正時計アプリの実測値「直径160dp / 幅213dp」に基づき、カード幅に比例した円の大きさを決めるために用いる。
+ */
+const val COMPACT_TIMER_RING_SIZE_RATIO = 160f / 213f
+
+/**
+ * 小さいカードの上端から円の上端までの位置比率(カード高さに対する比率)。
+ * 純正時計アプリの実測値「高さ43.5dp / 287dp」に基づき、上部見出し行と円の垂直配置を決めるために用いる。
+ */
+const val COMPACT_TIMER_RING_TOP_OFFSET_RATIO = 43.5f / 287f
+
+/**
+ * 止まっている小さいカードの円の線の太さ(dp)。
+ * 純正時計アプリの実測値7dpに基づき、停止時の輪郭線を適正な太さで描くために定義する。
+ */
+val COMPACT_TIMER_RING_STROKE_WIDTH = 7.dp
+
+/**
+ * 小さいカード下部の「+1:00」延長ボタンの幅比率(カード幅に対する比率)。
+ * 純正時計アプリの実測値「幅86dp / 幅213.5dp (約0.4029)」に基づき、画面幅に応じて横幅を伸縮するために定義する。
+ */
+const val COMPACT_TIMER_EXTEND_BUTTON_WIDTH_RATIO = 0.4029f
+
+/**
+ * 小さいカード下部の「+1:00」延長ボタンの高さ比率(カード幅に対する比率)。
+ * 純正時計アプリの実測値「高さ48dp / 幅213.5dp (約0.2249)」に基づき、画面幅に応じて高さを伸縮するために定義する。
+ */
+const val COMPACT_TIMER_EXTEND_BUTTON_HEIGHT_RATIO = 0.2249f
+
+/**
+ * 小さいカードの円下端からボタン上端までの垂直間隔比率(カード幅に対する比率)。
+ * 純正時計アプリの実測値「余白20dp / 幅213.5dp (約0.0937)」に基づき、画面幅に応じて余白を伸縮するために定義する。
+ */
+const val COMPACT_TIMER_RING_TO_BUTTON_GAP_RATIO = 0.0937f
+
+/**
+ * 小さいカードのボタン下端からカード下端までの余白比率(カード幅に対する比率)。
+ * 純正時計アプリの実測値「余白14dp / 幅213.5dp (約0.0656)」に基づき、画面幅に応じて余白を伸縮するために定義する。
+ */
+const val COMPACT_TIMER_BUTTON_TO_BOTTOM_GAP_RATIO = 0.0656f
+
+/**
+ * 操作ボタンやアイコンの最小タップ領域サイズ(dp)。
+ * 見た目の部品サイズが縮小された場合でもアクセシビリティ基準の操作性を維持するため、44dpを下回らないタッチ範囲を確保するために定義する。
+ */
+val COMPACT_TIMER_MIN_TOUCH_TARGET_SIZE = 44.dp
+
+/**
+ * 小さいカード中央の一時停止・再開の印のサイズ(dp)。
+ * 直径約160dpの小型円内部で残り時間とバランス良く視認できる大きさを保つために定義する。
+ */
+val COMPACT_TIMER_ACTION_ICON_SIZE = 18.dp
+
+/**
+ * 小さいカード中央の一時停止・再開の印を中心から下へずらすオフセット(dp)。
+ * 小型円内で残り時間の数字と印が重ならない適切な位置へ配置するために定義する。
+ */
+val COMPACT_TIMER_ACTION_ICON_CENTER_OFFSET = 30.dp
+
+/**
+ * タイマーカードのサイズ変化や出入り、並べ替えアニメーションの時間(ミリ秒)。
+ * 200msの機敏かつ滑らかな遷移で画面の切り替えを見せるために定義する。
+ */
+const val TIMER_ITEM_ANIMATION_DURATION_MS = 200
+
+/**
+ * 画面の利用可能な横幅から、小さいカード1枚の幅(dp)を計算する。
+ * 「(使える幅 - 列の間) ÷ 2」の式に従い、決め打ちにせず動的な画面幅に対応したカード幅を算出する。
+ *
+ * @param availableWidth 左右の余白を差し引いた利用可能な全幅
+ * @return 2列グリッドに配置するカード1枚の幅
+ */
+fun calculateCompactCardWidth(availableWidth: Dp): Dp {
+    return ((availableWidth - COMPACT_GRID_COLUMN_SPACING) / 2).coerceAtLeast(0.dp)
+}
+
+/**
+ * 小さいカードの幅から高さ(dp)を計算する。
+ * 「カードの幅 × 287 ÷ 213」の設計比率を維持し、幅に応じた正確なカードの高さを算出する。
+ *
+ * @param cardWidth 計算されたカードの幅
+ * @return 設計比率に基づくカードの高さ
+ */
+fun calculateCompactCardHeight(cardWidth: Dp): Dp {
+    return cardWidth * COMPACT_TIMER_CARD_ASPECT_RATIO
+}
 
 /**
  * 端末の「アニメーションを減らす」または「アニメーションの無効化」が有効になっているかを判定する。
@@ -610,6 +743,356 @@ private fun formatTimerDuration(millis: Long): String {
         }
         if (seconds > 0 || (hours == 0L && minutes == 0L)) {
             append(stringResource(R.string.timer_duration_seconds, seconds))
+        }
+    }
+}
+
+/**
+ * 2件以上のタイマーがある場合に2列で表示する小型カードComposable。
+ * 純正時計アプリの実測値(幅213dp、高さ287dp、角丸24dp、直径160dpの円、高さ48dpのボタン等)に基づき、
+ * 画面幅から計算された動的な幅と高さで描画する。
+ * 動作中は主役の色(primaryContainer)で塗りつぶした円、停止中は線だけの円とリセットボタンを表示し、
+ * 複数タイマーの一覧性と操作性を両立する役割を持つ。
+ *
+ * @param timer 対象のタイマー状態
+ * @param cardWidth 計算されたカードの幅
+ * @param cardHeight 計算されたカードの高さ
+ * @param nowElapsed 基準経過時刻(elapsedRealtime)
+ * @param nowWall 基準壁時計時刻(wallClockMillis)
+ * @param onPause 一時停止要求時のコールバック
+ * @param onResume 再開要求時のコールバック
+ * @param onReset リセット(やり直し)要求時のコールバック
+ * @param onExtend 1分延長要求時のコールバック
+ * @param onDelete 削除要求時のコールバック
+ * @param modifier 外部から適用するModifier
+ */
+@Composable
+fun CompactTimerCard(
+    timer: TimerState,
+    cardWidth: Dp,
+    cardHeight: Dp,
+    nowElapsed: Long,
+    nowWall: Long,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onReset: () -> Unit,
+    onExtend: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val reduceMotion = remember(context) { isReduceMotionEnabled(context) }
+    val isFinished = isTimerOverdue(timer, nowElapsed, nowWall)
+    val isRunning = timer.runState == TimerRunState.RUNNING && !isFinished
+    val isPaused = timer.runState == TimerRunState.PAUSED && !isFinished
+
+    // 動作中(RUNNING/FINISHED)は主役の色の暗めの面(primaryContainer)、停止中は控えめな面(surfaceContainer)
+    val targetContainerColor = if (isRunning || isFinished) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainer
+    }
+    val containerColor by animateColorAsState(
+        targetValue = targetContainerColor,
+        animationSpec = if (reduceMotion) snap() else timerColorAnimationSpec(),
+        label = "CompactTimerContainerColor",
+    )
+
+    // 円の描画色。動作中はprimaryで塗りつぶし、停止中はprimaryの線で描く
+    val targetCircleColor = MaterialTheme.colorScheme.primary
+    val circleColor by animateColorAsState(
+        targetValue = targetCircleColor,
+        animationSpec = if (reduceMotion) snap() else timerColorAnimationSpec(),
+        label = "CompactTimerCircleColor",
+    )
+
+    // 円の中の文字・印の色。動作中はonPrimary、停止中はonSurface
+    val targetTextColor = if (isRunning || isFinished) {
+        MaterialTheme.colorScheme.onPrimary
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    val textColor by animateColorAsState(
+        targetValue = targetTextColor,
+        animationSpec = if (reduceMotion) snap() else timerColorAnimationSpec(),
+        label = "CompactTimerTextColor",
+    )
+
+    // 見出しやアイコンの補助色。動作中はonPrimaryの控えめな透過、停止中はsubtleText
+    val targetSubtleColor = if (isRunning || isFinished) {
+        MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+    } else {
+        MaterialTheme.customColors.subtleText
+    }
+    val subtleColor by animateColorAsState(
+        targetValue = targetSubtleColor,
+        animationSpec = if (reduceMotion) snap() else timerColorAnimationSpec(),
+        label = "CompactTimerSubtleColor",
+    )
+
+    val circleSize = cardWidth * COMPACT_TIMER_RING_SIZE_RATIO
+    val circleTopOffset = cardHeight * COMPACT_TIMER_RING_TOP_OFFSET_RATIO
+    val buttonWidth = cardWidth * COMPACT_TIMER_EXTEND_BUTTON_WIDTH_RATIO
+    val buttonHeight = cardWidth * COMPACT_TIMER_EXTEND_BUTTON_HEIGHT_RATIO
+    val ringToButtonGap = cardWidth * COMPACT_TIMER_RING_TO_BUTTON_GAP_RATIO
+    val buttonToBottomGap = cardWidth * COMPACT_TIMER_BUTTON_TO_BOTTOM_GAP_RATIO
+
+    // 操作ボタンの押せる範囲を44dp以上確保するため、見た目の高さを保ちつつ上下の余白を案分して調整する
+    val touchTargetHeight = maxOf(buttonHeight, COMPACT_TIMER_MIN_TOUCH_TARGET_SIZE)
+    val extraTouchHeight = (touchTargetHeight - buttonHeight).coerceAtLeast(0.dp)
+    val adjustedTopGap = (ringToButtonGap - extraTouchHeight / 2).coerceAtLeast(0.dp)
+    val adjustedBottomGap = (buttonToBottomGap - extraTouchHeight / 2).coerceAtLeast(0.dp)
+
+    Card(
+        modifier = modifier
+            .width(cardWidth)
+            .height(cardHeight),
+        shape = RoundedCornerShape(COMPACT_TIMER_CARD_CORNER_RADIUS),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // 1. 上の見出し行: 左にタイマーの名前 (右端は44dpの閉じるボタン領域を確保)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(circleTopOffset)
+                        .padding(start = 16.dp, end = COMPACT_TIMER_MIN_TOUCH_TARGET_SIZE),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val formattedDuration = formatTimerDuration(timer.totalMillis)
+                    val userLabel = timer.userLabelOrNull()
+                    val labelText = userLabel ?: formattedDuration
+                    Text(
+                        text = labelText,
+                        style = TextStyle(
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = subtleColor,
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                // 2. まん中の円 (直径: カード幅の0.75倍) と 残り時間・印
+                val actionDesc = stringResource(
+                    when {
+                        isFinished -> R.string.timer_stop
+                        isRunning -> R.string.timer_pause
+                        else -> R.string.timer_resume
+                    }
+                )
+                val toggleAction = {
+                    when {
+                        isFinished -> onReset()
+                        isRunning -> onPause()
+                        else -> onResume()
+                    }
+                }
+                val centerInteraction = remember { MutableInteractionSource() }
+
+                Box(
+                    modifier = Modifier
+                        .size(circleSize)
+                        .clickable(
+                            interactionSource = centerInteraction,
+                            indication = ripple(bounded = false, radius = 45.dp),
+                            onClick = toggleAction,
+                        )
+                        .semantics { contentDescription = actionDesc },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val strokePx = COMPACT_TIMER_RING_STROKE_WIDTH.toPx()
+                        val radius = (size.minDimension - strokePx) / 2f
+
+                        if (isRunning || isFinished) {
+                            // 動作中: 円を主役の色で塗りつぶす
+                            drawCircle(
+                                color = circleColor,
+                                radius = size.minDimension / 2f,
+                                center = center,
+                            )
+                        } else {
+                            // 止まっているとき: 円は線だけ（太さ 7dp）で描く
+                            drawCircle(
+                                color = circleColor,
+                                radius = radius,
+                                center = center,
+                                style = Stroke(width = strokePx),
+                            )
+                        }
+                    }
+
+                    // 円の中の残り時間テキスト
+                    Text(
+                        text = timerDisplayText(timer, nowElapsed, nowWall),
+                        style = TextStyle(
+                            fontFamily = IbmPlexMono,
+                            fontWeight = FontWeight.W200,
+                            fontSize = 32.sp,
+                            lineHeight = 36.sp,
+                            letterSpacing = (-0.02).em,
+                            fontFeatureSettings = "tnum",
+                        ),
+                        autoSize = TextAutoSize.StepBased(
+                            minFontSize = 16.sp,
+                            maxFontSize = 32.sp,
+                            stepSize = 1.sp,
+                        ),
+                        maxLines = 1,
+                        softWrap = false,
+                        color = textColor,
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                    )
+
+                    // 一時停止・再開・停止の印
+                    TimerActionIcon(
+                        runState = timer.runState,
+                        color = textColor,
+                        modifier = Modifier
+                            .size(COMPACT_TIMER_ACTION_ICON_SIZE)
+                            .offset(y = COMPACT_TIMER_ACTION_ICON_CENTER_OFFSET),
+                    )
+                }
+
+                // 円の下端からボタンまでの余白 (実測20dp相当の比率)
+                Spacer(modifier = Modifier.height(adjustedTopGap))
+
+                // 3. 下のボタン行: 「+1:00」と、止まっているときだけ右へ小さく出す「リセット」
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(touchTargetHeight),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // +1:00 ボタン: 見た目の高さをbuttonHeightとしつつ、タップ領域はtouchTargetHeight(44dp以上)を確保
+                    val extendInteraction = remember { MutableInteractionSource() }
+                    val extendTextColor = if (isRunning || isFinished) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    val animatedExtendTextColor by animateColorAsState(
+                        targetValue = extendTextColor,
+                        animationSpec = if (reduceMotion) snap() else timerColorAnimationSpec(),
+                        label = "CompactTimerExtendTextColor",
+                    )
+                    val extendDesc = stringResource(R.string.timer_extend_one_minute_button)
+
+                    Box(
+                        modifier = Modifier
+                            .width(buttonWidth)
+                            .height(touchTargetHeight)
+                            .clickable(
+                                interactionSource = extendInteraction,
+                                indication = ripple(bounded = false, radius = buttonWidth / 2),
+                                onClick = onExtend,
+                            )
+                            .semantics { contentDescription = extendDesc },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(buttonHeight / 2),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            modifier = Modifier
+                                .width(buttonWidth)
+                                .height(buttonHeight)
+                                .pressScaleEffect(extendInteraction),
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
+                                Text(
+                                    text = extendDesc,
+                                    style = TextStyle(
+                                        fontFamily = IbmPlexMono,
+                                        fontSize = 14.sp,
+                                    ),
+                                    color = animatedExtendTextColor,
+                                )
+                            }
+                        }
+                    }
+
+                    // リセットボタン: 止まっているとき(PAUSED)だけ +1:00 の右へ小さく出す
+                    if (isPaused) {
+                        val resetInteraction = remember { MutableInteractionSource() }
+                        val resetDesc = stringResource(R.string.timer_reset)
+                        val resetIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        val animatedResetIconColor by animateColorAsState(
+                            targetValue = resetIconColor,
+                            animationSpec = if (reduceMotion) snap() else timerColorAnimationSpec(),
+                            label = "CompactTimerResetIconColor",
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .size(touchTargetHeight)
+                                .clickable(
+                                    interactionSource = resetInteraction,
+                                    indication = ripple(bounded = false, radius = touchTargetHeight / 2),
+                                    onClick = onReset,
+                                )
+                                .semantics { contentDescription = resetDesc },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                modifier = Modifier
+                                    .size(buttonHeight)
+                                    .pressScaleEffect(resetInteraction),
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    TimerResetIcon(
+                                        color = animatedResetIconColor,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // カード下端までの余白 (実測14dp相当の比率)
+                Spacer(modifier = Modifier.height(adjustedBottomGap))
+            }
+
+            // 右上の閉じる「×」ボタン:
+            // 見出し行の狭い高さ(約31dp〜36dp)に制限されず44dpのタップ領域を確保するため、カード右上に配置する
+            val deleteInteraction = remember { MutableInteractionSource() }
+            val deleteDesc = stringResource(if (isFinished) R.string.timer_stop else R.string.timer_delete)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(COMPACT_TIMER_MIN_TOUCH_TARGET_SIZE)
+                    .clickable(
+                        interactionSource = deleteInteraction,
+                        indication = ripple(bounded = false, radius = 20.dp),
+                        onClick = onDelete,
+                    )
+                    .semantics { contentDescription = deleteDesc },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = null,
+                    tint = subtleColor,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .offset(y = (circleTopOffset - COMPACT_TIMER_MIN_TOUCH_TARGET_SIZE) / 2),
+                )
+            }
         }
     }
 }

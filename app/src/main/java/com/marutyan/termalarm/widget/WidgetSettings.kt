@@ -5,7 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.glance.GlanceTheme
+import androidx.glance.LocalContext
 import androidx.glance.text.FontFamily
 import androidx.glance.text.FontWeight
 import androidx.glance.unit.ColorProvider
@@ -63,31 +63,101 @@ enum class WidgetBackgroundStyle {
 /**
  * ウィジェットの数字と文字に適用する書体の選択肢を定義する列挙型。
  * Glanceウィジェット上で確実に描画可能なフォントから好みの書体を選択できるようにするために必要となる。
- * 設定画面でのフォント選択およびウィジェット描画時のテキストスタイル構築において、FontFamilyを提供する役割を持つ。
+ * 設定画面でのフォント選択およびウィジェット描画時のテキストスタイル構築において、FontFamilyや各行の横幅比・高さ比を提供する役割を持つ。
  *
  * @property family Glanceのテキスト描画に用いるフォントファミリー。
+ * @property timeWidthRatio 実機でandroid.graphics.Paint.measureTextを使って測った時刻「12:34」の文字サイズに対する横幅比。数字とコロンの送り幅を見積もり、領域内に時刻を最大化して収める役割を持つ。
+ * @property dateWidthRatio 実機でandroid.graphics.Paint.measureTextを使って測った月日「12月30日(月)」の文字サイズに対する横幅比。漢字・数字・括弧を含む日付行が領域幅を超えないよう上限サイズを算出する役割を持つ。
+ * @property nextRingWidthRatio 実機でandroid.graphics.Paint.measureTextを使って測った次の鳴動「12:34（水）」の文字サイズに対する横幅比（曜日を含む）。次回アラーム情報が領域幅からはみ出して途切れるのを防ぐ上限サイズを算出する役割を持つ。
+ * @property lineHeightRatio 実機でandroid.text.StaticLayoutを使って測った、文字列によらずフォントが占める1行全体の高さ比（文字サイズ1emあたり）。行全体の必要領域を見積もる役割を持つ。
+ * @property timeBodyHeightRatio 実機でandroid.graphics.Paint.getTextBoundsを使って測った時刻「12:34」の文字実体の高さ比（文字サイズ1emあたり）。文字実体基準の配置と間隔計算に用いる役割を持つ。
+ * @property timeTopPaddingRatio 実機でandroid.text.StaticLayoutとPaint.getTextBoundsを使って測った時刻「12:34」の行上端から文字実体上端までの距離比（文字サイズ1emあたり）。実体位置に基づくpadding(top)算出に用いる役割を持つ。
+ * @property dateBodyHeightRatio 実機でandroid.graphics.Paint.getTextBoundsを使って測った月日「12月30日(月)」の文字実体の高さ比（文字サイズ1emあたり）。文字実体基準の配置と間隔計算に用いる役割を持つ。
+ * @property dateTopPaddingRatio 実機でandroid.text.StaticLayoutとPaint.getTextBoundsを使って測った月日「12月30日(月)」の行上端から文字実体上端までの距離比（文字サイズ1emあたり）。実体位置に基づくpadding(top)算出に用いる役割を持つ。
+ * @property nextRingBodyHeightRatio 実機でandroid.graphics.Paint.getTextBoundsを使って測った次の鳴動「12:34（水）」の文字実体の高さ比（文字サイズ1emあたり）。行の実体高さをアイコンと比べる際に用いる役割を持つ。
+ * @property nextRingTopPaddingRatio 実機でandroid.text.StaticLayoutとPaint.getTextBoundsを使って測った次の鳴動「12:34（水）」の行上端から文字実体上端までの距離比（文字サイズ1emあたり）。実体位置に基づくpadding(top)算出に用いる役割を持つ。
  */
-enum class WidgetFontStyle(val family: FontFamily) {
+enum class WidgetFontStyle(
+    val family: FontFamily,
+    val timeWidthRatio: Float,
+    val dateWidthRatio: Float,
+    val nextRingWidthRatio: Float,
+    val lineHeightRatio: Float,
+    val timeBodyHeightRatio: Float,
+    val timeTopPaddingRatio: Float,
+    val dateBodyHeightRatio: Float,
+    val dateTopPaddingRatio: Float,
+    val nextRingBodyHeightRatio: Float,
+    val nextRingTopPaddingRatio: Float,
+) {
     /**
      * 標準のゴシック体フォント（Sans-Serif）。
      * どの端末環境でも安定した視認性と自然な可読性を確保するために必要となる。
      * 書体設定の既定値として標準的なテキスト表示を提供する役割を持つ。
+     * 実機でandroid.text.StaticLayoutとPaint.getTextBoundsにより測った1emあたりの比率：
+     * 行が占める高さ1.34、時刻「12:34」（実体高0.74、上端距離0.33、幅2.48）、
+     * 月日「12月30日(月)」（実体高1.04、上端距離0.25、幅5.93）、
+     * 次の鳴動「12:34（水）」（実体高0.98、上端距離0.19、幅5.48）。
      */
-    STANDARD(FontFamily.SansSerif),
+    STANDARD(
+        family = FontFamily.SansSerif,
+        timeWidthRatio = 2.48f,
+        dateWidthRatio = 5.93f,
+        nextRingWidthRatio = 5.48f,
+        lineHeightRatio = 1.34f,
+        timeBodyHeightRatio = 0.74f,
+        timeTopPaddingRatio = 0.33f,
+        dateBodyHeightRatio = 1.04f,
+        dateTopPaddingRatio = 0.25f,
+        nextRingBodyHeightRatio = 0.98f,
+        nextRingTopPaddingRatio = 0.19f,
+    ),
 
     /**
      * 等幅フォント（Monospace）。
      * 各文字の幅を均一にして、時刻の更新時や数字の変化による文字の横揺れを防ぐために必要となる。
      * カウンターやデジタル時計らしい正確な佇まいを提供する役割を持つ。
+     * 実機でandroid.text.StaticLayoutとPaint.getTextBoundsにより測った1emあたりの比率：
+     * 行が占める高さ1.34、時刻「12:34」（実体高0.73、上端距離0.34、幅3.00）、
+     * 月日「12月30日(月)」（実体高0.96、上端距離0.26、幅6.60）、
+     * 次の鳴動「12:34（水）」（実体高0.98、上端距離0.19、幅6.00）。
      */
-    MONOSPACE(FontFamily.Monospace),
+    MONOSPACE(
+        family = FontFamily.Monospace,
+        timeWidthRatio = 3.00f,
+        dateWidthRatio = 6.60f,
+        nextRingWidthRatio = 6.00f,
+        lineHeightRatio = 1.34f,
+        timeBodyHeightRatio = 0.73f,
+        timeTopPaddingRatio = 0.34f,
+        dateBodyHeightRatio = 0.96f,
+        dateTopPaddingRatio = 0.26f,
+        nextRingBodyHeightRatio = 0.98f,
+        nextRingTopPaddingRatio = 0.19f,
+    ),
 
     /**
      * 明朝体フォント（Serif）。
      * 落ち着いた書籍風のクラシックな佇まいを好むユーザーの要望に応えるために必要となる。
      * 個性的なテキストデザインでウィジェットを演出する役割を持つ。
+     * 実機でandroid.text.StaticLayoutとPaint.getTextBoundsにより測った1emあたりの比率：
+     * 行が占める高さ1.30、時刻「12:34」（実体高0.74、上端距離0.32、幅2.53）、
+     * 月日「12月30日(月)」（実体高0.94、上端距離0.24、幅5.94）、
+     * 次の鳴動「12:34（水）」（実体高0.94、上端距離0.20、幅5.53）。
      */
-    SERIF(FontFamily.Serif),
+    SERIF(
+        family = FontFamily.Serif,
+        timeWidthRatio = 2.53f,
+        dateWidthRatio = 5.94f,
+        nextRingWidthRatio = 5.53f,
+        lineHeightRatio = 1.30f,
+        timeBodyHeightRatio = 0.74f,
+        timeTopPaddingRatio = 0.32f,
+        dateBodyHeightRatio = 0.94f,
+        dateTopPaddingRatio = 0.24f,
+        nextRingBodyHeightRatio = 0.94f,
+        nextRingTopPaddingRatio = 0.20f,
+    ),
 }
 
 /**
@@ -200,7 +270,7 @@ fun widgetSecondaryColorProvider(): ColorProvider {
 
 /**
  * 選択された時刻色設定に対応するColorProviderを生成する関数。
- * 白・黒の固定色描画に加え、システム動的カラー選択時にAndroid 12以降のプライマリ色を適用（未満は白）するために必要となる。
+ * 白・黒の固定色描画に加え、システム動的カラー選択時にAndroid 12以降の純正時計ウィジェットと同等の明るいトーン（system_accent1_100）を適用（未満は白）するために必要となる。
  * ウィジェットのメイン時刻表示部分に対して、OSバージョンと設定値に応じた最適なColorProviderを供給する役割を持つ。
  */
 @Composable
@@ -210,7 +280,10 @@ fun widgetTimeColorProvider(timeColor: WidgetTimeColor): ColorProvider {
         WidgetTimeColor.BLACK -> ColorProvider(Color.Black)
         WidgetTimeColor.SYSTEM -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                GlanceTheme.colors.primary
+                // Glanceの色リソース版ColorProviderはライブラリ内部専用のため使えない。
+                // ここで端末の色を1つの値へ解決し、通常のColorProviderへ渡す
+                val context = LocalContext.current
+                ColorProvider(Color(context.getColor(android.R.color.system_accent1_100)))
             } else {
                 ColorProvider(Color.White)
             }

@@ -2,14 +2,24 @@ package com.marutyan.termalarm.ui.timer
 
 import android.os.SystemClock
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -17,8 +27,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -36,6 +48,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -175,29 +188,107 @@ fun TimerScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // 1件も無いときはこの枝に来ない（数字を入れる画面をそのまま出すため）
-                        LazyColumn(
+                        // 1件のときは今までの大きなカードを画面幅いっぱいに、2件以上のときは2列グリッドで小さく並べる。
+                        // カードの幅は利用可能な幅から動的に計算し、件数の切り替えや増減時は滑らかなアニメーションを適用する。
+                        val context = LocalContext.current
+                        val reduceMotion = remember(context) { isReduceMotionEnabled(context) }
+                        val isSingle = sortedTimers.size == 1
+
+                        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                            val availableWidth = (maxWidth - (COMPACT_GRID_HORIZONTAL_PADDING * 2)).coerceAtLeast(0.dp)
+                            val compactCardWidth = calculateCompactCardWidth(availableWidth)
+                            val compactCardHeight = calculateCompactCardHeight(compactCardWidth)
+
+                            val gridHorizontalPadding = if (isSingle) TIMER_CARD_HORIZONTAL_PADDING else COMPACT_GRID_HORIZONTAL_PADDING
+                            val animatedGridPadding by animateDpAsState(
+                                targetValue = gridHorizontalPadding,
+                                animationSpec = if (reduceMotion) snap() else tween(durationMillis = TIMER_ITEM_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
+                                label = "GridHorizontalPadding",
+                            )
+
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(2),
                                 contentPadding = PaddingValues(
-                                    start = TIMER_CARD_HORIZONTAL_PADDING,
-                                    end = TIMER_CARD_HORIZONTAL_PADDING,
+                                    start = animatedGridPadding,
+                                    end = animatedGridPadding,
                                     bottom = 96.dp,
                                 ),
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(COMPACT_GRID_COLUMN_SPACING),
+                                verticalArrangement = Arrangement.spacedBy(COMPACT_GRID_ROW_SPACING),
                                 modifier = Modifier.fillMaxSize(),
                             ) {
-                                items(sortedTimers, key = { it.id }) { timer ->
-                                    TimerCard(
-                                        timer = timer,
-                                        nowElapsed = nowElapsed,
-                                        nowWall = nowWall,
-                                        onPause = { viewModel.pause(timer.id) },
-                                        onResume = { viewModel.resume(timer.id) },
-                                        onReset = { viewModel.reset(timer.id) },
-                                        onExtend = { viewModel.extendOneMinute(timer.id) },
-                                        onDelete = { viewModel.delete(timer.id) },
-                                        modifier = Modifier.animateItem(),
-                                    )
+                                items(
+                                    items = sortedTimers,
+                                    key = { it.id },
+                                    span = {
+                                        if (isSingle) GridItemSpan(2) else GridItemSpan(1)
+                                    },
+                                ) { timer ->
+                                    val itemModifier = if (reduceMotion) {
+                                        Modifier
+                                    } else {
+                                        Modifier.animateItem(
+                                            fadeInSpec = tween(TIMER_ITEM_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
+                                            fadeOutSpec = tween(TIMER_ITEM_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
+                                            placementSpec = tween(TIMER_ITEM_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
+                                        )
+                                    }
+
+                                    AnimatedContent(
+                                        targetState = isSingle,
+                                        transitionSpec = {
+                                            if (reduceMotion) {
+                                                EnterTransition.None.togetherWith(ExitTransition.None).using(SizeTransform { _, _ -> snap() })
+                                            } else if (targetState) {
+                                                // 2件以上から1件へ: 小さいカードから大きいカードへ広がりながらフェード
+                                                (fadeIn(animationSpec = tween(TIMER_ITEM_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing)) +
+                                                    scaleIn(initialScale = 0.85f, animationSpec = tween(TIMER_ITEM_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing)))
+                                                    .togetherWith(
+                                                        fadeOut(animationSpec = tween(TIMER_ITEM_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing)) +
+                                                            scaleOut(targetScale = 1.15f, animationSpec = tween(TIMER_ITEM_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing))
+                                                    )
+                                            } else {
+                                                // 1件から2件以上へ: 大きいカードから小さいカードへ縮みながらフェード
+                                                (fadeIn(animationSpec = tween(TIMER_ITEM_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing)) +
+                                                    scaleIn(initialScale = 1.15f, animationSpec = tween(TIMER_ITEM_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing)))
+                                                    .togetherWith(
+                                                        fadeOut(animationSpec = tween(TIMER_ITEM_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing)) +
+                                                            scaleOut(targetScale = 0.85f, animationSpec = tween(TIMER_ITEM_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing))
+                                                    )
+                                            }
+                                        },
+                                        label = "TimerCardContentTransition",
+                                        modifier = itemModifier,
+                                    ) { single ->
+                                        if (single) {
+                                            TimerCard(
+                                                timer = timer,
+                                                nowElapsed = nowElapsed,
+                                                nowWall = nowWall,
+                                                onPause = { viewModel.pause(timer.id) },
+                                                onResume = { viewModel.resume(timer.id) },
+                                                onReset = { viewModel.reset(timer.id) },
+                                                onExtend = { viewModel.extendOneMinute(timer.id) },
+                                                onDelete = { viewModel.delete(timer.id) },
+                                            )
+                                        } else {
+                                            CompactTimerCard(
+                                                timer = timer,
+                                                cardWidth = compactCardWidth,
+                                                cardHeight = compactCardHeight,
+                                                nowElapsed = nowElapsed,
+                                                nowWall = nowWall,
+                                                onPause = { viewModel.pause(timer.id) },
+                                                onResume = { viewModel.resume(timer.id) },
+                                                onReset = { viewModel.reset(timer.id) },
+                                                onExtend = { viewModel.extendOneMinute(timer.id) },
+                                                onDelete = { viewModel.delete(timer.id) },
+                                            )
+                                        }
+                                    }
                                 }
                             }
+                        }
                     }
 
                     // 右下に浮かせた「タイマーを追加」ボタン (60dp角、角丸20dp、主役の色)

@@ -12,7 +12,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,8 +33,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -67,7 +65,6 @@ import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.lifecycle.lifecycleScope
 import com.marutyan.termalarm.R
 import com.marutyan.termalarm.ui.theme.BlackSurface
-import com.marutyan.termalarm.ui.theme.DynamicThemePreviewColors
 import com.marutyan.termalarm.ui.theme.NavyOutline
 import com.marutyan.termalarm.ui.theme.NavyPrimary
 import com.marutyan.termalarm.ui.theme.NavySubtleText
@@ -377,13 +374,12 @@ private fun WidgetPreview(
         offset = Offset(shadowOffsetPx, shadowOffsetPx),
         blurRadius = 0f,
     )
-    val context = LocalContext.current
     val timeTextColor = when (timeColor) {
         WidgetTimeColor.WHITE -> Color.White
         WidgetTimeColor.BLACK -> Color.Black
         WidgetTimeColor.SYSTEM -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (isSystemInDarkTheme()) dynamicDarkColorScheme(context).primary else dynamicLightColorScheme(context).primary
+                colorResource(android.R.color.system_accent1_100)
             } else {
                 Color.White
             }
@@ -490,8 +486,8 @@ private fun ColorChoice(
 }
 
 /**
- * 端末の色（ダイナミックカラー）を表す虹色グラデーションの選択肢の丸。
- * Android 12以降でのみ表示し、壁紙連動の時刻色を選択できるようにするとともに、読み上げ用のラベルを提供するために用いる。
+ * 端末の色（ダイナミックカラー）を表す選択肢の丸。
+ * Android 12以降でのみ表示し、純正時計ウィジェットと同じ明るいトーン（system_accent1_100）の単色で表示して選ぶときの誤解を防ぐために用いる。
  * システムカラーを時刻の色として選ばせるための選択肢を提供する役割を持つ。
  */
 @Composable
@@ -500,14 +496,16 @@ private fun DynamicColorChoice(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val gradient = Brush.linearGradient(colors = DynamicThemePreviewColors)
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .background(gradient, CircleShape)
-            .border(if (selected) 3.dp else 1.dp, if (selected) NavyPrimary else NavyOutline, CircleShape)
-            .clickable(onClick = onClick)
-            .semantics { this.contentDescription = contentDescription },
+    val color = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        colorResource(android.R.color.system_accent1_100)
+    } else {
+        Color.White
+    }
+    ColorChoice(
+        color = color,
+        contentDescription = contentDescription,
+        selected = selected,
+        onClick = onClick,
     )
 }
 

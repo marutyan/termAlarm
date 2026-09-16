@@ -424,6 +424,8 @@ fun HomeScreen(
                 TermCard(
                     schedule = schedule,
                     timePattern = timePattern,
+                    now = now,
+                    onEndTodayTerm = onEndTodayTerm,
                     onToggleEnabled = { enabled ->
                         viewModel.toggleEnabled(schedule, enabled)
                     },
@@ -505,6 +507,8 @@ private val TERM_DAY_SPACING = 0.dp
 private fun TermCard(
     schedule: AlarmSchedule,
     timePattern: String,
+    now: ZonedDateTime,
+    onEndTodayTerm: (Long) -> Unit,
     onToggleEnabled: (Boolean) -> Unit,
     onToggleDay: (DayOfWeek) -> Unit,
     onClick: () -> Unit,
@@ -667,7 +671,15 @@ private fun TermCard(
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = ripple(bounded = false, radius = 24.dp),
-                    onClick = { onToggleEnabled(!schedule.enabled) },
+                    onClick = {
+                        // 鳴動中のタームを誤って無効化すると、その日の残りの鳴動がまとめて終了してしまう。
+                        // そのためセッション進行中にスイッチを切る場合は、即時無効化せず既存の確認ダイアログへ誘導する。
+                        if (schedule.enabled && canEndTodaySession(schedule, now)) {
+                            onEndTodayTerm(schedule.id)
+                        } else {
+                            onToggleEnabled(!schedule.enabled)
+                        }
+                    },
                 ),
             contentAlignment = Alignment.Center,
         ) {
