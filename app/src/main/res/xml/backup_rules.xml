@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 8.0〜11（API 26〜30）向けの自動バックアップおよび端末間データ移行の設定。
+    Android 12（API 31）以降では data_extraction_rules.xml が参照されるが、
+    API 26〜30 では本ファイル（full-backup-content）が参照される。
+
+    【何を預けて何を預けないか】
+    ・預けるもの:
+      端末保護ストレージ（Device Protected Storage）に配置されているデータベース（device_database）、
+      設定情報（device_sharedpref）、および関連ファイル（device_file）。
+      機種変更時などにアラーム設定等のユーザーデータを引き継ぐためにバックアップ対象に含める。
+    ・預けないもの:
+      キャッシュファイルや一時ファイル、通常ストレージのファイルは預けない。
+    ・時計ウィジェット設定が対象外である理由:
+      時計ウィジェットの設定は Glance の PreferencesGlanceStateDefinition により
+      通常ストレージの filesDir/datastore/ 以下へ保存される。
+      機種変更時は appWidgetId が変わり、復元しても正しく対応づかないため、
+      意図して端末保護ストレージ（device_*）のみを対象とし、ウィジェット設定はバックアップ対象外としている。
+
+    【暗号化設定について】
+    full-backup-content では、data_extraction_rules.xml のような
+    disableIfNoEncryptionCapabilities 属性によるクラウドバックアップの暗号化必須化や、
+    クラウドバックアップと端末間移行（device-transfer）の分離指定が構文上サポートされていない。
+    （include タグの requireFlags="clientSideEncryption" は Android 9+ で提供されているが、
+    D2D転送との両立ができず、また Android 8.0/8.1 では解釈されない）。
+    そのため、対象領域の指定（device_*）を揃える構成としている。
+-->
+<full-backup-content>
+    <include domain="device_database" path="." />
+    <include domain="device_sharedpref" path="." />
+    <include domain="device_file" path="." />
+</full-backup-content>

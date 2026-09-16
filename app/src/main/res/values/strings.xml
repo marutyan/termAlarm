@@ -132,6 +132,12 @@
 
     <!-- ライセンス -->
     <string name="about_title">ライセンス情報</string>
+    <string name="about_term_alarm_notice">This application is distributed under the GNU General Public License version 3.</string>
+    <string name="about_source_code_notice">Source code is available at https://github.com/marutyan/termAlarm</string>
+    <string name="about_section_apache_license">Apache License 2.0</string>
+    <string name="about_section_font_license">IBM Plex Mono</string>
+    <string name="about_section_libraries">Libraries</string>
+    <string name="about_libraries_notice">The following libraries are distributed under the Apache License 2.0.</string>
 
     <!-- 当日終了ゲーム -->
     <string name="skip_game_wrong_answer">不正解です。もう一度どうぞ</string>
@@ -266,7 +272,6 @@
 
     <!-- 新設定画面 (design/Settings.dc.html) -->
     <string name="settings_section_appearance">見た目</string>
-    <string name="settings_section_about_app">このアプリ</string>
     <string name="settings_sound_item_title">音</string>
     <string name="settings_silence_after_item_title">消音までの時間</string>
     <string name="settings_wake_check_item_title">二度寝チェックまで</string>
@@ -277,8 +282,6 @@
     <string name="settings_theme_light">明るい</string>
     <string name="settings_theme_black">黒</string>
     <string name="settings_theme_dynamic">端末の色</string>
-    <string name="settings_privacy_item_title">プライバシー</string>
-    <string name="settings_about_item_title">このアプリについて</string>
     <string name="settings_picker_none">なし</string>
     <string name="settings_minutes_format">%1$d分</string>
 

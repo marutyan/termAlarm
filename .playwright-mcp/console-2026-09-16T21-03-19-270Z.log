@@ -1,0 +1,2 @@
+[     883ms] [ERROR] Failed to load resource: the server responded with a status of 429 (Too Many Requests) @ https://www.gnu.org/licenses/gpl-3.0.txt:0
+[    1088ms] [ERROR] Failed to load resource: the server responded with a status of 429 (Too Many Requests) @ https://www.gnu.org/favicon.ico:0

@@ -1,0 +1,1171 @@
+- generic [active] [ref=f2e1]:
+  - link "Skip to main content" [ref=f2e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f2e3]:
+    - banner [ref=f2e4]:
+      - generic [ref=f2e5]:
+        - generic [ref=f2e8]:
+          - link [ref=f2e10] [cursor=pointer]:
+            - /url: /
+            - img "Android Developers" [ref=f2e12]
+          - navigation "Upper tabs" [ref=f2e16]:
+            - generic [ref=f2e17]:
+              - link "Essentials" [ref=f2e18] [cursor=pointer]:
+                - /url: https://developer.android.com/get-started
+              - button "Dropdown menu for Essentials" [ref=f2e19] [cursor=pointer]: arrow_drop_down
+            - generic [ref=f2e20]:
+              - link "Design & Plan, selected" [ref=f2e21] [cursor=pointer]:
+                - /url: https://developer.android.com/design
+                - text: Design & Plan
+              - button "Dropdown menu for Design & Plan" [ref=f2e22] [cursor=pointer]: arrow_drop_down
+            - generic [ref=f2e23]:
+              - link "Develop" [ref=f2e24] [cursor=pointer]:
+                - /url: https://developer.android.com/develop
+              - button "Dropdown menu for Develop" [ref=f2e25] [cursor=pointer]: arrow_drop_down
+            - generic [ref=f2e26]:
+              - link "Google Play" [ref=f2e27] [cursor=pointer]:
+                - /url: https://developer.android.com/distribute
+              - button "Dropdown menu for Google Play" [ref=f2e28] [cursor=pointer]: arrow_drop_down
+            - generic [ref=f2e29]:
+              - link "Blog" [ref=f2e30] [cursor=pointer]:
+                - /url: https://developer.android.com/blog
+              - button "Dropdown menu for Blog" [ref=f2e31] [cursor=pointer]: arrow_drop_down
+          - link "Android Studio" [ref=f2e32] [cursor=pointer]:
+            - /url: https://developer.android.com/studio
+        - generic [ref=f2e35]:
+          - list "Lower header breadcrumb" [ref=f2e39]:
+            - listitem [ref=f2e40]:
+              - link "Security" [ref=f2e41] [cursor=pointer]:
+                - /url: https://developer.android.com/security
+            - listitem [ref=f2e42]:
+              - generic [aria-hidden] [ref=f2e43]: chevron_right
+              - link "Identity" [ref=f2e44] [cursor=pointer]:
+                - /url: https://developer.android.com/identity
+          - navigation "Lower tabs" [ref=f2e47]:
+            - link "Overview" [ref=f2e49] [cursor=pointer]:
+              - /url: https://developer.android.com/identity
+            - link "Samples" [ref=f2e51] [cursor=pointer]:
+              - /url: https://developer.android.com/identity/samples
+            - link "Guides, selected" [ref=f2e53] [cursor=pointer]:
+              - /url: https://developer.android.com/identity/credential-manager
+              - text: Guides
+    - generic [ref=f2e54]:
+      - generic [ref=f2e55]:
+        - text: filter_list
+        - searchbox "Type to filter" [ref=f2e56]
+        - text: close
+      - navigation "Side menu" [ref=f2e57]:
+        - text: arrow_back
+        - generic [ref=f2e58]:
+          - text: arrow_forward arrow_forward arrow_forward arrow_forward arrow_forward
+          - list [ref=f2e60]:
+            - listitem [ref=f2e61]:
+              - generic [ref=f2e62]: Credential Manager overview
+            - listitem [ref=f2e64]:
+              - link "About Credential Manager" [ref=f2e65] [cursor=pointer]:
+                - /url: /identity/credential-manager
+            - listitem [ref=f2e67]:
+              - link "Prerequisites" [ref=f2e68] [cursor=pointer]:
+                - /url: /identity/credential-manager/prerequisites
+            - listitem [ref=f2e70]:
+              - generic [ref=f2e71]: Authenticate users
+            - listitem [ref=f2e73]:
+              - generic [ref=f2e74]:
+                - generic [aria-hidden] [ref=f2e75] [cursor=pointer]: arrow_drop_down
+                - button "Authenticate with passkeys" [ref=f2e76] [cursor=pointer]
+                - text: arrow_drop_down open_in_new
+            - listitem [ref=f2e78]:
+              - generic [ref=f2e79]:
+                - generic [aria-hidden] [ref=f2e80] [cursor=pointer]: arrow_drop_down
+                - button "Authenticate with Sign in with Google" [ref=f2e81] [cursor=pointer]
+                - text: open_in_new
+            - listitem [ref=f2e83]:
+              - link "Authenticate with passwords" [ref=f2e84] [cursor=pointer]:
+                - /url: /identity/passwords
+            - listitem [ref=f2e86]:
+              - generic [ref=f2e87]:
+                - generic [aria-hidden] [ref=f2e88] [cursor=pointer]: arrow_drop_down
+                - button "Restore credentials on new devices" [ref=f2e89] [cursor=pointer]
+            - listitem [ref=f2e91]:
+              - generic [ref=f2e92]:
+                - generic [aria-hidden] [ref=f2e93] [cursor=pointer]: arrow_drop_down
+                - button "Advanced features and integrations" [ref=f2e94] [cursor=pointer]
+            - listitem [ref=f2e96]:
+              - generic [ref=f2e97]:
+                - generic [aria-hidden] [ref=f2e98] [cursor=pointer]: arrow_drop_down
+                - button "Migrate to Credential Manager" [ref=f2e99] [cursor=pointer]
+            - listitem [ref=f2e101]:
+              - link "Authenticate across form factors" [ref=f2e102] [cursor=pointer]:
+                - /url: /identity/form-factors
+            - listitem [ref=f2e104]:
+              - generic [ref=f2e105]:
+                - generic [aria-hidden] [ref=f2e106] [cursor=pointer]: arrow_drop_down
+                - button "Implement authentication as a credential provider" [ref=f2e107] [cursor=pointer]
+            - listitem [ref=f2e109]:
+              - link "Troubleshoot common errors" [ref=f2e110] [cursor=pointer]:
+                - /url: /identity/sign-in/credential-manager-troubleshooting-guide
+            - listitem [ref=f2e112]:
+              - link "Credential Manager FAQ" [ref=f2e113] [cursor=pointer]:
+                - /url: /identity/sign-in/credential-manager-faq
+            - listitem [ref=f2e115]:
+              - link "Show a biometric authentication dialog" [ref=f2e116] [cursor=pointer]:
+                - /url: /identity/sign-in/biometric-auth
+            - listitem [ref=f2e118]:
+              - generic [ref=f2e119]:
+                - generic [aria-hidden] [ref=f2e120] [cursor=pointer]: arrow_drop_down
+                - button "Block Store" [ref=f2e121] [cursor=pointer]
+            - listitem [ref=f2e123]:
+              - generic [ref=f2e124]:
+                - generic [aria-hidden] [ref=f2e125] [cursor=pointer]: arrow_drop_down
+                - button "Legacy APIs" [ref=f2e126] [cursor=pointer]
+                - text: arrow_drop_down not_interested open_in_new arrow_drop_down not_interested
+            - listitem [ref=f2e128]:
+              - generic [ref=f2e129]: Authorize users
+            - listitem [ref=f2e131]:
+              - link "Authorize user access" [ref=f2e132] [cursor=pointer]:
+                - /url: /identity/authorization
+            - listitem [ref=f2e134]:
+              - generic [ref=f2e135]: Use digital credentials
+            - listitem [ref=f2e137]:
+              - generic [ref=f2e138]:
+                - generic [aria-hidden] [ref=f2e139] [cursor=pointer]: arrow_drop_down
+                - button "About digital credentials" [ref=f2e140] [cursor=pointer]
+            - listitem [ref=f2e142]:
+              - generic [ref=f2e143]:
+                - generic [aria-hidden] [ref=f2e144] [cursor=pointer]: arrow_drop_down
+                - button "Integrate your holder app with Credential Manager" [ref=f2e145] [cursor=pointer]
+            - listitem [ref=f2e147]:
+              - link "Integrate your verifier app with Credential Manager" [ref=f2e148] [cursor=pointer]:
+                - /url: /identity/digital-credentials/credential-verifier
+            - listitem [ref=f2e150]:
+              - generic [ref=f2e151]:
+                - generic [aria-hidden] [ref=f2e152] [cursor=pointer]: arrow_drop_down
+                - button "Issue credentials with Credential Manager" [ref=f2e153] [cursor=pointer]
+            - listitem [ref=f2e155]:
+              - link "Verify phone numbers with digital credentials" [ref=f2e156] [cursor=pointer]:
+                - /url: /identity/digital-credentials/phone-number-verification
+            - listitem [ref=f2e158]:
+              - generic [ref=f2e159]:
+                - generic [aria-hidden] [ref=f2e160] [cursor=pointer]: arrow_drop_down
+                - button "Verify email addresses with digital credentials" [ref=f2e161] [cursor=pointer]
+            - listitem [ref=f2e163]:
+              - generic [ref=f2e164]: Verify users
+            - listitem [ref=f2e166]:
+              - link "Automate SMS verification" [ref=f2e167] [cursor=pointer]:
+                - /url: /identity/sms-retriever
+            - listitem [ref=f2e169]:
+              - link "Provide phone number hints to users" [ref=f2e170] [cursor=pointer]:
+                - /url: /identity/phone-number-hint
+            - listitem [ref=f2e172]:
+              - generic [ref=f2e173]: Handle user data
+            - listitem [ref=f2e175]:
+              - generic [ref=f2e176]:
+                - generic [aria-hidden] [ref=f2e177] [cursor=pointer]: arrow_drop_down
+                - button "Autofill personal information" [ref=f2e178] [cursor=pointer]
+            - listitem [ref=f2e180]:
+              - link "Identify developer-owned apps" [ref=f2e181] [cursor=pointer]:
+                - /url: /identity/app-set-id
+            - listitem [ref=f2e183]:
+              - generic [ref=f2e184]:
+                - generic [aria-hidden] [ref=f2e185] [cursor=pointer]: arrow_drop_down
+                - button "Manage user data" [ref=f2e186] [cursor=pointer]
+                - text: arrow_drop_down arrow_drop_down
+    - generic [ref=f2e188]:
+      - main [ref=f2e189]:
+        - generic [ref=f2e190]:
+          - generic:
+            - navigation "On this page"
+        - generic [ref=f2e191]:
+          - article [ref=f2e192]:
+            - navigation [ref=f2e193]:
+              - list "Breadcrumb" [ref=f2e194]:
+                - listitem [ref=f2e195]:
+                  - link "Android Developers" [ref=f2e196] [cursor=pointer]:
+                    - /url: https://developer.android.com/
+                - listitem [ref=f2e197]:
+                  - generic [aria-hidden] [ref=f2e198]: chevron_right
+                  - link "Design & Plan" [ref=f2e199] [cursor=pointer]:
+                    - /url: https://developer.android.com/design
+                - listitem [ref=f2e200]:
+                  - generic [aria-hidden] [ref=f2e201]: chevron_right
+                  - link "Security" [ref=f2e202] [cursor=pointer]:
+                    - /url: https://developer.android.com/security
+                - listitem [ref=f2e203]:
+                  - generic [aria-hidden] [ref=f2e204]: chevron_right
+                  - link "Identity" [ref=f2e205] [cursor=pointer]:
+                    - /url: https://developer.android.com/identity
+                - listitem [ref=f2e206]:
+                  - generic [aria-hidden] [ref=f2e207]: chevron_right
+                  - link "Guides" [ref=f2e208] [cursor=pointer]:
+                    - /url: https://developer.android.com/identity/credential-manager
+            - heading "Back up user data with Auto Backup" [level=1] [ref=f2e209]
+            - generic [ref=f2e210]:
+              - paragraph [ref=f2e211]:
+                - emphasis [ref=f2e212]: Auto Backup for Apps
+                - text: automatically backs up a user's data from apps that target and run on Android 6.0 (API level 23) or higher. Android preserves app data by uploading it to the user's Google Drive, where it's protected by the user's Google Account credentials. The backup is end-to-end encrypted on devices running Android 9 or higher using the device's PIN, pattern, or password. Every app can allocate up to 25 MB of backup data per app user. There's no charge for storing backup data. Your app can customize the backup process or opt out by
+                - link "disabling backups" [ref=f2e213] [cursor=pointer]:
+                  - /url: "#EnablingAutoBackup"
+                - text: .
+              - paragraph [ref=f2e214]:
+                - text: For an overview of Android's backup options and guidance about which data to back up and restore, see the
+                - link "data backup overview" [ref=f2e215] [cursor=pointer]:
+                  - /url: /guide/topics/data/backup
+                - text: .
+              - heading "Files that are backed up" [level=2] [ref=f2e216]
+              - paragraph [ref=f2e217]: "By default, Auto Backup includes files in most of the directories that are assigned to your app by the system:"
+              - list [ref=f2e218]:
+                - listitem [ref=f2e219]:
+                  - paragraph [ref=f2e220]: Shared preferences files
+                - listitem [ref=f2e221]:
+                  - paragraph [ref=f2e222]:
+                    - text: Files saved to your app's internal storage and accessed by
+                    - link [ref=f2e223] [cursor=pointer]:
+                      - /url: /reference/android/content/Context#getFilesDir()
+                      - code [ref=f2e224]: getFilesDir()
+                    - text: or
+                    - link [ref=f2e225] [cursor=pointer]:
+                      - /url: /reference/android/content/Context#getDir(java.lang.String,%20int)
+                      - code [ref=f2e226]: getDir(String, int)
+                - listitem [ref=f2e227]:
+                  - paragraph [ref=f2e228]:
+                    - text: Files in the directory returned by
+                    - link [ref=f2e229] [cursor=pointer]:
+                      - /url: /reference/android/content/Context#getDatabasePath(java.lang.String)
+                      - code [ref=f2e230]: getDatabasePath(String)
+                    - text: ", which also includes files created with the"
+                    - link [ref=f2e231] [cursor=pointer]:
+                      - /url: /reference/android/database/sqlite/SQLiteOpenHelper
+                      - code [ref=f2e232]: SQLiteOpenHelper
+                    - text: class
+                - listitem [ref=f2e233]:
+                  - paragraph [ref=f2e234]:
+                    - text: Files on external storage in the directory returned by
+                    - link [ref=f2e235] [cursor=pointer]:
+                      - /url: /reference/android/content/Context#getExternalFilesDir(java.lang.String)
+                      - code [ref=f2e236]: getExternalFilesDir(String)
+              - paragraph [ref=f2e237]:
+                - text: Auto Backup excludes files in directories returned by
+                - link [ref=f2e238] [cursor=pointer]:
+                  - /url: /reference/android/content/Context#getCacheDir()
+                  - code [ref=f2e239]: getCacheDir()
+                - text: ","
+                - link [ref=f2e240] [cursor=pointer]:
+                  - /url: /reference/android/content/Context#getCodeCacheDir()
+                  - code [ref=f2e241]: getCodeCacheDir()
+                - text: ", and"
+                - link [ref=f2e242] [cursor=pointer]:
+                  - /url: /reference/android/content/Context#getNoBackupFilesDir()
+                  - code [ref=f2e243]: getNoBackupFilesDir()
+                - text: . The files saved in these locations are needed only temporarily and are intentionally excluded from backup operations.
+              - paragraph [ref=f2e244]:
+                - text: You can configure your app to include and exclude particular files. For more information, see the
+                - link "Include and exclude files" [ref=f2e245] [cursor=pointer]:
+                  - /url: "#IncludingFiles"
+                - text: section.
+              - complementary [ref=f2e246]:
+                - strong [ref=f2e247]: "Note:"
+                - generic [ref=f2e248]:
+                  - text: Android doesn't treat the configuration of components as user data. If your app enables or disables specific components in its manifest while it is running, Auto Backup doesn't automatically save and restore the configuration. To preserve the configuration state, store state in
+                  - link "shared preferences" [ref=f2e249] [cursor=pointer]:
+                    - /url: /guide/topics/data/data-storage#pref
+                  - text: and recover shared preferences on restore.
+              - heading "Backup location" [level=2] [ref=f2e250]
+              - paragraph [ref=f2e251]: Backup data is stored in a private folder in the user's Google Drive account, limited to 25 MB per app. The saved data does not count toward the user's personal Google Drive quota. Only the most recent backup is stored. When a backup is made, any previous backup is deleted. The backup data can't be read by the user or other apps on the device.
+              - paragraph [ref=f2e252]:
+                - text: Users can see a list of apps that have been backed up in the Google Drive Android app. On an Android-powered device, users can find this list in the Drive app's navigation drawer under
+                - strong [ref=f2e253]: Settings > Backup and reset
+                - text: .
+              - paragraph [ref=f2e254]: "Backups from each device-setup-lifetime are stored in separate datasets, as described in the following examples:"
+              - list [ref=f2e255]:
+                - listitem [ref=f2e256]:
+                  - paragraph [ref=f2e257]: If the user owns two devices, then a backup dataset exists for each device.
+                - listitem [ref=f2e258]:
+                  - paragraph [ref=f2e259]: If the user factory-resets a device and then sets up the device with the same account, the backup is stored in a new dataset. Obsolete datasets are automatically deleted after a period of inactivity.
+              - complementary [ref=f2e260]:
+                - text: error
+                - strong [ref=f2e261]: "Caution:"
+                - generic [ref=f2e262]:
+                  - text: If the amount of data is over 25 MB, the system calls
+                  - link [ref=f2e263] [cursor=pointer]:
+                    - /url: /reference/android/app/backup/BackupAgent#onQuotaExceeded(long,%20long)
+                    - code [ref=f2e264]: onQuotaExceeded()
+                  - text: and doesn't back up data to the cloud. The system periodically checks whether the amount of data later falls under the 25 MB threshold and continues Auto Backup when it does.
+              - heading "Backup schedule" [level=2] [ref=f2e265]
+              - paragraph [ref=f2e266]: "Backups occur automatically when all of the following conditions are met:"
+              - list [ref=f2e267]:
+                - listitem [ref=f2e268]:
+                  - text: The user has enabled backup on the device. In Android 9, this setting is in
+                  - strong [ref=f2e269]: Settings > System > Backup
+                  - text: .
+                - listitem [ref=f2e270]: At least 24 hours have elapsed since the last backup.
+                - listitem [ref=f2e271]: The device is idle.
+                - listitem [ref=f2e272]: The device is connected to a Wi-Fi network (if the device user hasn't opted in to mobile-data backups).
+              - paragraph [ref=f2e273]: In practice, these conditions occur roughly every night, but a device might never back up (for example, if it never connects to a network). To conserve network bandwidth, the upload takes place only if the app data has changed.
+              - paragraph [ref=f2e274]:
+                - text: During Auto Backup, the system shuts down the app to make sure it is no longer writing to the file system. By default, the backup system ignores apps that are running in the foreground to avoid a poor user experience. You can override the default behavior by setting the
+                - link [ref=f2e275] [cursor=pointer]:
+                  - /url: /guide/topics/manifest/application-element#backupInForeground
+                  - code [ref=f2e276]: android:backupInForeground
+                - text: attribute to true.
+              - paragraph [ref=f2e277]:
+                - text: To simplify testing, Android includes tools that let you manually initiate a backup of your app. For more information, see
+                - link "Test backup and restore" [ref=f2e278] [cursor=pointer]:
+                  - /url: /guide/topics/data/testingbackup
+                - text: .
+              - heading "Restore schedule" [level=2] [ref=f2e279]
+              - paragraph [ref=f2e280]:
+                - text: Data is restored whenever the app is installed, whether from the Play Store, during device setup (when the system installs previously installed apps), or by running
+                - code [ref=f2e281]: adb
+                - text: install. The restore operation occurs after the APK is installed but before the app is available to be launched by the user.
+              - paragraph [ref=f2e282]: During the initial device setup wizard, the user is shown a list of available backup datasets and is asked which one to restore data from. Whichever backup dataset is selected becomes the ancestral dataset for the device. The device can restore from either its own backups or the ancestral dataset. If backups from both sources are available, the device prioritizes its own backup. If the user didn't go through the device setup wizard, then the device can restore only from its own backups.
+              - paragraph [ref=f2e283]:
+                - text: To simplify testing, Android includes tools that let you manually initiate a restore of your app. For more information, see
+                - link "Test backup and restore" [ref=f2e284] [cursor=pointer]:
+                  - /url: /guide/topics/data/testingbackup
+                - text: .
+              - heading "Enable and disable backup" [level=2] [ref=f2e285]
+              - paragraph [ref=f2e286]:
+                - text: Apps that target Android 6.0 (API level 23) or higher automatically participate in Auto Backup. In your app manifest file, set the boolean value
+                - link [ref=f2e287] [cursor=pointer]:
+                  - /url: /guide/topics/manifest/application-element#allowbackup
+                  - code [ref=f2e288]: android:allowBackup
+                - text: to enable or disable backup. The default value is
+                - code [ref=f2e289]: "true"
+                - text: ", but we recommend explicitly setting the attribute in your manifest, as shown in the following example:"
+              - code [ref=f2e292]: <manifest ... > ... <application android:allowBackup="true" ... > ... </application> </manifest>
+              - paragraph [ref=f2e293]:
+                - text: You can disable backups by setting
+                - code [ref=f2e294]: android:allowBackup
+                - text: to
+                - code [ref=f2e295]: "false"
+                - text: . You might want to do this if your app can recreate its state through some other mechanism or if your app deals with sensitive information.
+              - complementary [ref=f2e296]:
+                - strong [ref=f2e297]: "Note:"
+                - generic [ref=f2e298]:
+                  - text: For apps targeting Android 12 (API level 31) or higher, this behavior varies. On devices from some device manufacturers, specifying
+                  - code [ref=f2e299]: android:allowBackup="false"
+                  - text: disables cloud-based backup and restore (such as Google Drive backups) but doesn't disable device-to-device transfers for the app. For more details, see the information about
+                  - link "changes in backup and restore" [ref=f2e300] [cursor=pointer]:
+                    - /url: /about/versions/12/backup-restore#functionality-changes
+                  - text: .
+              - heading "Include and exclude files" [level=2] [ref=f2e301]
+              - paragraph [ref=f2e302]:
+                - text: By default, the system backs up almost all app data. For more information, see the section about
+                - link "files that are backed up" [ref=f2e303] [cursor=pointer]:
+                  - /url: "#Files"
+                - text: .
+              - paragraph [ref=f2e304]:
+                - text: You can control which data is included in the backup based on the transfer type. Auto Backup supports cloud backups to Google Drive and direct device-to-device (D2D) transfers. Configuration methods vary based on the Android version and your app's
+                - code [ref=f2e305]: targetSdkVersion
+                - text: .
+              - list [ref=f2e306]:
+                - listitem [ref=f2e307]:
+                  - text: For devices running Android 11 or lower, see
+                  - link "Control backup on Android 11 and lower" [ref=f2e308] [cursor=pointer]:
+                    - /url: "#include-exclude-android-11"
+                  - text: .
+                - listitem [ref=f2e309]:
+                  - text: For devices running Android 12 or higher, apps targeting API level 31+ use the
+                  - code [ref=f2e310]: data-extraction-rules
+                  - text: format. See
+                  - link "Control backup on Android 12 or higher" [ref=f2e311] [cursor=pointer]:
+                    - /url: "#include-exclude-android-12"
+                  - text: for details.
+                - listitem [ref=f2e312]:
+                  - text: The
+                  - code [ref=f2e313]: data-extraction-rules
+                  - text: format also supports
+                  - strong [ref=f2e314]: Cross-Platform Transfers
+                  - text: (e.g., to iOS). This capability is available from
+                  - strong [ref=f2e315]: Android 16 QPR2
+                  - text: . Learn more in
+                  - link "Configure Cross-Platform Transfers" [ref=f2e316] [cursor=pointer]:
+                    - /url: "#configure-cross-platform"
+                  - text: .
+              - heading "Control backup on Android 11 and lower" [level=3] [ref=f2e317]
+              - paragraph [ref=f2e318]: Follow the steps in this section to control which files are backed up on devices running Android 11 (API level 30) or lower.
+              - complementary [ref=f2e319]:
+                - strong [ref=f2e320]: "Important:"
+                - generic [ref=f2e321]:
+                  - text: These XML backup rules are also used for devices running Android 12 or higher if your app targets Android 11 or lower. See the following section for
+                  - link "an additional set of XML backup rules" [ref=f2e322] [cursor=pointer]:
+                    - /url: "#include-exclude-android-12"
+                  - text: to support the
+                  - link "changes to backup restore" [ref=f2e323] [cursor=pointer]:
+                    - /url: /about/versions/12/backup-restore
+                  - text: that were introduced for devices running Android 12 or higher.
+              - list [ref=f2e324]:
+                - listitem [ref=f2e325]:
+                  - paragraph [ref=f2e326]:
+                    - text: In your
+                    - code [ref=f2e327]: AndroidManifest.xml
+                    - text: file, add the
+                    - link [ref=f2e328] [cursor=pointer]:
+                      - /url: /guide/topics/manifest/application-element#fullBackupContent
+                      - code [ref=f2e329]: android:fullBackupContent
+                    - text: attribute to the
+                    - code [ref=f2e330]: <application>
+                    - text: element, as shown in the following example. This attribute points to an XML file that contains backup rules.
+                  - generic [ref=f2e331]: <application ... android:fullBackupContent="@xml/backup_rules"> </application>
+                - listitem [ref=f2e333]:
+                  - paragraph [ref=f2e334]:
+                    - text: Create an XML file called
+                    - code [ref=f2e335]: "@xml/backup_rules"
+                    - text: in the
+                    - code [ref=f2e336]: res/xml/
+                    - text: directory. In this file, add rules with the
+                    - code [ref=f2e337]: <include>
+                    - text: and
+                    - code [ref=f2e338]: <exclude>
+                    - text: elements. The following sample backs up all shared preferences except
+                    - code [ref=f2e339]: device.xml
+                    - text: ":"
+                  - generic [ref=f2e340]: <?xml version="1.0" encoding="utf-8"?> <full-backup-content> <include domain="sharedpref" path="."/> <exclude domain="sharedpref" path="device.xml"/> </full-backup-content>
+              - heading "Define device conditions required for backup" [level=4] [ref=f2e342]
+              - paragraph [ref=f2e343]: "If your app saves sensitive information on the device, you can specify conditions under which your app's data is included in the user's backup. You can add the following conditions in Android 9 (API level 28) or higher:"
+              - list [ref=f2e344]:
+                - listitem [ref=f2e345]:
+                  - code [ref=f2e346]: clientSideEncryption
+                  - text: ": the user's backup is encrypted with a client-side secret. This form of encryption is enabled on devices running Android 9 or higher as long as the user has"
+                  - link "enabled backup in Android 9 or higher" [ref=f2e347] [cursor=pointer]:
+                    - /url: https://support.google.com/pixelphone/answer/7179901
+                  - text: and has
+                  - link "set a screen lock" [ref=f2e348] [cursor=pointer]:
+                    - /url: https://support.google.com/android/answer/2819522
+                  - text: (PIN, pattern, or password) for their device.
+                - listitem [ref=f2e349]:
+                  - code [ref=f2e350]: deviceToDeviceTransfer
+                  - text: ": the user is transferring their backup to another device that supports"
+                  - link "local device-to-device transfer" [ref=f2e351] [cursor=pointer]:
+                    - /url: https://support.google.com/pixelphone/answer/7129955
+                  - text: (for example, Google Pixel).
+              - paragraph [ref=f2e352]: If you've upgraded your development devices to Android 9, you need to disable and then re-enable data backup after upgrading. This is because Android only encrypts backups with a client-side secret after informing users in Settings or the setup wizard.
+              - paragraph [ref=f2e353]:
+                - text: To declare the inclusion conditions, set the
+                - code [ref=f2e354]: requireFlags
+                - text: attribute to a chosen value or values in the
+                - code [ref=f2e355]: <include>
+                - text: "elements within your set of backup rules:"
+              - paragraph [ref=f2e356]: backup_rules.xml
+              - generic [ref=f2e357]: <?xml version="1.0" encoding="utf-8"?> <full-backup-content> <!-- App data isn't included in user's backup unless client-side encryption is enabled. --> <include domain="file" path="." requireFlags="clientSideEncryption" /> </full-backup-content>
+              - complementary [ref=f2e359]:
+                - strong [ref=f2e360]: "Note:"
+                - generic [ref=f2e361]:
+                  - text: Because adding requirements to the XML prevents backups from working on previous Android versions,
+                  - link "provide alternate resources" [ref=f2e362] [cursor=pointer]:
+                    - /url: /guide/topics/resources/providing-resources#AlternativeResources
+                  - text: for backups being used on devices running Android 8.1 (API level 27) or lower.
+              - paragraph [ref=f2e363]:
+                - text: If your app implements a
+                - link "key-value backup" [ref=f2e364] [cursor=pointer]:
+                  - /url: /guide/topics/data/keyvaluebackup
+                - text: system or if you
+                - link [ref=f2e365] [cursor=pointer]:
+                  - /url: /guide/topics/data/autobackup#ImplementingBackupAgent
+                  - text: implement
+                  - code [ref=f2e366]: BackupAgent
+                - text: yourself, you can also apply these conditional requirements to your backup logic by performing a bitwise comparison between a
+                - link [ref=f2e367] [cursor=pointer]:
+                  - /url: /reference/android/app/backup/BackupDataOutput
+                  - code [ref=f2e368]: BackupDataOutput
+                - text: object's set of transport flags and your custom backup agent's
+                - link [ref=f2e369] [cursor=pointer]:
+                  - /url: /reference/android/app/backup/BackupAgent#FLAG_CLIENT_SIDE_ENCRYPTION_ENABLED
+                  - code [ref=f2e370]: FLAG_CLIENT_SIDE_ENCRYPTION_ENABLED
+                - text: or
+                - link [ref=f2e371] [cursor=pointer]:
+                  - /url: /reference/android/app/backup/BackupAgent#FLAG_DEVICE_TO_DEVICE_TRANSFER
+                  - code [ref=f2e372]: FLAG_DEVICE_TO_DEVICE_TRANSFER
+                - text: flags.
+              - paragraph [ref=f2e373]: "The following code snippet shows an example use of this method:"
+              - heading "Control backup on Android 12 or higher" [level=3] [ref=f2e374]
+              - paragraph [ref=f2e375]: If your app targets Android 12 (API level 31) or higher, follow the steps in this section to control which files are backed up on devices that are running Android 12 or higher.
+              - complementary [ref=f2e376]:
+                - strong [ref=f2e377]: "Important:"
+                - generic [ref=f2e378]:
+                  - text: Even if your app targets Android 12 or higher, you must also
+                  - link "specify another set of XML backup rules" [ref=f2e379] [cursor=pointer]:
+                    - /url: "#include-exclude-android-11"
+                  - text: to support devices that run Android 11 (API level 30) or lower.
+              - list [ref=f2e380]:
+                - listitem [ref=f2e381]:
+                  - paragraph [ref=f2e382]:
+                    - text: In your
+                    - code [ref=f2e383]: AndroidManifest.xml
+                    - text: file, add the
+                    - link [ref=f2e384] [cursor=pointer]:
+                      - /url: /reference/android/R.attr#dataExtractionRules
+                      - code [ref=f2e385]: android:dataExtractionRules
+                    - text: attribute to the
+                    - code [ref=f2e386]: <application>
+                    - text: element, as shown in the following example. This attribute points to an XML file that contains backup rules.
+                  - generic [ref=f2e387]: <application ... android:dataExtractionRules="backup_rules.xml"> </application>
+                - listitem [ref=f2e389]:
+                  - paragraph [ref=f2e390]:
+                    - text: Create an XML file called
+                    - code [ref=f2e391]: backup_rules.xml
+                    - text: in the
+                    - code [ref=f2e392]: res/xml/
+                    - text: directory. In this file, add rules with the
+                    - code [ref=f2e393]: <include>
+                    - text: and
+                    - code [ref=f2e394]: <exclude>
+                    - text: elements. The following sample backs up all shared preferences except
+                    - code [ref=f2e395]: device.xml
+                    - text: ":"
+                  - generic [ref=f2e396]: <?xml version="1.0" encoding="utf-8"?> <data-extraction-rules> <cloud-backup [disableIfNoEncryptionCapabilities="true|false"]> <include domain="sharedpref" path="."/> <exclude domain="sharedpref" path="device.xml"/> </cloud-backup> </data-extraction-rules>
+              - heading "XML config syntax" [level=3] [ref=f2e398]
+              - paragraph [ref=f2e399]: The XML syntax for the configuration file varies depending on the version of Android that your app is targeting and running on.
+              - heading "Android 11 or lower" [level=4] [ref=f2e400]
+              - paragraph [ref=f2e401]:
+                - text: Use the following XML syntax for the configuration file that
+                - link "controls backup for devices running Android 11 or lower" [ref=f2e402] [cursor=pointer]:
+                  - /url: "#include-exclude-android-11"
+                - text: .
+              - generic [ref=f2e403]: <full-backup-content> <include domain=["file" | "database" | "sharedpref" | "external" | "root" | "device_file" | "device_database" | "device_sharedpref" | "device_root" ] path="string" requireFlags=["clientSideEncryption" | "deviceToDeviceTransfer"] /> <exclude domain=["file" | "database" | "sharedpref" | "external" | "root" | "device_file" | "device_database" | "device_sharedpref" | "device_root" ] path="string" /> </full-backup-content>
+              - heading "Android 12 or higher" [level=4] [ref=f2e405]
+              - paragraph [ref=f2e406]:
+                - text: If your app targets Android 12 (API level 31) or higher, use the following XML syntax for the configuration file that
+                - link "controls backup for devices running Android 12 or higher" [ref=f2e407] [cursor=pointer]:
+                  - /url: "#include-exclude-android-12"
+                - text: .
+              - generic [ref=f2e408]: <data-extraction-rules> <cloud-backup [disableIfNoEncryptionCapabilities="true|false"]> ... <include domain=["file" | "database" | "sharedpref" | "external" | "root" | "device_file" | "device_database" | "device_sharedpref" | "device_root" ] path="string"/> ... <exclude domain=["file" | "database" | "sharedpref" | "external" | "root" | "device_file" | "device_database" | "device_sharedpref" | "device_root" ] path="string"/> ... </cloud-backup> <device-transfer> ... <include domain=["file" | "database" | "sharedpref" | "external" | "root" | "device_file" | "device_database" | "device_sharedpref" | "device_root" ] path="string"/> ... <exclude domain=["file" | "database" | "sharedpref" | "external" | "root" | "device_file" | "device_database" | "device_sharedpref" | "device_root" ] path="string"/> ... </device-transfer> <cross-platform-transfer platform="ios"> ... <include domain=["file" | "database" | "sharedpref" | "external" | "root" | "device_file" | "device_database" | "device_sharedpref" | "device_root" ] path="string"/> ... <exclude domain=["file" | "database" | "sharedpref" | "external" | "root" | "device_file" | "device_database" | "device_sharedpref" | "device_root" ] path="string"/> ... <platform-specific-params bundleId="string" teamId="string" contentVersion="string"/> ... </cross-platform-transfer> </data-extraction-rules>
+              - paragraph [ref=f2e410]:
+                - text: Each section of the configuration (
+                - code [ref=f2e411]: <cloud-backup>
+                - text: ","
+                - code [ref=f2e412]: <device-transfer>
+                - text: ","
+                - code [ref=f2e413]: <cross-platform-transfer>
+                - text: ) contains rules that apply only to that type of transfer. This separation lets you, for example, exclude a file or directory from Google Drive backups while still transferring it during device-to-device (D2D) transfers or cross-platform transfers. This is useful if you have files that are too large to back up to the cloud but can be transferred between devices without issue.
+              - paragraph [ref=f2e414]:
+                - text: If there are no rules for a particular backup mode, such as if the
+                - code [ref=f2e415]: <device-transfer>
+                - text: section is missing, that mode is fully enabled for all content except for
+                - code [ref=f2e416]: no-backup
+                - text: and
+                - code [ref=f2e417]: cache
+                - text: directories, as described in the
+                - link "Files that are backed up" [ref=f2e418] [cursor=pointer]:
+                  - /url: "#Files"
+                - text: section.
+              - paragraph [ref=f2e419]:
+                - text: Your app can set the
+                - code [ref=f2e420]: disableIfNoEncryptionCapabilities
+                - text: flag in the
+                - code [ref=f2e421]: <cloud-backup>
+                - text: section to make sure the backup happens only if it can be encrypted, such as when the user has a lock screen. Setting this constraint stops backups from being sent to the cloud if the user’s device cannot support encryption, but because D2D transfers aren't sent to the server, they continue to operate even on devices that don't support encryption.
+              - heading "Syntax for include and exclude elements" [level=4] [ref=f2e422]
+              - paragraph [ref=f2e423]:
+                - text: Inside the
+                - code [ref=f2e424]: <full-backup-content>
+                - text: ","
+                - code [ref=f2e425]: <cloud-backup>
+                - text: ", and"
+                - code [ref=f2e426]: <device-transfer>
+                - text: tags (depending on the device's Android version and your app's
+                - code [ref=f2e427]: targetSDKVersion
+                - text: ), you can define
+                - code [ref=f2e428]: <include>
+                - text: and
+                - code [ref=f2e429]: <exclude>
+                - text: "elements:"
+              - generic [ref=f2e430]:
+                - term [ref=f2e431]:
+                  - code [ref=f2e432]: <include>
+                - definition [ref=f2e433]:
+                  - paragraph [ref=f2e434]:
+                    - text: Specifies a file or folder to backup. By default, Auto Backup includes almost all app files. If you specify an
+                    - code [ref=f2e435]: <include>
+                    - text: element, the system no longer includes any files by default and backs up
+                    - emphasis [ref=f2e436]: only the files specified
+                    - text: . To include multiple files, use multiple
+                    - code [ref=f2e437]: <include>
+                    - text: elements.
+                  - paragraph [ref=f2e438]:
+                    - text: "On"
+                    - link "Android 11 and lower" [ref=f2e439] [cursor=pointer]:
+                      - /url: "#xml-syntax-android-11"
+                    - text: ", this element can also contain the"
+                    - code [ref=f2e440]: requireFlags
+                    - text: attribute, which the section describing how to
+                    - link "define conditional requirements for backup" [ref=f2e441] [cursor=pointer]:
+                      - /url: "#define-device-conditions"
+                    - text: discusses in more detail.
+                  - paragraph [ref=f2e442]:
+                    - text: Files in directories returned by
+                    - code [ref=f2e443]: getCacheDir()
+                    - text: ","
+                    - code [ref=f2e444]: getCodeCacheDir()
+                    - text: ", or"
+                    - code [ref=f2e445]: getNoBackupFilesDir()
+                    - text: are always excluded even if you try to include them.
+                  - complementary [ref=f2e446]:
+                    - strong [ref=f2e447]: "Tip:"
+                    - generic [ref=f2e448]:
+                      - text: To back up user credentials and authentication tokens, don't store them in shared preferences or a file. Instead use
+                      - link "Block Store APIs" [ref=f2e449] [cursor=pointer]:
+                        - /url: https://developers.google.com/identity/blockstore/android
+                      - text: to store and manage credentials. This helps ensure that they are securely stored and can be backed up and restored alongside other app data.
+                - term [ref=f2e450]:
+                  - code [ref=f2e451]: <exclude>
+                - definition [ref=f2e452]:
+                  - paragraph [ref=f2e453]: "Specifies a file or folder to exclude during backup. Here are some files that are typically excluded from backup:"
+                  - list [ref=f2e454]:
+                    - listitem [ref=f2e455]:
+                      - paragraph [ref=f2e456]:
+                        - text: Files that have device-specific identifiers, either issued by a server or generated on the device. For example,
+                        - link "Firebase Cloud Messaging (FCM)" [ref=f2e457] [cursor=pointer]:
+                          - /url: https://firebase.google.com/docs/cloud-messaging/
+                        - text: needs to generate a registration token every time a user installs your app on a new device. If the old registration token is restored, the app might behave unexpectedly.
+                    - listitem [ref=f2e458]:
+                      - paragraph [ref=f2e459]: Files related to app debugging.
+                    - listitem [ref=f2e460]:
+                      - paragraph [ref=f2e461]: Large files that cause the app to exceed the 25 MB backup quota.
+                  - complementary [ref=f2e462]:
+                    - strong [ref=f2e463]: "Note:"
+                    - generic [ref=f2e464]:
+                      - text: If your configuration file specifies both elements, then the backup contains everything captured by the
+                      - code [ref=f2e465]: <include>
+                      - text: elements minus the resources named in the
+                      - code [ref=f2e466]: <exclude>
+                      - text: elements. In other words,
+                      - code [ref=f2e467]: <exclude>
+                      - text: takes precedence.
+              - paragraph [ref=f2e468]:
+                - text: Each
+                - code [ref=f2e469]: <include>
+                - text: and
+                - code [ref=f2e470]: <exclude>
+                - text: "element must include the following two attributes:"
+              - generic [ref=f2e471]:
+                - term [ref=f2e472]:
+                  - code [ref=f2e473]: domain
+                - definition [ref=f2e474]:
+                  - paragraph [ref=f2e475]: "Specifies the location of resource. Valid values for this attribute include the following:"
+                  - list [ref=f2e476]:
+                    - listitem [ref=f2e477]:
+                      - code [ref=f2e478]: root
+                      - text: ": the directory on the file system where all private files belonging to this app are stored."
+                    - listitem [ref=f2e479]:
+                      - code [ref=f2e480]: file
+                      - text: ": directories returned by"
+                      - code [ref=f2e481]: getFilesDir()
+                      - text: .
+                    - listitem [ref=f2e482]:
+                      - code [ref=f2e483]: database
+                      - text: ": directories returned by"
+                      - code [ref=f2e484]: getDatabasePath()
+                      - text: . Databases created with
+                      - code [ref=f2e485]: SQLiteOpenHelper
+                      - text: are stored here.
+                    - listitem [ref=f2e486]:
+                      - code [ref=f2e487]: sharedpref
+                      - text: ": the directory where"
+                      - link [ref=f2e488] [cursor=pointer]:
+                        - /url: /reference/android/content/SharedPreferences
+                        - code [ref=f2e489]: SharedPreferences
+                      - text: are stored.
+                    - listitem [ref=f2e490]:
+                      - code [ref=f2e491]: external
+                      - text: ": the directory returned by"
+                      - code [ref=f2e492]: getExternalFilesDir()
+                      - text: .
+                    - listitem [ref=f2e493]:
+                      - code [ref=f2e494]: device_root
+                      - text: ": like"
+                      - code [ref=f2e495]: root
+                      - text: but for the device-protected storage.
+                    - listitem [ref=f2e496]:
+                      - code [ref=f2e497]: device_file
+                      - text: ": like"
+                      - code [ref=f2e498]: file
+                      - text: but for the device-protected storage.
+                    - listitem [ref=f2e499]:
+                      - code [ref=f2e500]: device_database
+                      - text: ": like"
+                      - code [ref=f2e501]: database
+                      - text: but for the device-protected storage.
+                    - listitem [ref=f2e502]:
+                      - code [ref=f2e503]: device_sharedpref
+                      - text: ": like"
+                      - code [ref=f2e504]: sharedpref
+                      - text: but for the device-protected storage.
+                  - complementary [ref=f2e505]:
+                    - strong [ref=f2e506]: "Note:"
+                    - text: You can't back up files outside these locations.
+                - term [ref=f2e507]:
+                  - code [ref=f2e508]: path
+                - definition [ref=f2e509]:
+                  - paragraph [ref=f2e510]: "Specifies a file or folder to include in or exclude from backup. Note the following:"
+                  - list [ref=f2e511]:
+                    - listitem [ref=f2e512]: This attribute does not support wildcard or regular expression syntax.
+                    - listitem [ref=f2e513]:
+                      - text: You can reference the current directory using
+                      - code [ref=f2e514]: ./
+                      - text: ", but you can't reference the parent directory, such as using"
+                      - code [ref=f2e515]: ..
+                      - text: ", for security reasons."
+                    - listitem [ref=f2e516]: If you specify a directory, then the rule applies to all files in the directory and recursive subdirectories.
+              - heading "Configure Cross-Platform Transfers" [level=3] [ref=f2e517]
+              - paragraph [ref=f2e518]:
+                - text: Starting from Android 16 QPR2 (API level 36.1) you can configure Auto Backup for data transfers to and from non-Android devices. To do this, add the
+                - code [ref=f2e519]: <cross-platform-transfer>
+                - text: element within your
+                - code [ref=f2e520]: <data-extraction-rules>
+                - text: configuration, as shown in the
+                - link "Android 12 or higher syntax" [ref=f2e521] [cursor=pointer]:
+                  - /url: "#include-exclude-android-12"
+                - text: . You must specify the target platform using the required
+                - code [ref=f2e522]: platform
+                - text: attribute. The only supported value is
+                - code [ref=f2e523]: ios
+                - text: .
+              - paragraph [ref=f2e524]:
+                - text: Inside this section, you can use the standard
+                - code [ref=f2e525]: <include>
+                - text: and
+                - code [ref=f2e526]: <exclude>
+                - text: elements as described in
+                - link "Syntax for include and exclude elements" [ref=f2e527] [cursor=pointer]:
+                  - /url: "#xml-include-exclude"
+                - text: to specify which data to transfer.
+              - paragraph [ref=f2e528]:
+                - text: Additionally, you must include the
+                - code [ref=f2e529]: <platform-specific-params>
+                - text: "element to help the system match your app with the corresponding app on the target platform. This element has the following required attributes:"
+              - list [ref=f2e530]:
+                - listitem [ref=f2e531]:
+                  - code [ref=f2e532]: bundleId
+                  - text: ": The bundle ID of the app on the other platform (e.g., your iOS app's Bundle ID)."
+                - listitem [ref=f2e533]:
+                  - code [ref=f2e534]: teamId
+                  - text: ": The team ID of the app on the other platform (e.g., your iOS app's Team ID)."
+                - listitem [ref=f2e535]:
+                  - code [ref=f2e536]: contentVersion
+                  - text: ": A version string you define, associated with the data format being exported."
+              - paragraph [ref=f2e537]:
+                - text: The
+                - code [ref=f2e538]: bundleId
+                - text: and
+                - code [ref=f2e539]: teamId
+                - text: attributes are used to help verify data integrity and proper app-to-app matching. They guarantee that data is only transferred
+                - emphasis [ref=f2e540]: to
+                - text: the specified app on the other platform during an export, and that this Android app only imports data
+                - emphasis [ref=f2e541]: from
+                - text: that specific app during an import.
+              - paragraph [ref=f2e542]:
+                - text: For more fine-grained control over the data transformation and transfer process beyond what the XML rules provide, you can implement a custom
+                - link [ref=f2e543] [cursor=pointer]:
+                  - /url: "#ImplementingBackupAgent"
+                  - code [ref=f2e544]: BackupAgent
+                - text: and use the
+                - link "Cross-Platform Transfer APIs" [ref=f2e545] [cursor=pointer]:
+                  - /url: "#cpt-backup-agent"
+                - text: .
+              - heading "File Mapping for iOS Transfers" [level=5] [ref=f2e546]
+              - paragraph [ref=f2e547]:
+                - text: When transferring files to iOS, the Android
+                - code [ref=f2e548]: domain
+                - text: and
+                - code [ref=f2e549]: path
+                - text: you specify in the
+                - code [ref=f2e550]: <include>
+                - text: rules map to a specific directory structure. The following table shows the destination paths on iOS relative to the transfer destination root, based on the Android
+                - code [ref=f2e551]: domain
+                - text: ":"
+              - table [ref=f2e552]:
+                - rowgroup [ref=f2e553]:
+                  - row [ref=f2e554]:
+                    - columnheader [ref=f2e555]:
+                      - text: Android
+                      - code [ref=f2e556]: domain
+                    - columnheader "Path on iOS (relative to transfer root)" [ref=f2e557]
+                - rowgroup [ref=f2e558]:
+                  - row [ref=f2e559]:
+                    - cell [ref=f2e560]:
+                      - code [ref=f2e561]: root
+                    - cell [ref=f2e562]:
+                      - code [ref=f2e563]: app/
+                  - row [ref=f2e564]:
+                    - cell [ref=f2e565]:
+                      - code [ref=f2e566]: file
+                    - cell [ref=f2e567]:
+                      - code [ref=f2e568]: app/files/
+                  - row [ref=f2e569]:
+                    - cell [ref=f2e570]:
+                      - code [ref=f2e571]: database
+                    - cell [ref=f2e572]:
+                      - code [ref=f2e573]: app/databases/
+                  - row [ref=f2e574]:
+                    - cell [ref=f2e575]:
+                      - code [ref=f2e576]: sharedpref
+                    - cell [ref=f2e577]:
+                      - code [ref=f2e578]: app/shared_prefs/
+                  - row [ref=f2e579]:
+                    - cell [ref=f2e580]:
+                      - code [ref=f2e581]: external
+                    - cell [ref=f2e582]:
+                      - code [ref=f2e583]: external/files/
+                  - row [ref=f2e584]:
+                    - cell [ref=f2e585]:
+                      - code [ref=f2e586]: device_root
+                    - cell [ref=f2e587]:
+                      - code [ref=f2e588]: device/app/
+                  - row [ref=f2e589]:
+                    - cell [ref=f2e590]:
+                      - code [ref=f2e591]: device_file
+                    - cell [ref=f2e592]:
+                      - code [ref=f2e593]: device/app/files/
+                  - row [ref=f2e594]:
+                    - cell [ref=f2e595]:
+                      - code [ref=f2e596]: device_database
+                    - cell [ref=f2e597]:
+                      - code [ref=f2e598]: device/app/databases/
+                  - row [ref=f2e599]:
+                    - cell [ref=f2e600]:
+                      - code [ref=f2e601]: device_sharedpref
+                    - cell [ref=f2e602]:
+                      - code [ref=f2e603]: device/app/shared_prefs/
+              - paragraph [ref=f2e604]:
+                - text: For example, a file included with
+                - code [ref=f2e605]: <include domain="file" path="my_settings.txt"/>
+                - text: will be available on the iOS side at
+                - code [ref=f2e606]: app/files/my_settings.txt
+                - text: relative to the transfer destination root.
+              - heading "Implement BackupAgent" [level=2] [ref=f2e607]
+              - paragraph [ref=f2e608]:
+                - text: Apps that implement Auto Backup don't need to implement a
+                - link [ref=f2e609] [cursor=pointer]:
+                  - /url: /reference/android/app/backup/BackupAgent
+                  - code [ref=f2e610]: BackupAgent
+                - text: . However, you can optionally implement a custom
+                - code [ref=f2e611]: BackupAgent
+                - text: ". Typically, there are two reasons for doing this:"
+              - list [ref=f2e612]:
+                - listitem [ref=f2e613]:
+                  - paragraph [ref=f2e614]:
+                    - text: You want to receive notification of backup events, such as
+                    - link [ref=f2e615] [cursor=pointer]:
+                      - /url: /reference/android/app/backup/BackupAgent#onRestoreFinished()
+                      - code [ref=f2e616]: onRestoreFinished()
+                    - text: and
+                    - link [ref=f2e617] [cursor=pointer]:
+                      - /url: /reference/android/app/backup/BackupAgent#onQuotaExceeded(long,%20long)
+                      - code [ref=f2e618]: onQuotaExceeded()
+                    - text: . These callback methods are executed even if the app is not running.
+                - listitem [ref=f2e619]:
+                  - paragraph [ref=f2e620]:
+                    - text: You can't easily express the set of files you want to back up with XML rules. In these rare cases, you can implement a
+                    - code [ref=f2e621]: BackupAgent
+                    - text: that overrides
+                    - link [ref=f2e622] [cursor=pointer]:
+                      - /url: /reference/android/app/backup/BackupAgent#onFullBackup(android.app.backup.FullBackupDataOutput)
+                      - code [ref=f2e623]: onFullBackup(FullBackupDataOutput)
+                    - text: to store what you want. To retain the system's default implementation, call the corresponding method on the superclass with
+                    - code [ref=f2e624]: super.onFullBackup()
+                    - text: .
+              - paragraph [ref=f2e625]:
+                - text: If you implement a
+                - code [ref=f2e626]: BackupAgent
+                - text: ", by default the system expects your app to perform"
+                - link "key-value backup and restore" [ref=f2e627] [cursor=pointer]:
+                  - /url: /guide/topics/data/keyvaluebackup
+                - text: . To use the file-based Auto Backup instead, set the
+                - link [ref=f2e628] [cursor=pointer]:
+                  - /url: /guide/topics/manifest/application-element#fullBackupOnly
+                  - code [ref=f2e629]: android:fullBackupOnly
+                - text: attribute to
+                - code [ref=f2e630]: "true"
+                - text: in your app's manifest.
+              - paragraph [ref=f2e631]:
+                - text: During auto backup and restore operations, the system launches the app in a restricted mode to both prevent the app from accessing files that might cause conflicts and let the app execute callback methods in its
+                - code [ref=f2e632]: BackupAgent
+                - text: . In this restricted mode, the app's main activity is not automatically launched, its
+                - link "content providers" [ref=f2e633] [cursor=pointer]:
+                  - /url: /guide/topics/providers/content-providers
+                - text: are not initialized, and the base-class
+                - link [ref=f2e634] [cursor=pointer]:
+                  - /url: /reference/android/app/Application
+                  - code [ref=f2e635]: Application
+                - text: is instantiated instead of any subclass declared in the app's
+                - link "manifest" [ref=f2e636] [cursor=pointer]:
+                  - /url: /guide/topics/manifest/application-element#nm
+                - text: .
+              - complementary [ref=f2e637]:
+                - text: error
+                - strong [ref=f2e638]: "Caution:"
+                - generic [ref=f2e639]:
+                  - text: To avoid errors, make sure that the parts of your app that execute in the restricted mode (mostly your
+                  - link [ref=f2e640] [cursor=pointer]:
+                    - /url: /reference/android/app/backup/BackupAgent
+                    - code [ref=f2e641]: BackupAgent
+                  - text: ) don't access content providers in the same app or attempt to cast the
+                  - link [ref=f2e642] [cursor=pointer]:
+                    - /url: /reference/android/app/Application
+                    - code [ref=f2e643]: Application
+                  - text: object. If you can't avoid those patterns, then consider implementing
+                  - link "key-value backup" [ref=f2e644] [cursor=pointer]:
+                    - /url: /guide/topics/data/keyvaluebackup
+                  - text: or disabling backup entirely.
+              - paragraph [ref=f2e645]:
+                - text: Your
+                - code [ref=f2e646]: BackupAgent
+                - text: must implement the abstract methods
+                - link [ref=f2e647] [cursor=pointer]:
+                  - /url: /reference/android/app/backup/BackupAgent#onBackup(android.os.ParcelFileDescriptor,%20android.app.backup.BackupDataOutput,%20android.os.ParcelFileDescriptor)
+                  - code [ref=f2e648]: onBackup()
+                - text: and
+                - link [ref=f2e649] [cursor=pointer]:
+                  - /url: /reference/android/app/backup/BackupAgent#onRestore(android.app.backup.BackupDataInput,%20int,%20android.os.ParcelFileDescriptor)
+                  - code [ref=f2e650]: onRestore()
+                - text: ", which are used for key-value backup. If you don't want to perform key-value backup, you can leave your implementation of those methods blank."
+              - paragraph [ref=f2e651]:
+                - text: For more information, see
+                - link "Extend BackupAgent" [ref=f2e652] [cursor=pointer]:
+                  - /url: /guide/topics/data/keyvaluebackup#BackupAgent
+                - text: .
+              - heading "Handle Cross-Platform Transfers in BackupAgent" [level=3] [ref=f2e653]
+              - paragraph [ref=f2e654]:
+                - text: Starting with Android 16 QPR2 (API level 36.1), several new APIs are available in
+                - code [ref=f2e655]: BackupAgent
+                - text: to better support cross-platform data transfers.
+              - paragraph [ref=f2e656]:
+                - strong [ref=f2e657]: "New Transport Flag:"
+              - list [ref=f2e658]:
+                - listitem [ref=f2e659]:
+                  - code [ref=f2e660]: FLAG_CROSS_PLATFORM_TRANSFER_IOS
+                  - text: ": This flag is added to the"
+                  - code [ref=f2e661]: transportFlags
+                  - text: provided to your
+                  - code [ref=f2e662]: BackupAgent
+                  - text: .
+                  - list [ref=f2e663]:
+                    - listitem [ref=f2e664]:
+                      - text: In
+                      - code [ref=f2e665]: onFullBackup
+                      - text: ", this flag is set if the current backup operation is part of a data export to an iOS device."
+                    - listitem [ref=f2e666]:
+                      - text: In the new
+                      - code [ref=f2e667]: onRestoreFile
+                      - text: overload, this flag is set if the data is being imported from an iOS device.
+              - paragraph [ref=f2e668]:
+                - strong [ref=f2e669]:
+                  - text: New
+                  - code [ref=f2e670]: onRestoreFile
+                  - text: "Method:"
+              - paragraph [ref=f2e671]:
+                - text: A new overload of
+                - code [ref=f2e672]: onRestoreFile
+                - text: is introduced, which takes a single
+                - code [ref=f2e673]: FullRestoreDataInput
+                - text: "parameter. This object provides more context about the restore operation:"
+              - list [ref=f2e674]:
+                - listitem [ref=f2e675]:
+                  - code [ref=f2e676]: FullRestoreDataInput.getTransportFlags()
+                  - text: ": Returns the transport flags for the current restore operation, which can include"
+                  - code [ref=f2e677]: FLAG_CROSS_PLATFORM_TRANSFER_IOS
+                  - text: .
+                - listitem [ref=f2e678]:
+                  - code [ref=f2e679]: FullRestoreDataInput.getContentVersion()
+                  - text: ": Returns the content version string provided by the"
+                  - emphasis [ref=f2e680]: source application
+                  - text: on the other platform during a cross-platform transfer. This value is an empty string if not provided by the source.
+              - paragraph [ref=f2e681]:
+                - strong [ref=f2e682]: "New Size Estimation Method:"
+              - list [ref=f2e683]:
+                - listitem [ref=f2e684]:
+                  - code [ref=f2e685]: onEstimateFullBackupBytes()
+                  - text: ": This method lets you provide an estimated size of the data your app intends to back up. Implementation is"
+                  - strong [ref=f2e686]: strongly recommended
+                  - text: if your app performs significant data transformations during backup or handles a large volume of data, as it can improve efficiency by avoiding the default system dry run. For apps with small, straightforward backups, this method is typically not necessary.
+              - paragraph [ref=f2e687]:
+                - strong [ref=f2e688]: "Example Usage:"
+          - generic [ref=f2e691]:
+            - paragraph [ref=f2e692]:
+              - text: Content and code samples on this page are subject to the licenses described in the
+              - link "Content License" [ref=f2e693] [cursor=pointer]:
+                - /url: /license
+              - text: . Java and OpenJDK are trademarks or registered trademarks of Oracle and/or its affiliates.
+            - paragraph [ref=f2e694]: Last updated 2026-02-26 UTC.
+      - navigation "Promotions" [ref=f2e696]:
+        - list [ref=f2e697]:
+          - listitem [ref=f2e698]:
+            - link [ref=f2e699] [cursor=pointer]:
+              - /url: //x.com/AndroidDev
+              - img "X" [ref=f2e701]
+              - text: X
+            - generic [ref=f2e702]: Follow @AndroidDev on X
+          - listitem [ref=f2e703]:
+            - link [ref=f2e704] [cursor=pointer]:
+              - /url: //www.youtube.com/user/androiddevelopers
+              - img "YouTube" [ref=f2e706]
+              - text: YouTube
+            - generic [ref=f2e707]: Check out Android Developers on YouTube
+          - listitem [ref=f2e708]:
+            - link [ref=f2e709] [cursor=pointer]:
+              - /url: //www.linkedin.com/showcase/androiddev
+              - img "LinkedIn" [ref=f2e711]
+              - text: LinkedIn
+            - generic [ref=f2e712]: Connect with the Android Developers community on LinkedIn
+      - navigation "Footer links" [ref=f2e714]:
+        - list [ref=f2e715]:
+          - listitem [ref=f2e716]:
+            - heading "More Android" [level=3] [ref=f2e717]
+            - list [ref=f2e718]:
+              - listitem [ref=f2e719]:
+                - link "Android" [ref=f2e720] [cursor=pointer]:
+                  - /url: //www.android.com
+              - listitem [ref=f2e721]:
+                - link "Android for Enterprise" [ref=f2e722] [cursor=pointer]:
+                  - /url: //www.android.com/enterprise/
+              - listitem [ref=f2e723]:
+                - link "Security" [ref=f2e724] [cursor=pointer]:
+                  - /url: //www.android.com/security-center/
+              - listitem [ref=f2e725]:
+                - link "Source" [ref=f2e726] [cursor=pointer]:
+                  - /url: //source.android.com
+              - listitem [ref=f2e727]:
+                - link "News" [ref=f2e728] [cursor=pointer]:
+                  - /url: /news
+              - listitem [ref=f2e729]:
+                - link "Blog" [ref=f2e730] [cursor=pointer]:
+                  - /url: //android-developers.googleblog.com/
+              - listitem [ref=f2e731]:
+                - link "Podcasts" [ref=f2e732] [cursor=pointer]:
+                  - /url: /podcasts
+          - listitem [ref=f2e733]:
+            - heading "Discover" [level=3] [ref=f2e734]
+            - list [ref=f2e735]:
+              - listitem [ref=f2e736]:
+                - link "Gaming" [ref=f2e737] [cursor=pointer]:
+                  - /url: /games
+              - listitem [ref=f2e738]:
+                - link "Machine Learning" [ref=f2e739] [cursor=pointer]:
+                  - /url: /ml
+              - listitem [ref=f2e740]:
+                - link "Health & Fitness" [ref=f2e741] [cursor=pointer]:
+                  - /url: /health-and-fitness
+              - listitem [ref=f2e742]:
+                - link "Camera & Media" [ref=f2e743] [cursor=pointer]:
+                  - /url: /media
+              - listitem [ref=f2e744]:
+                - link "Privacy" [ref=f2e745] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=f2e746]:
+                - link "5G" [ref=f2e747] [cursor=pointer]:
+                  - /url: /training/connectivity/5g
+          - listitem [ref=f2e748]:
+            - heading "Android Devices" [level=3] [ref=f2e749]
+            - list [ref=f2e750]:
+              - listitem [ref=f2e751]:
+                - link "Large screens" [ref=f2e752] [cursor=pointer]:
+                  - /url: /large-screens
+              - listitem [ref=f2e753]:
+                - link "Wear OS" [ref=f2e754] [cursor=pointer]:
+                  - /url: /wear
+              - listitem [ref=f2e755]:
+                - link "ChromeOS devices" [ref=f2e756] [cursor=pointer]:
+                  - /url: /chrome-os
+              - listitem [ref=f2e757]:
+                - link "Android for cars" [ref=f2e758] [cursor=pointer]:
+                  - /url: /cars
+              - listitem [ref=f2e759]:
+                - link "Android TV" [ref=f2e760] [cursor=pointer]:
+                  - /url: /tv
+          - listitem [ref=f2e761]:
+            - heading "Releases" [level=3] [ref=f2e762]
+            - list [ref=f2e763]:
+              - listitem [ref=f2e764]:
+                - link "Android 17" [ref=f2e765] [cursor=pointer]:
+                  - /url: /about/versions/17
+              - listitem [ref=f2e766]:
+                - link "Android 16" [ref=f2e767] [cursor=pointer]:
+                  - /url: /about/versions/16
+              - listitem [ref=f2e768]:
+                - link "Android 15" [ref=f2e769] [cursor=pointer]:
+                  - /url: /about/versions/15
+              - listitem [ref=f2e770]:
+                - link "Android 14" [ref=f2e771] [cursor=pointer]:
+                  - /url: /about/versions/14
+              - listitem [ref=f2e772]:
+                - link "Android 13" [ref=f2e773] [cursor=pointer]:
+                  - /url: /about/versions/13
+              - listitem [ref=f2e774]:
+                - link "Android 12" [ref=f2e775] [cursor=pointer]:
+                  - /url: /about/versions/12
+              - listitem [ref=f2e776]:
+                - link "Android 11" [ref=f2e777] [cursor=pointer]:
+                  - /url: /about/versions/11
+          - listitem [ref=f2e778]:
+            - heading "Documentation and Downloads" [level=3] [ref=f2e779]
+            - list [ref=f2e780]:
+              - listitem [ref=f2e781]:
+                - link "Android Studio guide" [ref=f2e782] [cursor=pointer]:
+                  - /url: /studio/intro
+              - listitem [ref=f2e783]:
+                - link "Developers guides" [ref=f2e784] [cursor=pointer]:
+                  - /url: /guide
+              - listitem [ref=f2e785]:
+                - link "API reference" [ref=f2e786] [cursor=pointer]:
+                  - /url: /reference
+              - listitem [ref=f2e787]:
+                - link "Download Studio" [ref=f2e788] [cursor=pointer]:
+                  - /url: /studio
+              - listitem [ref=f2e789]:
+                - link "Android NDK" [ref=f2e790] [cursor=pointer]:
+                  - /url: /ndk
+          - listitem [ref=f2e791]:
+            - heading "Support" [level=3] [ref=f2e792]
+            - list [ref=f2e793]:
+              - listitem [ref=f2e794]:
+                - link "Report platform bug" [ref=f2e795] [cursor=pointer]:
+                  - /url: //issuetracker.google.com/issues/new?component=190923&template=841312
+              - listitem [ref=f2e796]:
+                - link "Report documentation bug" [ref=f2e797] [cursor=pointer]:
+                  - /url: //issuetracker.google.com/issues/new?component=192697
+              - listitem [ref=f2e798]:
+                - link "Google Play support" [ref=f2e799] [cursor=pointer]:
+                  - /url: //support.google.com/googleplay/android-developer
+              - listitem [ref=f2e800]:
+                - link "Join research studies" [ref=f2e801] [cursor=pointer]:
+                  - /url: https://g.co/userresearch/androiddeveloperfooter
+      - generic [ref=f2e803]:
+        - navigation "Other Google Developers websites" [ref=f2e804]:
+          - link [ref=f2e805] [cursor=pointer]:
+            - /url: https://developers.google.com/
+            - img "Google Developers" [ref=f2e807]
+          - list [ref=f2e808]:
+            - listitem [ref=f2e809]:
+              - link "Android" [ref=f2e810] [cursor=pointer]:
+                - /url: //developer.android.com
+            - listitem [ref=f2e811]:
+              - link "Chrome" [ref=f2e812] [cursor=pointer]:
+                - /url: //developer.chrome.com/home
+            - listitem [ref=f2e813]:
+              - link "Firebase" [ref=f2e814] [cursor=pointer]:
+                - /url: //firebase.google.com
+            - listitem [ref=f2e815]:
+              - link "Google Cloud Platform" [ref=f2e816] [cursor=pointer]:
+                - /url: //cloud.google.com
+            - listitem [ref=f2e817]:
+              - link "All products" [ref=f2e818] [cursor=pointer]:
+                - /url: //developers.google.com/products/
+        - navigation "Utility links" [ref=f2e819]:
+          - list [ref=f2e820]:
+            - listitem [ref=f2e821]:
+              - link "Privacy" [ref=f2e822] [cursor=pointer]:
+                - /url: //policies.google.com/privacy
+            - listitem [ref=f2e823]:
+              - text: "|"
+              - link "License" [ref=f2e824] [cursor=pointer]:
+                - /url: /license
+            - listitem [ref=f2e825]:
+              - text: "|"
+              - link "Brand guidelines" [ref=f2e826] [cursor=pointer]:
+                - /url: /distribute/marketing-tools/brand-guidelines
+            - text: "|"
+            - listitem [ref=f2e827]:
+              - generic [ref=f2e828]: Get news and tips by email
+              - link "Subscribe" [ref=f2e829] [cursor=pointer]:
+                - /url: /updates

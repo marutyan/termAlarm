@@ -30,6 +30,8 @@
 
     <application
         android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
@@ -199,7 +201,11 @@
                 android:resource="@xml/term_alarm_widget_info" />
         </receiver>
 
-        <!-- ウィジェットの定期更新（1分タイマー発火先）・鳴動終了・端末時刻変更・アプリ更新を受け取るレシーバー -->
+        <!-- ウィジェットの定期更新（1分タイマー発火先）・鳴動終了・端末時刻変更・アプリ更新を受け取るレシーバー。
+             BOOT_COMPLETEDなどシステムが送るものを受けるため exported は true にする必要がある
+             （exported="false" にするとシステムからのブロードキャストが届かず、再起動後に復帰しなくなる）。
+             自前のRINGING_FINISHEDは送る側がsetPackageで自アプリへ限定しているため、
+             外から同じものを送られても起きるのはウィジェットの描き直しだけで実害はない。 -->
         <receiver
             android:name=".widget.WidgetUpdateReceiver"
             android:exported="true">

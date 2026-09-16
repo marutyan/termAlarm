@@ -107,7 +107,7 @@ class TermAlarmWidget : GlanceAppWidget() {
             .mapNotNull { schedule -> nextTrigger(schedule, now)?.let { schedule to it } }
             .minByOrNull { it.second }
         val nextTime = next?.second?.let {
-            "${it.format(TIME_FORMAT)}（${it.format(DAY_OF_WEEK_FORMAT)}）"
+            "${it.format(TIME_FORMAT)}(${it.format(DAY_OF_WEEK_FORMAT)})"
         }
         return WidgetContent(
             date = LocalDateTime.now().format(DATE_FORMAT),
@@ -189,12 +189,13 @@ private const val FONT_WIDTH_SAFETY_FACTOR = 1.02f
 private const val TIME_WIDTH_USAGE = 0.85f
 
 /**
- * 次の鳴動表示における時計アイコンと時刻テキストの間の余白(dp)。
- * アイコンと文字が密着するのを防ぎ、行全体の横幅見積もりと実際のレイアウト描画で間隔の整合性を保つために必要となる。
- * 次の鳴動行に必要な横幅の計算およびSpacerの幅設定に用いる役割を持つ。
+ * 次の鳴動表示における時計アイコンと時刻テキストの間の空き比率。
+ * 添える文字の大きさに対して0.50倍の空きを確保し、文字サイズに連動して適切な間隔を保つために必要となる。
+ * 純正端末のロック画面の実測値（文字サイズ約15.6dp、時計アイコン幅15.73dp、空き8.54dpで約0.55倍）に基づき、
+ * 本ウィジェットではアイコンを文字の0.90倍と少し小さくしているバランスに合わせて0.5倍とする。
+ * 次の鳴動行に必要な横幅の見積もり判定および実際のレイアウト描画時の間隔算出に用いる役割を持つ。
  */
-private const val NEXT_RING_ICON_SPACING_DP = 4f
-private val NEXT_RING_ICON_SPACING = NEXT_RING_ICON_SPACING_DP.dp
+private const val NEXT_RING_ICON_SPACING_RATIO = 0.5f
 
 // 横並びのときに左の時刻と右の列（月日・次の鳴動）の間にあける空白(dp)。
 // 左右がくっついて読みにくくなるのを防ぎ、右の列で使える幅の計算と行間の余白描画で同じ間隔を共有する役割を持つ。
@@ -220,6 +221,7 @@ private data class WidgetLayerStyle(
     val timeFontSize: TextUnit,
     val secondaryFontSize: TextUnit,
     val iconSize: Dp,
+    val iconSpacing: Dp,
     val fontStyle: WidgetFontStyle,
     val timeWeight: WidgetFontWeight,
     val secondaryWeight: WidgetFontWeight,
@@ -345,7 +347,7 @@ private fun WidgetBody(
     // 月日・次の鳴動の下限必要幅を算出し、下限の大きさでも幅に入らない行は出さない
     val minDateWidth = MIN_SECONDARY_FONT_SIZE_DP * dateWidthRatio
     val minNextRingWidth =
-        MIN_SECONDARY_FONT_SIZE_DP * (nextRingWidthRatio + ICON_TO_SECONDARY_RATIO) + NEXT_RING_ICON_SPACING_DP
+        MIN_SECONDARY_FONT_SIZE_DP * (nextRingWidthRatio + ICON_TO_SECONDARY_RATIO + NEXT_RING_ICON_SPACING_RATIO)
     val dateFitsWidth = secondaryAvailableWidth >= minDateWidth
     val nextRingFitsWidth = secondaryAvailableWidth >= minNextRingWidth
 
@@ -370,8 +372,8 @@ private fun WidgetBody(
     }
     if (showNextRing && content.nextTime != null) {
         widthLimits.add(
-            (secondaryAvailableWidth - NEXT_RING_ICON_SPACING_DP).coerceAtLeast(0f) /
-                (nextRingWidthRatio + ICON_TO_SECONDARY_RATIO),
+            secondaryAvailableWidth /
+                (nextRingWidthRatio + ICON_TO_SECONDARY_RATIO + NEXT_RING_ICON_SPACING_RATIO),
         )
     }
     val secondaryFontSizeDp = if (widthLimits.isEmpty()) {
@@ -381,11 +383,13 @@ private fun WidgetBody(
     }
 
     val iconSizeDp = nextRingIconSizeDp(secondaryFontSizeDp)
+    val iconSpacingDp = secondaryFontSizeDp * NEXT_RING_ICON_SPACING_RATIO
 
     // dpで解いた大きさをfontScaleで割り、Glanceへ渡すspへ変換する
     val timeFontSize = (timeFontSizeDp / fontScale).sp
     val secondaryFontSize = (secondaryFontSizeDp / fontScale).sp
     val iconSize = iconSizeDp.dp
+    val iconSpacing = iconSpacingDp.dp
     val secondaryWeight = secondaryFontWeight(fontWeight)
 
     // 第4版の共通契約に基づき、背景色・時刻の色・月日と次の鳴動の色を取得する
@@ -398,6 +402,7 @@ private fun WidgetBody(
         timeFontSize = timeFontSize,
         secondaryFontSize = secondaryFontSize,
         iconSize = iconSize,
+        iconSpacing = iconSpacing,
         fontStyle = fontStyle,
         timeWeight = fontWeight,
         secondaryWeight = secondaryWeight,
@@ -598,6 +603,7 @@ private fun WidgetLayer(
                             time = content.nextTime,
                             style = dateStyle,
                             iconSize = style.iconSize,
+                            iconSpacing = style.iconSpacing,
                             modifier = GlanceModifier.padding(top = nextRingTop),
                         )
                     }
@@ -629,6 +635,7 @@ private fun WidgetLayer(
                     time = content.nextTime,
                     style = dateStyle,
                     iconSize = style.iconSize,
+                    iconSpacing = style.iconSpacing,
                     modifier = GlanceModifier.padding(top = nextRingTop),
                 )
             }
@@ -645,6 +652,7 @@ private fun NextRingRow(
     time: String,
     style: TextStyle,
     iconSize: Dp,
+    iconSpacing: Dp,
     modifier: GlanceModifier = GlanceModifier,
 ) {
     Row(
@@ -657,7 +665,7 @@ private fun NextRingRow(
             modifier = GlanceModifier.size(iconSize),
             colorFilter = ColorFilter.tint(style.color),
         )
-        Spacer(GlanceModifier.width(NEXT_RING_ICON_SPACING))
+        Spacer(GlanceModifier.width(iconSpacing))
         Text(text = time, style = style, maxLines = 1)
     }
 }
