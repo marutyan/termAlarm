@@ -71,7 +71,7 @@ private val DEPENDENCY_LIBRARIES: List<LibraryArtifact> = listOf(
 
 /**
  * アプリ情報とオープンソースライセンス(IBM Plex MonoのSIL OFL、および依存ライブラリのApache License 2.0)を表示する画面。
- * 一覧画面右上のメニューから遷移する。スクロール可能な画面として依存一覧と各ライセンスの全文を表示する。
+ * 一覧画面右上のメニューから遷移する。スクロール可能な画面として各ライセンスの全文と依存一覧を表示する。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,9 +95,31 @@ fun AboutScreen(onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
-            // セクション1: このアプリが使っているもの
+            // セクション1: Apache License 2.0
             AboutSectionTitle(
-                text = stringResource(R.string.about_section_dependencies),
+                text = stringResource(R.string.about_section_apache_license),
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+            val apacheLicenseText = rememberRawResourceText(R.raw.apache_license_2_0)
+            LicenseBodyText(text = apacheLicenseText)
+
+            // セクション2: IBM Plex Mono
+            AboutSectionTitle(
+                text = stringResource(R.string.about_section_font_license),
+                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
+            )
+            val fontLicenseText = rememberRawResourceText(R.raw.font_license)
+            LicenseBodyText(text = fontLicenseText)
+
+            // セクション3: 依存ライブラリの一覧
+            AboutSectionTitle(
+                text = stringResource(R.string.about_section_libraries),
+                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
+            )
+            Text(
+                text = stringResource(R.string.about_libraries_notice),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 8.dp),
             )
             DEPENDENCY_LIBRARIES.forEach { lib ->
@@ -106,22 +128,6 @@ fun AboutScreen(onBack: () -> Unit) {
                     license = lib.license,
                 )
             }
-
-            // セクション2: Apache License 2.0
-            AboutSectionTitle(
-                text = stringResource(R.string.about_section_apache_license),
-                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
-            )
-            val apacheLicenseText = rememberRawResourceText(R.raw.apache_license_2_0)
-            LicenseBodyText(text = apacheLicenseText)
-
-            // セクション3: IBM Plex Mono
-            AboutSectionTitle(
-                text = stringResource(R.string.about_section_font_license),
-                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
-            )
-            val fontLicenseText = rememberRawResourceText(R.raw.font_license)
-            LicenseBodyText(text = fontLicenseText)
         }
     }
 }

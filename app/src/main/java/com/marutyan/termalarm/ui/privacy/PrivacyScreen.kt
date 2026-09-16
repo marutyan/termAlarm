@@ -292,36 +292,42 @@ fun PrivacyScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
             )
 
-            // 1. 収集する情報
-            PolicySectionTitle(text = "収集する情報")
+            // 第1条 本ポリシーについて
+            PolicySectionTitle(text = "第1条 本ポリシーについて")
+            PolicyParagraph(
+                text = "本プライバシーポリシー（以下「本ポリシー」といいます。）は、Androidアプリケーション「TermAlarm」（以下「本アプリケーション」といいます。）における利用者の情報の取り扱いについて定めるものです。本ポリシーは、本アプリケーションをご利用になるすべての利用者に適用されます。",
+            )
+
+            // 第2条 取得する情報
+            PolicySectionTitle(text = "第2条 取得する情報")
             PolicyParagraph(
                 text = "このアプリは、利用者に関する情報を一切収集しません。",
                 isBold = true,
             )
-            PolicyBulletItem(text = "個人情報の収集: ありません")
-            PolicyBulletItem(text = "利用状況の記録や分析: ありません")
-            PolicyBulletItem(text = "広告: 表示しません")
+            PolicyBulletItem(text = "個人情報の取得: 行いません")
+            PolicyBulletItem(text = "利用状況の記録および分析: 行いません")
+            PolicyBulletItem(text = "広告の表示: 行いません")
             val internetBullet = remember {
                 buildAnnotatedString {
-                    append("通信: 行いません。インターネットへの接続許可（")
+                    append("外部との通信: 行いません。インターネットへの接続権限（")
                     withStyle(SpanStyle(fontFamily = IbmPlexMono)) {
                         append("INTERNET")
                     }
-                    append("）自体を持っていません")
+                    append("）自体を保持していません")
                 }
             }
             PolicyBulletItem(text = internetBullet)
             PolicyParagraph(
-                text = "なお、Androidの標準機能による自動バックアップはOSが行うものであり、アプリ自身が通信するものではありません。詳しくは「バックアップについて」をご覧ください。",
+                text = "なお、Androidの標準機能による自動バックアップはOS（オペレーティングシステム）が実行するものであり、本アプリケーション自身が通信を行うものではありません。詳細については「第5条 バックアップ」をご確認ください。",
             )
 
-            // 2. 端末内に保存される情報
-            PolicySectionTitle(text = "端末内に保存される情報")
+            // 第3条 端末内に保存する情報
+            PolicySectionTitle(text = "第3条 端末内に保存する情報")
             val storageIntro = remember {
                 buildAnnotatedString {
-                    append("アプリが動作するために、次の情報を")
+                    append("本アプリケーションが正常に動作するために、次の情報を")
                     withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                        append("端末の中だけ")
+                        append("端末内のみ")
                     }
                     append("に保存します。")
                 }
@@ -340,117 +346,135 @@ fun PrivacyScreen(onBack: () -> Unit) {
             )
             PolicyTableRowItem(
                 title = "アプリの設定",
-                description = "選んだ動作や見た目を保つため（アラームやタイマーの音、バイブの有無、徐々に音量を上げる時間、消音までの時間、二度寝チェックまでの時間、配色テーマなど）",
+                description = "選択した動作や外観を保持するため（アラームやタイマーの音、バイブレーションの有無、徐々に音量を上げる時間、消音までの時間、二度寝チェックまでの時間、配色テーマなど）",
             )
             PolicyTableRowItem(
                 title = "時計ウィジェットの設定",
-                description = "ウィジェットの見た目を保つため（時刻の色、背景スタイル、書体など）",
+                description = "ウィジェットの外観を保持するため（時刻の色、背景スタイル、書体など）",
             )
             PolicyTableRowItem(
                 title = "起床の記録",
-                description = "起床の傾向を振り返るため（鳴動ごとの予定時刻や停止時刻、止め方、何回目で起きたかの集計など）",
+                description = "起床の傾向を振り返るため（鳴動ごとの予定時刻や停止時刻、無効化の方法、何回目で起きたかの集計など）",
                 isLast = true,
             )
             Spacer(modifier = Modifier.height(8.dp))
 
             PolicyParagraph(
-                text = "これらは端末のアプリ専用の領域に保存され、他のアプリからは読めません。アプリ自身が外部のサーバーへ送信することはありません（Androidの標準機能によるバックアップについては「バックアップについて」をご覧ください）。アプリを削除すると、すべて削除されます。",
+                text = "これらの情報は端末内の本アプリケーション専用の領域に保存され、他のアプリケーションから読み取ることはできません。本アプリケーション自身が外部のサーバーへ送信することはありません（Androidの標準機能による自動バックアップについては「第5条 バックアップ」をご確認ください）。本アプリケーションを端末から削除（アンインストール）した場合は、保存された情報もすべて消去されます。",
             )
 
-            // 3. バックアップについて
-            PolicySectionTitle(text = "バックアップについて")
+            // 第4条 情報の利用目的
+            PolicySectionTitle(text = "第4条 情報の利用目的")
             PolicyParagraph(
-                text = "このアプリは、機種変更やアプリの入れ直しのときに元へ戻すため、Androidの標準機能による自動バックアップに対応しています。",
+                text = "本アプリケーションが端末内に保存する情報は、以下の目的のためにのみ利用します。",
             )
+            PolicyBulletItem(text = "アラームの設定: 指定された設定に従ってアラームを鳴動させるため")
+            PolicyBulletItem(text = "タイマーとストップウォッチの状態: アプリケーションを終了している間も計測を継続するため")
+            PolicyBulletItem(text = "アプリの設定: 利用者が選択した動作設定や外観設定を維持するため")
+            PolicyBulletItem(text = "時計ウィジェットの設定: ホーム画面上のウィジェットの外観を維持するため")
+            PolicyBulletItem(text = "起床の記録: 利用者が起床傾向を振り返るための履歴表示および集計を行うため")
             PolicyParagraph(
-                text = "預けられる情報は、アラームの設定、タイマーとストップウォッチの状態、アプリの設定、時計ウィジェットの設定、起床の記録です。",
-            )
-            PolicyParagraph(
-                text = "預け先は利用者自身のGoogleドライブの非公開領域です。本人からも他のアプリからも読めず、ドライブの容量は消費しません。アプリの作者もこのデータを見ることはできません。また、Android 9以降では端末のPINなどで暗号化されます。",
-            )
-            PolicyParagraph(
-                text = "端末の設定からバックアップを切れば、預けられることはありません。",
+                text = "本アプリケーションは、これらの情報を上記の目的以外に利用することはありません。",
             )
 
-            // 4. 利用する権限とその理由
-            PolicySectionTitle(text = "利用する権限とその理由")
+            // 第5条 バックアップ
+            PolicySectionTitle(text = "第5条 バックアップ")
+            PolicyParagraph(
+                text = "本アプリケーションは、端末の機種変更時や本アプリケーションの再インストール時に設定等を復元できるよう、Androidの標準機能による自動バックアップに対応しています。なお、このバックアップはAndroid（OS）が提供する仕組みによって実行されます。",
+            )
+            PolicyParagraph(
+                text = "バックアップされる情報は、アラームの設定、タイマーとストップウォッチの状態、アプリの設定、時計ウィジェットの設定、および起床の記録です。",
+            )
+            PolicyParagraph(
+                text = "データの保存先は、利用者自身のGoogle ドライブの非公開領域です。この領域のデータは利用者本人や他のアプリケーションから読み取ることはできず、Google ドライブのストレージ容量も消費しません。本アプリケーションの開発者もこのデータを閲覧することはできません。また、Android 9以降では、端末のPINコードやパスワード等を用いて暗号化されます。",
+            )
+            PolicyParagraph(
+                text = "端末の設定から自動バックアップ機能を無効化することで、データのバックアップを停止できます。",
+            )
+
+            // 第6条 第三者への提供
+            PolicySectionTitle(text = "第6条 第三者への提供")
+            PolicyParagraph(
+                text = "本アプリケーションは、外部へ送信する情報や保持する個人情報を保有していないため、第三者へ情報を提供することはありません。また、本アプリケーションには外部の分析サービスや広告配信のためのライブラリ等は一切含まれていません。",
+            )
+
+            // 第7条 アプリケーションの権限
+            PolicySectionTitle(text = "第7条 アプリケーションの権限")
+            PolicyParagraph(
+                text = "本アプリケーションが利用する権限およびその理由は、次のとおりです。",
+            )
+            Spacer(modifier = Modifier.height(4.dp))
             PolicyTableHeader(leftTitle = "権限", rightTitle = "理由")
             PolicyTableRowItem(
                 title = "正確なアラーム",
                 identifier = "(USE_EXACT_ALARM / SCHEDULE_EXACT_ALARM)",
-                description = "指定した時刻にアラームを鳴らすため。アラームアプリの中心的な機能です",
+                description = "指定した時刻にアラームを鳴らすため。本アプリケーションの中核機能です",
             )
             PolicyTableRowItem(
                 title = "通知",
                 identifier = "(POST_NOTIFICATIONS)",
-                description = "アラームの鳴動と、タイマーやストップウォッチの経過を知らせるため",
+                description = "アラームの鳴動や、タイマーおよびストップウォッチの経過を通知するため",
             )
             PolicyTableRowItem(
                 title = "進行中の通知",
                 identifier = "(POST_PROMOTED_NOTIFICATIONS)",
-                description = "鳴っているアラームとタイマーの残り時間を、通知欄の上に出し続けるため",
+                description = "鳴動中のアラームおよびタイマーの残り時間を、通知欄の上部に継続して表示するため",
             )
             PolicyTableRowItem(
                 title = "全画面通知",
                 identifier = "(USE_FULL_SCREEN_INTENT)",
-                description = "画面が消えているときに、アラームの画面を表示するため",
+                description = "画面消灯時やロック時に、アラーム画面を表示するため",
             )
             PolicyTableRowItem(
                 title = "起動完了の受信",
                 identifier = "(RECEIVE_BOOT_COMPLETED)",
-                description = "端末を再起動した後もアラームを鳴らすため",
+                description = "端末の再起動後もアラーム設定を復元して鳴らすため",
             )
             PolicyTableRowItem(
                 title = "バイブレーション",
                 identifier = "(VIBRATE)",
-                description = "アラームで端末を振動させるため",
+                description = "アラーム鳴動時に端末を振動させるため",
             )
             PolicyTableRowItem(
                 title = "フォアグラウンドサービス",
                 identifier = "(FOREGROUND_SERVICE、FOREGROUND_SERVICE_MEDIA_PLAYBACK、FOREGROUND_SERVICE_SPECIAL_USE)",
-                description = "アプリを閉じてもアラームを鳴らし続け、タイマーとストップウォッチの計測を続けるため",
+                description = "アプリケーションを閉じた状態でもアラームを鳴らし続け、タイマーおよびストップウォッチの計測を継続するため",
             )
             PolicyTableRowItem(
                 title = "スリープ解除",
                 identifier = "(WAKE_LOCK)",
-                description = "アラームの時刻に端末を起こすため",
+                description = "アラームの鳴動時刻に端末のスリープ状態を解除するため",
                 isLast = true,
             )
             Spacer(modifier = Modifier.height(8.dp))
 
             PolicyParagraph(
-                text = "位置情報、連絡先、カメラ、マイク、ストレージへのアクセスは要求しません。",
+                text = "位置情報、連絡先、カメラ、マイク、ストレージへのアクセス権限は要求しません。",
                 isBold = true,
             )
 
-            // 5. 加速度センサーについて
-            PolicySectionTitle(text = "加速度センサーについて")
+            // 第8条 センサーの利用
+            PolicySectionTitle(text = "第8条 センサーの利用")
             PolicyParagraph(
-                text = "アラーム停止時や「今日はもう止める」の前に出すゲームのうち「端末を振る」または「歩く」が出題された場合だけ、加速度センサーの値を読みます。読んだ値は振った回数や歩数を数えるためにその場で使い、保存も送信もしません。センサーの利用に権限は不要です。",
+                text = "本アプリケーションは、アラーム停止時または「今日はもう止める」の実行前に提示されるミニゲームのうち、「端末を振る」または「歩く」が出題された場合のみ、加速度センサーの値を読み取ります。読み取った値は、端末を振った回数や歩数を計測するためにその場でのみ使用し、端末内に保存したり外部へ送信したりすることはありません。なお、加速度センサーの利用に特別な権限は不要です。",
             )
 
-            // 6. 子どもの利用について
-            PolicySectionTitle(text = "子どもの利用について")
+            // 第9条 児童のプライバシー
+            PolicySectionTitle(text = "第9条 児童のプライバシー")
             PolicyParagraph(
-                text = "このアプリは、13歳未満の子どもから意図的に情報を集めることはありません。そもそも誰からも情報を集めていません。",
+                text = "本アプリケーションは、13歳未満の児童から意図的に個人情報を取得することはありません。本アプリケーションは、利用者の年齢を問わず、すべての利用者から情報を一切取得しません。",
             )
 
-            // 7. 第三者への提供
-            PolicySectionTitle(text = "第三者への提供")
+            // 第10条 本ポリシーの変更
+            PolicySectionTitle(text = "第10条 本ポリシーの変更")
             PolicyParagraph(
-                text = "提供する情報がないため、第三者へ提供することはありません。アプリには外部の分析サービスや広告のライブラリを含んでいません。",
+                text = "本ポリシーの内容を変更した場合は、本ページを更新し、最終更新日を改定します。収集または取得する情報が増加するような変更を行う場合は、アプリケーションの更新時等に利用者が確認できるよう通知します。",
             )
 
-            // 8. ポリシーの変更
-            PolicySectionTitle(text = "ポリシーの変更")
+            // 第11条 お問い合わせ
+            PolicySectionTitle(text = "第11条 お問い合わせ")
             PolicyParagraph(
-                text = "変更した場合は、このページを更新し、最終更新日を書き換えます。収集する情報が増えるような変更を行う場合は、アプリの更新時に分かるようにします。",
-            )
-
-            // 9. 連絡先
-            PolicySectionTitle(text = "連絡先")
-            PolicyParagraph(
-                text = "このポリシーについて質問がある場合は、\nhttps://github.com/marutyan/termAlarm の Issue からご連絡ください。",
+                text = "本ポリシーに関するご質問やお問合せがある場合は、\nhttps://github.com/marutyan/termAlarm の Issue からご連絡ください。",
             )
 
             Spacer(modifier = Modifier.height(24.dp))

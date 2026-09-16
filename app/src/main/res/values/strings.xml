@@ -135,6 +135,8 @@
     <string name="about_section_dependencies">このアプリが使っているもの</string>
     <string name="about_section_apache_license">Apache License 2.0</string>
     <string name="about_section_font_license">IBM Plex Mono</string>
+    <string name="about_section_libraries">Libraries</string>
+    <string name="about_libraries_notice">The following libraries are distributed under the Apache License 2.0.</string>
 
     <!-- 当日終了ゲーム -->
     <string name="skip_game_wrong_answer">不正解です。もう一度どうぞ</string>
