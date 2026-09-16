@@ -29,6 +29,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -46,7 +48,6 @@ import com.marutyan.termalarm.ui.common.TermAlarmTopBar
 import com.marutyan.termalarm.ui.theme.IbmPlexMono
 import com.marutyan.termalarm.ui.theme.customColors
 import java.util.Locale
-import kotlin.math.roundToInt
 
 /**
  * 記録画面。design/Records.dc.htmlの設計に基づき、起床実績の集計指標・週棒グラフ・日別一覧を描画する。
@@ -101,11 +102,12 @@ fun RecordsScreen(
             onSelectPeriod = { viewModel.selectPeriod(it) },
         )
 
-        // 3. 指標3つ（平均回、平均分、放置割合）
+        // 3. 指標3つ（平均回、平均分、前の期間との差）
         MetricsCards(
+            selectedPeriod = uiState.selectedPeriod,
             averageOccurrence = uiState.averageOccurrence,
             averageDurationMinutes = uiState.averageDurationMinutes,
-            autoSilencedRatio = uiState.autoSilencedRatio,
+            averageOccurrenceDiff = uiState.averageOccurrenceDiff,
         )
 
         // 4. 週の棒グラフ
@@ -204,14 +206,15 @@ private fun PeriodTabButton(
 }
 
 /**
- * 起床実績の3大指標（平均起床回、平均所要分数、放置割合）を表示する3分割カード。
+ * 起床実績の3大指標（平均起床回、平均所要分数、前の期間との差）を表示する3分割カード。
  * 等幅数字(tnum)フォントを用いて可読性を確保する。
  */
 @Composable
 private fun MetricsCards(
+    selectedPeriod: RecordsPeriod,
     averageOccurrence: Double?,
     averageDurationMinutes: Double?,
-    autoSilencedRatio: Double,
+    averageOccurrenceDiff: Double?,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -240,14 +243,34 @@ private fun MetricsCards(
             modifier = Modifier.weight(1f),
         )
 
-        // カード3: 放置割合
-        val percent = (autoSilencedRatio * 100).roundToInt()
+        // カード3: 前の期間との差
+        val diffTopLabel = when (selectedPeriod) {
+            RecordsPeriod.THIS_WEEK -> stringResource(R.string.records_metric_diff_this_week)
+            RecordsPeriod.LAST_30_DAYS -> stringResource(R.string.records_metric_diff_last_30_days)
+        }
+        val (diffText, diffColor) = if (averageOccurrenceDiff != null) {
+            val rounded = String.format(Locale.US, "%.1f", kotlin.math.abs(averageOccurrenceDiff))
+            val text = when {
+                rounded == "0.0" -> "0.0"
+                averageOccurrenceDiff < 0.0 -> "−$rounded"
+                else -> "+$rounded"
+            }
+            val color = when {
+                rounded == "0.0" -> MaterialTheme.colorScheme.onSurface
+                averageOccurrenceDiff < 0.0 -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.tertiary
+            }
+            text to color
+        } else {
+            "—" to MaterialTheme.colorScheme.onSurface
+        }
+
         MetricCard(
-            topLabel = stringResource(R.string.records_metric_auto_silenced),
-            valueText = percent.toString(),
-            unitText = stringResource(R.string.records_metric_percent_suffix),
-            bottomLabel = stringResource(R.string.records_metric_auto_silenced_caption),
-            valueColor = MaterialTheme.colorScheme.tertiary,
+            topLabel = diffTopLabel,
+            valueText = diffText,
+            unitText = if (averageOccurrenceDiff != null) stringResource(R.string.records_metric_diff_unit) else null,
+            bottomLabel = stringResource(R.string.records_metric_diff_caption),
+            valueColor = diffColor,
             modifier = Modifier.weight(1f),
         )
     }
@@ -327,6 +350,16 @@ private fun MetricCard(
 }
 
 /**
+ * 週棒グラフで各曜日の縦列（WeeklyBarColumn）を並べる行の高さ。
+ * 上部の数値テキスト（13sp・約18dp）、下部の曜日ラベル（13sp・約18dp）、
+ * それらと棒の間の上下の空き（各6dp、計12dp）を確保した上で、
+ * 棒本体に十分な高さ（約64dp目安）を割り当てるために112dpとしている。
+ * グラフ領域全体の縦幅を決定し、端末の文字サイズ設定を大きくしても
+ * 棒が曜日のラベルに重ならずに収まる土台としての役割を持つ。
+ */
+private val WEEKLY_BAR_ROW_HEIGHT = 112.dp
+
+/**
  * 1週間の起床回数推移を表示する棒グラフカード。
  * 月曜から日曜の7本のバーを描画し、今日は破線枠、未到来日は細線で表現する。
  */
@@ -380,7 +413,7 @@ private fun WeeklyBarChart(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(88.dp),
+                    .height(WEEKLY_BAR_ROW_HEIGHT),
                 horizontalArrangement = Arrangement.spacedBy(7.dp),
                 verticalAlignment = Alignment.Bottom,
             ) {
@@ -429,41 +462,46 @@ private fun WeeklyBarColumn(
         Spacer(modifier = Modifier.height(6.dp))
 
         // 棒本体
-        val barHeight = when {
-            bar.isDone -> (bar.heightRatio * 60f).coerceIn(4f, 60f).dp
-            bar.isToday && !bar.isDone -> 26.dp
-            else -> 2.dp
-        }
-
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(barHeight)
+                .weight(1f)
                 .drawBehind {
                     when {
                         bar.isDone -> {
                             val color = if (bar.isWarningColor) tertiaryColor else primaryColor
+                            val barHeightPx = (size.height * bar.heightRatio)
+                                .coerceAtLeast(4.dp.toPx())
+                                .coerceAtMost(size.height)
                             drawRoundRect(
                                 color = color,
+                                topLeft = Offset(0f, size.height - barHeightPx),
+                                size = Size(size.width, barHeightPx),
                                 cornerRadius = CornerRadius(1.dp.toPx(), 1.dp.toPx()),
                             )
                         }
                         bar.isToday && !bar.isDone -> {
-                            // 今日の破線枠
+                            // 今日の破線枠（残りの高さの半分を目安に描画）
+                            val barHeightPx = (size.height * 0.5f).coerceAtMost(size.height)
                             val stroke = Stroke(
                                 width = 1.dp.toPx(),
                                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f), 0f),
                             )
                             drawRoundRect(
                                 color = scalePastColor,
+                                topLeft = Offset(0f, size.height - barHeightPx),
+                                size = Size(size.width, barHeightPx),
                                 cornerRadius = CornerRadius(1.dp.toPx(), 1.dp.toPx()),
                                 style = stroke,
                             )
                         }
                         else -> {
                             // 未到来日の細線
+                            val barHeightPx = 2.dp.toPx().coerceAtMost(size.height)
                             drawRoundRect(
                                 color = outlineVariantColor,
+                                topLeft = Offset(0f, size.height - barHeightPx),
+                                size = Size(size.width, barHeightPx),
                                 cornerRadius = CornerRadius(1.dp.toPx(), 1.dp.toPx()),
                             )
                         }
@@ -534,7 +572,7 @@ private fun DailyRecordList(
 
 /**
  * 1日分の実績行コンポーネント。
- * 日付、回数、所要時間、停止方法を横並びで配置し、底面に区切り線を描画する。
+ * 日付、回数、所要時間を横並びで配置し、底面に区切り線を描画する。
  */
 @Composable
 private fun DailyRecordRow(
@@ -552,8 +590,6 @@ private fun DailyRecordRow(
         row.isWarningOccurrence -> tertiaryColor
         else -> onSurfaceColor
     }
-
-    val methodColor = if (row.isWarningMethod) tertiaryColor else subtleTextColor
 
     Row(
         modifier = modifier
@@ -581,7 +617,7 @@ private fun DailyRecordRow(
                 fontFeatureSettings = "tnum",
                 color = subtleTextColor,
             ),
-            modifier = Modifier.width(64.dp),
+            modifier = Modifier.width(72.dp),
         )
 
         // 回数
@@ -593,7 +629,7 @@ private fun DailyRecordRow(
                 fontFeatureSettings = "tnum",
                 color = occurrenceColor,
             ),
-            modifier = Modifier.width(52.dp),
+            modifier = Modifier.weight(1f),
         )
 
         // 所要時間
@@ -604,16 +640,6 @@ private fun DailyRecordRow(
                 fontSize = 13.sp,
                 fontFeatureSettings = "tnum",
                 color = subtleTextColor,
-            ),
-            modifier = Modifier.weight(1f),
-        )
-
-        // 止め方
-        Text(
-            text = row.methodText,
-            style = TextStyle(
-                fontSize = 13.sp,
-                color = methodColor,
             ),
         )
     }
