@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    自動バックアップ（クラウドバックアップ）および端末間データ移行の設定。
+
+    【何を預けて何を預けないか】
+    ・預けるもの:
+      端末保護ストレージ（Device Protected Storage）に配置されているデータベース（device_database）、
+      設定情報（device_sharedpref）、および関連ファイル（device_file）。
+      機種変更時などにアラーム設定等のユーザーデータを引き継ぐためにバックアップ対象に含める。
+    ・預けないもの:
+      キャッシュファイルや一時ファイル（getCacheDir() 等）は預けない。
+      明示的に指定した端末保護ストレージ領域のみを含め、不要な一時データは対象外とする。
+
+    【なぜ既定任せにせず明示するのか】
+    バックアップ対象をシステムの既定任せにせず、何が預けられるかを決めておくため。
+    アプリが意図したデータ（端末保護ストレージ内のアラーム設定情報）のみを明示して
+    確実に預け、意図しないファイルが含まれるのを防ぐ。
+
+    【プライバシーポリシーとの整合性】
+    プライバシーポリシーにも同じ内容（アラーム設定などの端末内データのみを保持し、
+    外部への不正な情報収集や送信は行わないこと）を記載している。
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="device_database" path="." />
+        <include domain="device_sharedpref" path="." />
+        <include domain="device_file" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="device_database" path="." />
+        <include domain="device_sharedpref" path="." />
+        <include domain="device_file" path="." />
+    </device-transfer>
+</data-extraction-rules>

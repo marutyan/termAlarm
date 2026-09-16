@@ -67,7 +67,6 @@ class SettingsScreenTest {
         // セクション見出し
         composeTestRule.onNodeWithText(string(R.string.settings_section_alarm)).assertExists()
         composeTestRule.onNodeWithText(string(R.string.settings_section_appearance)).assertExists()
-        composeTestRule.onNodeWithText(string(R.string.settings_section_about_app)).assertExists()
 
         // アラームセクションの項目
         composeTestRule.onNodeWithText(string(R.string.settings_sound_item_title)).assertExists()
@@ -77,10 +76,8 @@ class SettingsScreenTest {
         composeTestRule.onNodeWithText(string(R.string.settings_wake_check_item_title)).assertExists()
         composeTestRule.onNodeWithText(string(R.string.settings_mini_games_item_title)).assertExists()
 
-        // 見た目・このアプリセクションの項目
+        // 見た目セクションの項目
         composeTestRule.onNodeWithText(string(R.string.settings_theme_item_title)).assertExists()
-        composeTestRule.onNodeWithText(string(R.string.settings_privacy_item_title)).assertExists()
-        composeTestRule.onNodeWithText(string(R.string.settings_about_item_title)).assertExists()
     }
 
     // 消音までの時間のダイアログを開いて値を選択し、決定を押すと画面とRepositoryに保存されることを保証する
