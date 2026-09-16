@@ -150,13 +150,15 @@ private const val DIGIT_LINE_HEIGHT_RATIO = 1.17f
  */
 private const val KANJI_LINE_HEIGHT_RATIO = 1.45f
 
-// 月日と次の鳴動の大きさ。時刻に対するこの割合にする
-private const val SECONDARY_FONT_RATIO = 0.38f
+// 月日と次の鳴動の大きさ。時刻に対するこの割合にする。
+// 添える文字を小さくすると、その行が占める高さも下がって時刻と近づき、
+// 空いたぶんだけ時刻を大きく解けるようになる
+private const val SECONDARY_FONT_RATIO = 0.32f
 
 // 月日と次の鳴動の大きさの下限と上限(sp)。
 // 縦並びの解き直しと添える文字の大きさ算出で同じ範囲を共有する
 private const val MIN_SECONDARY_FONT_SIZE_SP = 11f
-private const val MAX_SECONDARY_FONT_SIZE_SP = 32f
+private const val MAX_SECONDARY_FONT_SIZE_SP = 26f
 
 // 時刻「12:34」の横幅は、その文字の大きさのおよそ2.75倍になる
 private const val TIME_WIDTH_RATIO = 2.75f
