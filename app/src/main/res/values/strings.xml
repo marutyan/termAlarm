@@ -257,9 +257,9 @@
     <string name="records_metric_wake_occurrence_suffix">回目で起床</string>
     <string name="records_metric_duration_suffix">分</string>
     <string name="records_metric_duration_caption">開始から</string>
-    <string name="records_metric_auto_silenced">放置</string>
-    <string name="records_metric_percent_suffix">%</string>
-    <string name="records_metric_auto_silenced_caption">止めずに終わった回</string>
+    <string name="records_metric_diff_this_week">先週との差</string>
+    <string name="records_metric_diff_last_30_days">前の30日との差</string>
+    <string name="records_metric_diff_unit">回</string>
     <string name="records_chart_title">何回目で起きたか</string>
     <string name="records_list_title">1日ごと</string>
     <string name="records_empty">記録がありません</string>

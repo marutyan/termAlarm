@@ -7,7 +7,6 @@ import com.marutyan.termalarm.data.AlarmRepository
 import com.marutyan.termalarm.data.WakeRecordRepository
 import com.marutyan.termalarm.domain.AlarmSchedule
 import com.marutyan.termalarm.domain.SessionRecord
-import com.marutyan.termalarm.domain.StopMethod
 import com.marutyan.termalarm.domain.wakeDurationMinutes
 import com.marutyan.termalarm.domain.wakeOccurrence
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -48,16 +47,14 @@ data class WeeklyBarUiModel(
 
 /**
  * 1日ごとの実績一覧行を表すUIモデル。
- * 日付、起床回数、所要時間、停止方法および強調色フラグを保持する。
+ * 日付、起床回数、所要時間および強調色フラグを保持する。
  */
 data class DailyRowUiModel(
     val dateText: String,
     val occurrenceText: String,
     val durationText: String,
-    val methodText: String,
     val isWarningOccurrence: Boolean,
     val isOngoing: Boolean,
-    val isWarningMethod: Boolean,
 )
 
 /**
@@ -68,7 +65,12 @@ data class RecordsUiState(
     val selectedPeriod: RecordsPeriod = RecordsPeriod.THIS_WEEK,
     val averageOccurrence: Double? = null,
     val averageDurationMinutes: Double? = null,
-    val autoSilencedRatio: Double = 0.0,
+    /**
+     * 前の期間（今週なら先週、直近30日なら前の30日）との平均起床回数の差。
+     * 継続による改善度合いを把握できるようにするために保持する。
+     * 指標カードの3つ目に符号付き（減っていれば主役色、増えていれば警告色）で表示する。どちらかの期間に実績がない場合は null。
+     */
+    val averageOccurrenceDiff: Double? = null,
     val weekDateRangeText: String = "",
     val weeklyBars: List<WeeklyBarUiModel> = emptyList(),
     val dailyRows: List<DailyRowUiModel> = emptyList(),
@@ -98,6 +100,12 @@ class RecordsViewModel(
                 RecordsPeriod.LAST_30_DAYS -> today.minusDays(29) to today
             }
 
+            // 比べる直前の同じ長さの期間（今週なら先週の月〜日、直近30日ならその前の30日間）
+            val (previousFrom, previousTo) = when (period) {
+                RecordsPeriod.THIS_WEEK -> monday.minusWeeks(1) to sunday.minusWeeks(1)
+                RecordsPeriod.LAST_30_DAYS -> today.minusDays(59) to today.minusDays(30)
+            }
+
             // 週のグラフ用セッション（今週分）と、現在期間のセッションを両方監視する
             val currentSessionsFlow = wakeRecordRepository.observeSessionsBetween(from, to)
             val weekSessionsFlow = if (period == RecordsPeriod.THIS_WEEK) {
@@ -105,13 +113,16 @@ class RecordsViewModel(
             } else {
                 wakeRecordRepository.observeSessionsBetween(monday, sunday)
             }
+            // 前の期間との平均起床回数の差を計算するために前の期間のセッションを読み出すFlow
+            val previousSessionsFlow = wakeRecordRepository.observeSessionsBetween(previousFrom, previousTo)
 
             combine(
                 currentSessionsFlow,
                 weekSessionsFlow,
+                previousSessionsFlow,
                 alarmRepository.observeAll(),
-            ) { sessions, weekSessions, schedules ->
-                buildUiState(period, today, monday, sunday, sessions, weekSessions, schedules)
+            ) { sessions, weekSessions, previousSessions, schedules ->
+                buildUiState(period, today, monday, sunday, sessions, weekSessions, previousSessions, schedules)
             }
         }
         .stateIn(
@@ -130,7 +141,7 @@ class RecordsViewModel(
 
     /**
      * 取得したセッションデータからUIStateを組み立てる。
-     * domain集計関数を呼び出し、週棒グラフと1日ごとの一覧行を整形する。
+     * domain集計関数を呼び出し、現在と過去の期間の指標差分、週棒グラフ、1日ごとの一覧行を整形する。
      */
     private fun buildUiState(
         period: RecordsPeriod,
@@ -139,11 +150,25 @@ class RecordsViewModel(
         sunday: LocalDate,
         sessions: List<SessionRecord>,
         weekSessions: List<SessionRecord>,
+        previousSessions: List<SessionRecord>,
         schedules: List<AlarmSchedule>,
     ): RecordsUiState {
         // 指標の算出はdomain関数を使用
         val averages = wakeRecordRepository.calculateAverages(sessions)
-        val autoSilenced = wakeRecordRepository.calculateAutoSilencedRatio(sessions)
+        val previousAverages = wakeRecordRepository.calculateAverages(previousSessions)
+        val currentAvgOccurrence = averages?.averageOccurrence
+        val previousAvgOccurrence = previousAverages?.averageOccurrence
+
+        /**
+         * 現在の期間の平均起床回数と直前の同じ長さの期間の平均起床回数の差。
+         * 継続による起床傾向の変化（改善または悪化）を把握するために計算する。
+         * 3大指標カードの3つ目の値としてUIへ渡す。どちらかの期間に実績がない場合は null。
+         */
+        val averageOccurrenceDiff = if (currentAvgOccurrence != null && previousAvgOccurrence != null) {
+            currentAvgOccurrence - previousAvgOccurrence
+        } else {
+            null
+        }
 
         // 週の日付範囲テキスト ("09.07 – 09.13")
         val monthDayFormatter = DateTimeFormatter.ofPattern("MM.dd", Locale.getDefault())
@@ -230,7 +255,6 @@ class RecordsViewModel(
             .map { session ->
                 val occ = wakeOccurrence(session)
                 val dur = wakeDurationMinutes(session)
-                val lastRing = session.rings.lastOrNull()
 
                 val occurrenceText = if (occ != null) {
                     "${occ}回目"
@@ -246,21 +270,12 @@ class RecordsViewModel(
                     "—"
                 }
 
-                val methodText = when (lastRing?.stopMethod) {
-                    StopMethod.CHALLENGE -> "正解"
-                    StopMethod.TAP -> "長押し"
-                    StopMethod.AUTO_SILENCED -> "放置"
-                    null -> ""
-                }
-
                 DailyRowUiModel(
                     dateText = session.sessionStart.format(dateFormatter),
                     occurrenceText = occurrenceText,
                     durationText = durationText,
-                    methodText = methodText,
                     isWarningOccurrence = (occ ?: 0) >= 9,
                     isOngoing = false,
-                    isWarningMethod = lastRing?.stopMethod == StopMethod.TAP,
                 )
             }
 
@@ -268,7 +283,7 @@ class RecordsViewModel(
             selectedPeriod = period,
             averageOccurrence = averages?.averageOccurrence,
             averageDurationMinutes = averages?.averageDurationMinutes,
-            autoSilencedRatio = autoSilenced,
+            averageOccurrenceDiff = averageOccurrenceDiff,
             weekDateRangeText = weekDateRangeText,
             weeklyBars = weeklyBars,
             dailyRows = dailyRows,
