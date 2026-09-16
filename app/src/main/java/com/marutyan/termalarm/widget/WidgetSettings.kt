@@ -63,31 +63,57 @@ enum class WidgetBackgroundStyle {
 /**
  * ウィジェットの数字と文字に適用する書体の選択肢を定義する列挙型。
  * Glanceウィジェット上で確実に描画可能なフォントから好みの書体を選択できるようにするために必要となる。
- * 設定画面でのフォント選択およびウィジェット描画時のテキストスタイル構築において、FontFamilyを提供する役割を持つ。
+ * 設定画面でのフォント選択およびウィジェット描画時のテキストスタイル構築において、FontFamilyや各行の横幅比を提供する役割を持つ。
  *
  * @property family Glanceのテキスト描画に用いるフォントファミリー。
+ * @property timeWidthRatio 実機でandroid.graphics.Paint.measureTextを使って測った時刻「12:34」の文字サイズに対する横幅比。数字とコロンの送り幅を見積もり、領域内に時刻を最大化して収める役割を持つ。
+ * @property dateWidthRatio 実機でandroid.graphics.Paint.measureTextを使って測った月日「12月30日(月)」の文字サイズに対する横幅比。漢字・数字・括弧を含む日付行が領域幅を超えないよう上限サイズを算出する役割を持つ。
+ * @property nextRingWidthRatio 実機でandroid.graphics.Paint.measureTextを使って測った次の鳴動「12:34（水）」の文字サイズに対する横幅比（曜日を含む）。次回アラーム情報が領域幅からはみ出して途切れるのを防ぐ上限サイズを算出する役割を持つ。
  */
-enum class WidgetFontStyle(val family: FontFamily) {
+enum class WidgetFontStyle(
+    val family: FontFamily,
+    val timeWidthRatio: Float,
+    val dateWidthRatio: Float,
+    val nextRingWidthRatio: Float,
+) {
     /**
      * 標準のゴシック体フォント（Sans-Serif）。
      * どの端末環境でも安定した視認性と自然な可読性を確保するために必要となる。
      * 書体設定の既定値として標準的なテキスト表示を提供する役割を持つ。
+     * 実機でandroid.graphics.Paint.measureTextを使って測った横幅比：時刻「12:34」は2.48、月日「12月30日(月)」は5.93、次の鳴動「12:34（水）」は5.48。
      */
-    STANDARD(FontFamily.SansSerif),
+    STANDARD(
+        family = FontFamily.SansSerif,
+        timeWidthRatio = 2.48f,
+        dateWidthRatio = 5.93f,
+        nextRingWidthRatio = 5.48f,
+    ),
 
     /**
      * 等幅フォント（Monospace）。
      * 各文字の幅を均一にして、時刻の更新時や数字の変化による文字の横揺れを防ぐために必要となる。
      * カウンターやデジタル時計らしい正確な佇まいを提供する役割を持つ。
+     * 実機でandroid.graphics.Paint.measureTextを使って測った横幅比：時刻「12:34」は3.00、月日「12月30日(月)」は6.60、次の鳴動「12:34（水）」は6.00。
      */
-    MONOSPACE(FontFamily.Monospace),
+    MONOSPACE(
+        family = FontFamily.Monospace,
+        timeWidthRatio = 3.00f,
+        dateWidthRatio = 6.60f,
+        nextRingWidthRatio = 6.00f,
+    ),
 
     /**
      * 明朝体フォント（Serif）。
      * 落ち着いた書籍風のクラシックな佇まいを好むユーザーの要望に応えるために必要となる。
      * 個性的なテキストデザインでウィジェットを演出する役割を持つ。
+     * 実機でandroid.graphics.Paint.measureTextを使って測った横幅比：時刻「12:34」は2.53、月日「12月30日(月)」は5.94、次の鳴動「12:34（水）」は5.53。
      */
-    SERIF(FontFamily.Serif),
+    SERIF(
+        family = FontFamily.Serif,
+        timeWidthRatio = 2.53f,
+        dateWidthRatio = 5.94f,
+        nextRingWidthRatio = 5.53f,
+    ),
 }
 
 /**

@@ -134,6 +134,26 @@ fun secondaryFontSizeSp(timeFontSizeSp: Float): Float =
     (timeFontSizeSp * SECONDARY_FONT_RATIO).coerceIn(MIN_SECONDARY_FONT_SIZE_SP, MAX_SECONDARY_FONT_SIZE_SP)
 
 /**
+ * 描画領域の幅を考慮して、添える文字（月日・次の鳴動）の大きさをspの数値で求める関数。
+ * 時刻に対する割合に基づく大きさに加え、月日および次の鳴動が利用可能な横幅に収まる上限サイズを掛け合わせることで、
+ * 狭いウィジェット領域でも文字の途切れを防ぐために必要となる。
+ * 幅による上限計算を行い、下限（11sp）と上限（30sp）の範囲内で最適なフォントサイズを決定する役割を持つ。
+ */
+fun secondaryFontSizeSp(
+    timeFontSizeSp: Float,
+    availableWidth: Float,
+    dateWidthRatio: Float,
+    nextRingWidthRatio: Float,
+): Float {
+    val baseSize = timeFontSizeSp * SECONDARY_FONT_RATIO
+    val dateLimit = availableWidth / dateWidthRatio
+    val availableForNextRing = (availableWidth - NEXT_RING_ICON_SPACING_DP).coerceAtLeast(0f)
+    val nextRingLimit = availableForNextRing / (nextRingWidthRatio + ICON_TO_SECONDARY_RATIO)
+    val maxAllowed = minOf(MAX_SECONDARY_FONT_SIZE_SP, dateLimit, nextRingLimit)
+    return minOf(baseSize, maxAllowed).coerceAtLeast(MIN_SECONDARY_FONT_SIZE_SP)
+}
+
+/**
  * 時計アイコンの大きさをdpの数値で求める関数。
  * 添える文字に対して0.90倍とする決め方を、本体と見本で同じにするために必要となる。
  */
@@ -229,13 +249,12 @@ private const val MIN_SECONDARY_FONT_SIZE_SP = 11f
 private const val MAX_SECONDARY_FONT_SIZE_SP = 30f
 
 /**
- * 時刻表示の横幅比率（文字サイズに対する比率）。
- * 実機で「9:52」と「10:04」の2つを測り、数字1文字が約0.4909em、コロンが約0.1413emと分かった。
- * 最も幅をとる4桁＋コロンで約2.105em（文字の実体の幅）になる。
- * 文字の送り幅は実体より広く、端末の書体差もあるため、安全側に見込んで2.35fとする。
- * 使える幅から時刻の大きさ上限を求める役割を持つ。
+ * 端末差を考慮して文字の横幅比に掛ける安全係数。
+ * 実機で測った値は文字の送り幅そのものであるため大きな安全代は不要だが、
+ * 端末やOSバージョンによるフォント描画の微妙な個体差を考慮して比に1.02を掛け、
+ * 文字切れを確実に防ぐ役割を持つ。
  */
-private const val TIME_WIDTH_RATIO = 2.35f
+private const val FONT_WIDTH_SAFETY_FACTOR = 1.02f
 
 /**
  * 時刻が横方向に使ってよい幅の割合。
@@ -244,9 +263,13 @@ private const val TIME_WIDTH_RATIO = 2.35f
  */
 private const val TIME_WIDTH_USAGE = 0.85f
 
-// 月日「9月16日(水)」の横幅比（全角3文字＋半角5文字ぶん）。文字の大きさのおよそ5.2倍を使う。
-// 横並びのときに右の列へ月日が収まる上限サイズを解くために必要となる。
-private const val DATE_WIDTH_RATIO = 5.2f
+/**
+ * 次の鳴動表示における時計アイコンと時刻テキストの間の余白(dp)。
+ * アイコンと文字が密着するのを防ぎ、行全体の横幅見積もりと実際のレイアウト描画で間隔の整合性を保つために必要となる。
+ * 次の鳴動行に必要な横幅の計算およびSpacerの幅設定に用いる役割を持つ。
+ */
+private const val NEXT_RING_ICON_SPACING_DP = 4f
+private val NEXT_RING_ICON_SPACING = NEXT_RING_ICON_SPACING_DP.dp
 
 // 横並びのときに左の時刻と右の列（月日・次の鳴動）の間にあける空白(dp)。
 // 左右がくっついて読みにくくなるのを防ぎ、右の列で使える幅の計算と行間の余白描画で同じ間隔を共有する役割を持つ。
@@ -331,12 +354,18 @@ private fun WidgetBody(
     // 幅が高さに比べて2倍以上の横長形状であれば横並びにする
     val isHorizontal = (w / h) >= 2.0f
 
+    val timeWidthRatio = fontStyle.timeWidthRatio * FONT_WIDTH_SAFETY_FACTOR
+    val dateWidthRatio = fontStyle.dateWidthRatio * FONT_WIDTH_SAFETY_FACTOR
+    val nextRingWidthRatio = fontStyle.nextRingWidthRatio * FONT_WIDTH_SAFETY_FACTOR
+
     val showDate: Boolean
     val showNextRing: Boolean
+    val secondaryAvailableWidth: Float
     val timeFontSize = if (isHorizontal) {
         // 横に並べる場合：左に時刻、右に月日と次の鳴動を縦へ積む
         val leftAvailableWidth = w * 0.58f
         val rightAvailableWidth = w - leftAvailableWidth - HORIZONTAL_SPACING_DP
+        secondaryAvailableWidth = rightAvailableWidth
         // 右側は、h >= 40f なら月日と次の鳴動の両方、そうでなければ次の鳴動だけを出す。
         // 次に鳴る時刻が無い場合は月日だけを出す。
         showDate = content.nextTime == null || h >= 40f
@@ -345,23 +374,29 @@ private fun WidgetBody(
         // 左側の時刻1行は数字行の見積もり（1.17倍）を用いる
         val heightLimit = h / DIGIT_LINE_HEIGHT_RATIO
         val rightHeightLimit = h / ((KANJI_LINE_HEIGHT_RATIO + DIGIT_LINE_HEIGHT_RATIO) * SECONDARY_FONT_RATIO)
-        val leftWidthLimit = leftAvailableWidth * TIME_WIDTH_USAGE / TIME_WIDTH_RATIO
-        val rightWidthLimit = rightAvailableWidth / (DATE_WIDTH_RATIO * SECONDARY_FONT_RATIO)
+        val leftWidthLimit = leftAvailableWidth * TIME_WIDTH_USAGE / timeWidthRatio
+        val rightWidthLimit = rightAvailableWidth / (dateWidthRatio * SECONDARY_FONT_RATIO)
         val maxTimeFontSize = minOf(heightLimit, rightHeightLimit, leftWidthLimit, rightWidthLimit)
         maxTimeFontSize.coerceAtLeast(12f).sp
     } else {
+        secondaryAvailableWidth = w
         // 縦に並べる場合（既定）：上から月日、時刻、次の鳴動の順で並べる
         showDate = h >= 56f
         showNextRing = h >= 84f && content.nextTime != null
         // 実際に出すかどうかにかかわらず、常に3行ぶん（時刻＋月日＋次の鳴動）で必要な高さを計算する。
         // 上限・下限に当たることを踏まえて時刻の大きさを解き直す
         val heightLimit = calculateVerticalTimeHeightLimit(h)
-        val widthLimit = w * TIME_WIDTH_USAGE / TIME_WIDTH_RATIO
+        val widthLimit = w * TIME_WIDTH_USAGE / timeWidthRatio
         minOf(heightLimit, widthLimit).coerceAtLeast(12f).sp
     }
 
     // 時刻の大きさに合わせて添える文字（月日・次の鳴動）と時計アイコンの大きさを決定する
-    val secondaryFontSize = secondaryFontSizeSp(timeFontSize.value).sp
+    val secondaryFontSize = secondaryFontSizeSp(
+        timeFontSizeSp = timeFontSize.value,
+        availableWidth = secondaryAvailableWidth,
+        dateWidthRatio = dateWidthRatio,
+        nextRingWidthRatio = nextRingWidthRatio,
+    ).sp
     val iconSize = nextRingIconSizeDp(secondaryFontSize.value).dp
     val secondaryWeight = secondaryFontWeight(fontWeight)
 
@@ -553,7 +588,7 @@ private fun NextRingRow(
             modifier = GlanceModifier.size(iconSize),
             colorFilter = ColorFilter.tint(style.color),
         )
-        Spacer(GlanceModifier.width(4.dp))
+        Spacer(GlanceModifier.width(NEXT_RING_ICON_SPACING))
         Text(text = time, style = style, maxLines = 1)
     }
 }
