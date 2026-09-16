@@ -295,7 +295,7 @@ fun PrivacyScreen(onBack: () -> Unit) {
             // 第1条 本ポリシーについて
             PolicySectionTitle(text = "第1条 本ポリシーについて")
             PolicyParagraph(
-                text = "本プライバシーポリシー（以下「本ポリシー」といいます。）は、Androidアプリケーション「TermAlarm」（以下「本アプリケーション」といいます。）における利用者の情報の取り扱いについて定めるものです。本ポリシーは、本アプリケーションをご利用になるすべての利用者に適用されます。",
+                text = "本プライバシーポリシー（以下「本ポリシー」といいます。）は、marutyan（以下「提供者」といいます。）が提供するAndroidアプリケーション「TermAlarm」（以下「本アプリケーション」といいます。）における利用者の情報の取り扱いについて定めるものです。本ポリシーは、本アプリケーションをご利用になるすべての利用者に適用されます。",
             )
 
             // 第2条 取得する情報
@@ -474,8 +474,10 @@ fun PrivacyScreen(onBack: () -> Unit) {
             // 第11条 お問い合わせ
             PolicySectionTitle(text = "第11条 お問い合わせ")
             PolicyParagraph(
-                text = "本ポリシーに関するご質問やお問合せがある場合は、\nhttps://github.com/marutyan/termAlarm の Issue からご連絡ください。",
+                text = "本ポリシーに関するご質問やお問合せがある場合は、以下の窓口よりご連絡ください。",
             )
+            PolicyBulletItem(text = "提供者: marutyan")
+            PolicyBulletItem(text = "連絡先: https://github.com/marutyan/termAlarm の Issue")
 
             Spacer(modifier = Modifier.height(24.dp))
         }
