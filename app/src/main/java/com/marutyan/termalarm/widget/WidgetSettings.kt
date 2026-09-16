@@ -5,7 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.glance.GlanceTheme
+import androidx.glance.LocalContext
 import androidx.glance.text.FontFamily
 import androidx.glance.text.FontWeight
 import androidx.glance.unit.ColorProvider
@@ -200,7 +200,7 @@ fun widgetSecondaryColorProvider(): ColorProvider {
 
 /**
  * 選択された時刻色設定に対応するColorProviderを生成する関数。
- * 白・黒の固定色描画に加え、システム動的カラー選択時にAndroid 12以降のプライマリ色を適用（未満は白）するために必要となる。
+ * 白・黒の固定色描画に加え、システム動的カラー選択時にAndroid 12以降の純正時計ウィジェットと同等の明るいトーン（system_accent1_100）を適用（未満は白）するために必要となる。
  * ウィジェットのメイン時刻表示部分に対して、OSバージョンと設定値に応じた最適なColorProviderを供給する役割を持つ。
  */
 @Composable
@@ -210,7 +210,10 @@ fun widgetTimeColorProvider(timeColor: WidgetTimeColor): ColorProvider {
         WidgetTimeColor.BLACK -> ColorProvider(Color.Black)
         WidgetTimeColor.SYSTEM -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                GlanceTheme.colors.primary
+                // Glanceの色リソース版ColorProviderはライブラリ内部専用のため使えない。
+                // ここで端末の色を1つの値へ解決し、通常のColorProviderへ渡す
+                val context = LocalContext.current
+                ColorProvider(Color(context.getColor(android.R.color.system_accent1_100)))
             } else {
                 ColorProvider(Color.White)
             }

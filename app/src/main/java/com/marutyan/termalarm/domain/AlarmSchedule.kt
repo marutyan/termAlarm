@@ -16,7 +16,7 @@ data class AlarmSchedule(
     val repeatDays: Set<DayOfWeek>, // 空集合なら「次の1回だけ」
     val label: String,
     val enabled: Boolean,
-    val challengeTiming: ChallengeTiming = ChallengeTiming.NEVER, // 解除チャレンジの出題タイミング
+    val challengeTiming: ChallengeTiming = ChallengeTiming.END_ONLY, // 解除チャレンジの出題タイミング。新しく作るタームでは、最後の1回だけミッションを出すのがこのアプリの想定した使い方であるため
     val challenge: ChallengeLevel = ChallengeLevel.EASY, // 解除チャレンジの強さ
     val wakeCheck: Boolean = false, // ターム終了後に二度寝チェックを行うか。既定false
     val skippedSessionStart: LocalDate? = null, // 「タームを終了」で終了させたセッションの開始日

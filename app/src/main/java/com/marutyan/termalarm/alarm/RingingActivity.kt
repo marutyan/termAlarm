@@ -442,7 +442,7 @@ internal fun RingingContent(
                 ),
             )
 
-            // 中央のスペーサー（文字拡大時にも最小32dpの間隔を保ち、通常時はボタン群を画面下端へ押し出す）
+            // 中央のスペーサー（文字拡大時にも最小32dpの間隔を保ち、余った高さを上1:下0.45で分けてボタン群を配置する）
             Spacer(modifier = Modifier.height(32.dp))
             Spacer(modifier = Modifier.weight(1f))
 
@@ -464,6 +464,9 @@ internal fun RingingContent(
                     onClick = onEndTerm,
                 )
             }
+
+            // ボタン群を下端から浮かせるためのスペーサー（余った高さを上1 : 下0.45で分ける）
+            Spacer(modifier = Modifier.weight(0.45f))
         }
     }
 }

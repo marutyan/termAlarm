@@ -125,7 +125,7 @@ fun secondaryFontWeight(weight: WidgetFontWeight): WidgetFontWeight {
  * 時刻に対する割合と下限・上限を、ウィジェット本体と設定画面の見本で同じにするために必要となる。
  */
 fun secondaryFontSizeSp(timeFontSizeSp: Float): Float =
-    (timeFontSizeSp * SECONDARY_FONT_RATIO).coerceIn(11f, 26f)
+    (timeFontSizeSp * SECONDARY_FONT_RATIO).coerceIn(MIN_SECONDARY_FONT_SIZE_SP, MAX_SECONDARY_FONT_SIZE_SP)
 
 /**
  * 時計アイコンの大きさをdpの数値で求める関数。
@@ -136,12 +136,27 @@ fun nextRingIconSizeDp(secondaryFontSizeSp: Float): Float = secondaryFontSizeSp 
 // 時計アイコンは添える文字より少しだけ大きくすると、文字と並べたときに釣り合って見える
 private const val ICON_TO_SECONDARY_RATIO = 1.05f
 
-// 1行が占める高さは、その文字の大きさのおよそ1.45倍になる。入る大きさを解くときに使う。
-// 日本語の書体は英数字より行が高く、1.2倍で見積もっていたときは合計が入りきらなかった
-private const val LINE_HEIGHT_RATIO = 1.45f
+/**
+ * 数字だけの行（時刻「9:16」や次の鳴動「9:17」）が占める高さの比率。
+ * 数字中心の行は英数字用に行高を抑えられるため1.17倍で見積もり、ウィジェット内で時刻の文字を最大限大きく描くために必要となる。
+ * 縦並びの時刻および次の鳴動の行高計算や、横並びの時刻の高さ上限算出において、必要な行高を解く係数の役割を持つ。
+ */
+private const val DIGIT_LINE_HEIGHT_RATIO = 1.17f
+
+/**
+ * 漢字を含む行（月日「9月16日(水)」）が占める高さの比率。
+ * 日本語フォントの漢字行は英数字よりも上下に広い行高を要するため1.45倍を確保し、行の重なりや文字切れを防ぐために必要となる。
+ * 縦並びの月日行の行高計算や、横並びの右列の高さ上限算出において、必要な行高を解く係数の役割を持つ。
+ */
+private const val KANJI_LINE_HEIGHT_RATIO = 1.45f
 
 // 月日と次の鳴動の大きさ。時刻に対するこの割合にする
 private const val SECONDARY_FONT_RATIO = 0.38f
+
+// 月日と次の鳴動の大きさの下限と上限(sp)。
+// 縦並びの解き直しと添える文字の大きさ算出で同じ範囲を共有する
+private const val MIN_SECONDARY_FONT_SIZE_SP = 11f
+private const val MAX_SECONDARY_FONT_SIZE_SP = 32f
 
 // 時刻「12:34」の横幅は、その文字の大きさのおよそ2.75倍になる
 private const val TIME_WIDTH_RATIO = 2.75f
@@ -182,6 +197,37 @@ private data class WidgetLayerStyle(
 )
 
 /**
+ * 縦並び配置において、利用可能な高さから時刻文字の大きさの上限(sp)を算出する関数。
+ * 月日と次の鳴動の文字サイズが上限や下限に当たった場合、固定比率(0.38倍)の前提が崩れて
+ * ウィジェット内に高さの余りや不足が生じるため、上限値または下限値で固定した上で時刻の大きさを解き直す。
+ * 縦並び表示で描画領域の高さを最大限に活かし、文字がはみ出すことなく時刻をできる限り大きく表示する役割を持つ。
+ */
+private fun calculateVerticalTimeHeightLimit(availableHeight: Float): Float {
+    // (a) まず上限・下限を考慮せず、月日と次の鳴動が時刻の0.38倍になる前提で解く
+    val unconstrainedRatio = DIGIT_LINE_HEIGHT_RATIO +
+        SECONDARY_FONT_RATIO * KANJI_LINE_HEIGHT_RATIO +
+        SECONDARY_FONT_RATIO * DIGIT_LINE_HEIGHT_RATIO
+    val t0 = availableHeight / unconstrainedRatio
+
+    // (b) t0から求めた月日の大きさs0が上限・下限に当たるか確認する
+    val s0 = t0 * SECONDARY_FONT_RATIO
+    return when {
+        // (c) 上限を超える場合は、月日と次の鳴動を上限値で固定して時刻を解き直す
+        s0 > MAX_SECONDARY_FONT_SIZE_SP -> {
+            val s = MAX_SECONDARY_FONT_SIZE_SP
+            (availableHeight - s * KANJI_LINE_HEIGHT_RATIO - s * DIGIT_LINE_HEIGHT_RATIO) / DIGIT_LINE_HEIGHT_RATIO
+        }
+        // (d) 下限を下回る場合は、月日と次の鳴動を下限値で固定して時刻を解き直す
+        s0 < MIN_SECONDARY_FONT_SIZE_SP -> {
+            val s = MIN_SECONDARY_FONT_SIZE_SP
+            (availableHeight - s * KANJI_LINE_HEIGHT_RATIO - s * DIGIT_LINE_HEIGHT_RATIO) / DIGIT_LINE_HEIGHT_RATIO
+        }
+        // 上限にも下限にも当たらなければt0をそのまま使う
+        else -> t0
+    }
+}
+
+/**
  * ウィジェットの中身を描画するComposable。
  * 押すとアプリ本体が開く。置かれた領域の幅と高さに応じて横並び・縦並びを切り替え、
  * 余白と文字の大きさを滑らかに調整する。
@@ -198,7 +244,7 @@ private fun WidgetBody(
 
     // ウィジェットが配置された領域の寸法を取得し、外枠余白と有効な描画領域を計算する
     val size = LocalSize.current
-    val padding = minOf(10f, size.height.value * 0.08f).dp
+    val padding = minOf(4f, size.height.value * 0.035f).dp
     val h = (size.height.value - padding.value * 2f - WIDGET_SHADOW_OFFSET_DP)
     val w = (size.width.value - padding.value * 2f - WIDGET_SHADOW_OFFSET_DP)
     // 幅が高さに比べて2倍以上の横長形状であれば横並びにする
@@ -214,26 +260,23 @@ private fun WidgetBody(
         // 次に鳴る時刻が無い場合は月日だけを出す。
         showDate = content.nextTime == null || h >= 40f
         showNextRing = content.nextTime != null
-        val heightLimit = h / LINE_HEIGHT_RATIO
+        // 時刻の大きさは、右の列（月日＋次の鳴動）が常に2行あるものとして解く。
+        // 左側の時刻1行は数字行の見積もり（1.17倍）を用いる
+        val heightLimit = h / DIGIT_LINE_HEIGHT_RATIO
+        val rightHeightLimit = h / ((KANJI_LINE_HEIGHT_RATIO + DIGIT_LINE_HEIGHT_RATIO) * SECONDARY_FONT_RATIO)
         val leftWidthLimit = leftAvailableWidth / TIME_WIDTH_RATIO
-        val maxTimeFontSize = if (showDate) {
-            val rightWidthLimit = rightAvailableWidth / (DATE_WIDTH_RATIO * SECONDARY_FONT_RATIO)
-            minOf(heightLimit, leftWidthLimit, rightWidthLimit)
-        } else {
-            minOf(heightLimit, leftWidthLimit)
-        }
+        val rightWidthLimit = rightAvailableWidth / (DATE_WIDTH_RATIO * SECONDARY_FONT_RATIO)
+        val maxTimeFontSize = minOf(heightLimit, rightHeightLimit, leftWidthLimit, rightWidthLimit)
         maxTimeFontSize.coerceIn(12f, 160f).sp
     } else {
         // 縦に並べる場合（既定）：上から月日、時刻、次の鳴動の順で並べる
         showDate = h >= 56f
         showNextRing = h >= 84f && content.nextTime != null
-        // 3つの行がちょうど収まる時刻の大きさを解いて求める。
-        // 月日と次の鳴動は時刻のSECONDARY_FONT_RATIO倍なので、必要な高さは
-        // 時刻の大きさ × 行の高さの比 × (1 + 添える行のぶん) になる
-        val rows = 1f +
-            (if (showDate) SECONDARY_FONT_RATIO else 0f) +
-            (if (showNextRing) SECONDARY_FONT_RATIO else 0f)
-        minOf(h / (LINE_HEIGHT_RATIO * rows), w / TIME_WIDTH_RATIO).coerceIn(12f, 160f).sp
+        // 実際に出すかどうかにかかわらず、常に3行ぶん（時刻＋月日＋次の鳴動）で必要な高さを計算する。
+        // 上限・下限に当たることを踏まえて時刻の大きさを解き直す
+        val heightLimit = calculateVerticalTimeHeightLimit(h)
+        val widthLimit = w / TIME_WIDTH_RATIO
+        minOf(heightLimit, widthLimit).coerceIn(12f, 160f).sp
     }
 
     // 時刻の大きさに合わせて添える文字（月日・次の鳴動）と時計アイコンの大きさを決定する

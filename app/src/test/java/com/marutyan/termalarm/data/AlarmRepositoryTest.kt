@@ -40,7 +40,7 @@ class AlarmRepositoryTest {
 
         val loaded = repository.getById(id)
         assertEquals(false, loaded?.wakeCheck)
-        assertEquals(ChallengeTiming.NEVER, loaded?.challengeTiming)
+        assertEquals(ChallengeTiming.END_ONLY, loaded?.challengeTiming)
         assertEquals(ChallengeLevel.EASY, loaded?.challenge)
     }
 
