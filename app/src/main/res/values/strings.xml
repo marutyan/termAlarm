@@ -260,7 +260,6 @@
     <string name="records_metric_diff_this_week">先週との差</string>
     <string name="records_metric_diff_last_30_days">前の30日との差</string>
     <string name="records_metric_diff_unit">回</string>
-    <string name="records_metric_diff_caption">少ないほど良い</string>
     <string name="records_chart_title">何回目で起きたか</string>
     <string name="records_list_title">1日ごと</string>
     <string name="records_empty">記録がありません</string>

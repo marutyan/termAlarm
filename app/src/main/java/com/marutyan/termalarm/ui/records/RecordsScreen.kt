@@ -7,6 +7,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -217,8 +218,9 @@ private fun MetricsCards(
     averageOccurrenceDiff: Double?,
     modifier: Modifier = Modifier,
 ) {
+    // 説明の行が無いカードがあっても3枚の高さがそろうよう、いちばん高いカードに合わせる
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(7.dp),
     ) {
         // カード1: 平均回数
@@ -229,7 +231,7 @@ private fun MetricsCards(
             unitText = null,
             bottomLabel = stringResource(R.string.records_metric_wake_occurrence_suffix),
             valueColor = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
         )
 
         // カード2: 平均分数
@@ -240,7 +242,7 @@ private fun MetricsCards(
             unitText = if (averageDurationMinutes != null) stringResource(R.string.records_metric_duration_suffix) else null,
             bottomLabel = stringResource(R.string.records_metric_duration_caption),
             valueColor = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
         )
 
         // カード3: 前の期間との差
@@ -269,9 +271,10 @@ private fun MetricsCards(
             topLabel = diffTopLabel,
             valueText = diffText,
             unitText = if (averageOccurrenceDiff != null) stringResource(R.string.records_metric_diff_unit) else null,
-            bottomLabel = stringResource(R.string.records_metric_diff_caption),
+            // 差の意味は見出しで足りるため、説明の行は置かない
+            bottomLabel = null,
             valueColor = diffColor,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
         )
     }
 }
@@ -285,7 +288,7 @@ private fun MetricCard(
     topLabel: String,
     valueText: String,
     unitText: String?,
-    bottomLabel: String,
+    bottomLabel: String?,
     valueColor: Color,
     modifier: Modifier = Modifier,
 ) {
@@ -338,13 +341,15 @@ private fun MetricCard(
                     )
                 }
             }
-            Text(
-                text = bottomLabel,
-                style = TextStyle(
-                    fontSize = 13.sp,
-                    color = MaterialTheme.customColors.subtleText,
-                ),
-            )
+            if (bottomLabel != null) {
+                Text(
+                    text = bottomLabel,
+                    style = TextStyle(
+                        fontSize = 13.sp,
+                        color = MaterialTheme.customColors.subtleText,
+                    ),
+                )
+            }
         }
     }
 }
@@ -620,19 +625,7 @@ private fun DailyRecordRow(
             modifier = Modifier.width(72.dp),
         )
 
-        // 回数
-        Text(
-            text = row.occurrenceText,
-            style = TextStyle(
-                fontFamily = IbmPlexMono,
-                fontSize = 14.sp,
-                fontFeatureSettings = "tnum",
-                color = occurrenceColor,
-            ),
-            modifier = Modifier.weight(1f),
-        )
-
-        // 所要時間
+        // 開始から起きるまでにかかった時間
         Text(
             text = row.durationText,
             style = TextStyle(
@@ -640,6 +633,18 @@ private fun DailyRecordRow(
                 fontSize = 13.sp,
                 fontFeatureSettings = "tnum",
                 color = subtleTextColor,
+            ),
+            modifier = Modifier.weight(1f),
+        )
+
+        // 何回目で起きたか。この画面でいちばん見たい値なので右端へ置く
+        Text(
+            text = row.occurrenceText,
+            style = TextStyle(
+                fontFamily = IbmPlexMono,
+                fontSize = 14.sp,
+                fontFeatureSettings = "tnum",
+                color = occurrenceColor,
             ),
         )
     }
