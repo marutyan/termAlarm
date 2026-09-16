@@ -158,17 +158,17 @@ private const val ICON_TO_SECONDARY_RATIO = 0.90f
  * 視覚的な区切りを一定に保ちつつ時刻を最大限大きく描くために10dpの固定値とする。
  * 縦並びおよび横並び右列の各行の配置位置決めと高さ計算において間隔の基準となる役割を持つ。
  */
-private const val VERTICAL_LINE_SPACING_DP = 10f
+private const val VERTICAL_LINE_SPACING_DP = 14f
 
 // 月日と次の鳴動の大きさ。時刻に対するこの割合にする。
 // 添える文字を小さくすると、その行が占める高さも下がって時刻と近づき、
 // 空いたぶんだけ時刻を大きく解けるようになる
-private const val SECONDARY_FONT_RATIO = 0.32f
+private const val SECONDARY_FONT_RATIO = 0.26f
 
 // 添える文字（月日・次の鳴動）の大きさの下限と上限(dp)。
 // 縦並びの解き直しと添える文字の大きさ算出で同じ範囲を共有する
 private const val MIN_SECONDARY_FONT_SIZE_DP = 11f
-private const val MAX_SECONDARY_FONT_SIZE_DP = 30f
+private const val MAX_SECONDARY_FONT_SIZE_DP = 24f
 
 // 時刻の文字の大きさの下限(dp)。
 private const val MIN_TIME_FONT_SIZE_DP = 12f
