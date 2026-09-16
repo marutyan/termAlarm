@@ -1,0 +1,620 @@
+- generic [active] [ref=e1]:
+  - link "Skip to main content" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e8]:
+          - link [ref=e10] [cursor=pointer]:
+            - /url: /
+            - img "Android Developers" [ref=e12]
+          - navigation "Upper tabs" [ref=e16]:
+            - generic [ref=e17]:
+              - link "Essentials" [ref=e18] [cursor=pointer]:
+                - /url: https://developer.android.com/get-started
+              - button "Dropdown menu for Essentials" [ref=e19] [cursor=pointer]: arrow_drop_down
+            - generic [ref=e20]:
+              - link "Design & Plan, selected" [ref=e21] [cursor=pointer]:
+                - /url: https://developer.android.com/design
+                - text: Design & Plan
+              - button "Dropdown menu for Design & Plan" [ref=e22] [cursor=pointer]: arrow_drop_down
+            - generic [ref=e23]:
+              - link "Develop" [ref=e24] [cursor=pointer]:
+                - /url: https://developer.android.com/develop
+              - button "Dropdown menu for Develop" [ref=e25] [cursor=pointer]: arrow_drop_down
+            - generic [ref=e26]:
+              - link "Google Play" [ref=e27] [cursor=pointer]:
+                - /url: https://developer.android.com/distribute
+              - button "Dropdown menu for Google Play" [ref=e28] [cursor=pointer]: arrow_drop_down
+            - generic [ref=e29]:
+              - link "Blog" [ref=e30] [cursor=pointer]:
+                - /url: https://developer.android.com/blog
+              - button "Dropdown menu for Blog" [ref=e31] [cursor=pointer]: arrow_drop_down
+          - link "Android Studio" [ref=e32] [cursor=pointer]:
+            - /url: https://developer.android.com/studio
+        - list [ref=e39]:
+          - listitem [ref=e40]:
+            - link "App architecture" [ref=e41] [cursor=pointer]:
+              - /url: https://developer.android.com/topic/architecture/intro
+    - generic [ref=e42]:
+      - generic [ref=e43]:
+        - text: filter_list
+        - searchbox "Type to filter" [ref=e44]
+        - text: close
+      - navigation "Side menu" [ref=e45]:
+        - text: arrow_back
+        - generic [ref=e46]:
+          - text: arrow_forward arrow_forward arrow_forward arrow_forward arrow_forward arrow_forward
+          - list [ref=e48]:
+            - listitem [ref=e49]:
+              - link "Introduction" [ref=e50] [cursor=pointer]:
+                - /url: /topic/architecture/intro
+            - listitem [ref=e52]:
+              - generic [ref=e53]:
+                - generic [aria-hidden] [ref=e54] [cursor=pointer]: expand_less
+                - button "Guide to app architecture" [ref=e55] [cursor=pointer]
+                - text: arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down
+            - listitem [ref=e57]:
+              - generic [ref=e58]:
+                - generic [aria-hidden] [ref=e59] [cursor=pointer]: expand_less
+                - button "Modularization" [ref=e60] [cursor=pointer]
+            - listitem [ref=e62]:
+              - generic [ref=e63]:
+                - generic [aria-hidden] [ref=e64] [cursor=pointer]: expand_less
+                - button "App resources" [ref=e65] [cursor=pointer]
+                - text: arrow_drop_down arrow_drop_down
+            - listitem [ref=e67]:
+              - generic [ref=e68]:
+                - generic [aria-hidden] [ref=e69] [cursor=pointer]: expand_less
+                - button "App manifest file" [ref=e70] [cursor=pointer]
+            - listitem [ref=e72]:
+              - generic [ref=e73]:
+                - generic [aria-hidden] [ref=e74] [cursor=pointer]: expand_less
+                - button "App entry points" [ref=e75] [cursor=pointer]
+                - text: arrow_drop_down
+            - listitem [ref=e77]:
+              - generic [ref=e78]:
+                - generic [aria-hidden] [ref=e79] [cursor=pointer]: expand_less
+                - button "App navigation" [ref=e80] [cursor=pointer]
+                - text: arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down arrow_drop_down
+            - listitem [ref=e82]:
+              - generic [ref=e83]:
+                - generic [aria-hidden] [ref=e84] [cursor=pointer]: expand_less
+                - button "Dependency injection" [ref=e85] [cursor=pointer]
+                - text: arrow_drop_down
+    - generic [ref=e87]:
+      - main [ref=e88]:
+        - generic [ref=e89]:
+          - generic:
+            - navigation "On this page"
+        - generic [ref=e90]:
+          - article [ref=e91]:
+            - navigation [ref=e92]:
+              - list "Breadcrumb" [ref=e93]:
+                - listitem [ref=e94]:
+                  - link "Android Developers" [ref=e95] [cursor=pointer]:
+                    - /url: https://developer.android.com/
+                - listitem [ref=e96]:
+                  - generic [aria-hidden] [ref=e97]: chevron_right
+                  - link "Design & Plan" [ref=e98] [cursor=pointer]:
+                    - /url: https://developer.android.com/design
+                - listitem [ref=e99]:
+                  - generic [aria-hidden] [ref=e100]: chevron_right
+                  - link "App architecture" [ref=e101] [cursor=pointer]:
+                    - /url: https://developer.android.com/topic/architecture/intro
+            - heading "<receiver>" [level=1] [ref=e102]
+            - generic [ref=e104]:
+              - term [ref=e105]: "syntax:"
+              - definition [ref=e106]:
+                - generic [ref=e108]:
+                  - text: "<receiver android:"
+                  - link "directBootAware" [ref=e109] [cursor=pointer]:
+                    - /url: "#directBootAware"
+                  - text: "=[\"true\" | \"false\"] android:"
+                  - link "enabled" [ref=e110] [cursor=pointer]:
+                    - /url: "#enabled"
+                  - text: "=[\"true\" | \"false\"] android:"
+                  - link "exported" [ref=e111] [cursor=pointer]:
+                    - /url: "#exported"
+                  - text: "=[\"true\" | \"false\"] android:"
+                  - link "icon" [ref=e112] [cursor=pointer]:
+                    - /url: "#icon"
+                  - text: ="
+                  - generic [ref=e113]: drawable resource
+                  - text: "\" android:"
+                  - link "intentMatchingFlags" [ref=e114] [cursor=pointer]:
+                    - /url: "#intentMatchingFlags"
+                  - text: "=[\"none\" | \"enforceIntentFilter\" | \"allowNullAction\"] android:"
+                  - link "label" [ref=e115] [cursor=pointer]:
+                    - /url: "#label"
+                  - text: ="
+                  - generic [ref=e116]: string resource
+                  - text: "\" android:"
+                  - link "name" [ref=e117] [cursor=pointer]:
+                    - /url: "#nm"
+                  - text: "=\"string\" android:"
+                  - link "permission" [ref=e118] [cursor=pointer]:
+                    - /url: "#prmsn"
+                  - text: "=\"string\" android:"
+                  - link "process" [ref=e119] [cursor=pointer]:
+                    - /url: "#proc"
+                  - text: ="string" > ... </receiver>
+              - term [ref=e120]: "contained in:"
+              - definition [ref=e121]:
+                - code [ref=e122]:
+                  - link "<application>" [ref=e123] [cursor=pointer]:
+                    - /url: /guide/topics/manifest/application-element
+              - term [ref=e124]: "can contain:"
+              - definition [ref=e125]:
+                - code [ref=e126]:
+                  - link "<intent-filter>" [ref=e127] [cursor=pointer]:
+                    - /url: /guide/topics/manifest/intent-filter-element
+                - code [ref=e128]:
+                  - link "<meta-data>" [ref=e129] [cursor=pointer]:
+                    - /url: /guide/topics/manifest/meta-data-element
+                - code [ref=e130]:
+                  - link "<property>" [ref=e131] [cursor=pointer]:
+                    - /url: /guide/topics/manifest/property-element
+              - term [ref=e132]: "description:"
+              - definition [ref=e133]:
+                - text: Declares a broadcast receiver, a
+                - code [ref=e134]:
+                  - link "BroadcastReceiver" [ref=e135] [cursor=pointer]:
+                    - /url: /reference/android/content/BroadcastReceiver
+                - text: subclass, as one of the application's components. Broadcast receivers enable applications to receive intents that are broadcast by the system or by other applications, even when other components of the application aren't running.
+                - paragraph [ref=e136]:
+                  - text: There are two ways to make a broadcast receiver known to the system. One is to declare it in the manifest file with this element. The other is to create the receiver dynamically in code and register it with the
+                  - code [ref=e137]:
+                    - link "Context.registerReceiver()" [ref=e138] [cursor=pointer]:
+                      - /url: /reference/android/content/Context#registerReceiver(android.content.BroadcastReceiver,%20android.content.IntentFilter)
+                  - text: method or one of its overloaded versions.
+                - paragraph [ref=e139]:
+                  - text: For more information about how to dynamically create receivers, see the
+                  - code [ref=e140]:
+                    - link "BroadcastReceiver" [ref=e141] [cursor=pointer]:
+                      - /url: /reference/android/content/BroadcastReceiver
+                  - text: class description.
+                - paragraph [ref=e142]:
+                  - text: If this receiver handles non-system broadcasts, specify a value for
+                  - code [ref=e143]: android:exported
+                  - text: . Set this value to
+                  - code [ref=e144]: "\"true\""
+                  - text: if you want your receiver to be able to receiver broadcasts from other applications or
+                  - code [ref=e145]: "\"false\""
+                  - text: if you only want your receiver to be able to receive broadcasts from your own app.
+                - paragraph [ref=e146]:
+                  - text: You don't have to remove the
+                  - code [ref=e147]: android:permission
+                  - text: attribute if you already declared it.
+                - paragraph [ref=e148]:
+                  - text: warning
+                  - strong [ref=e149]: "Warning:"
+                  - text: Limit how many broadcast receivers you set in your app. Having too many broadcast receivers can affect your app's performance and the battery life of users' devices. For more information about APIs you can use instead of the
+                  - code [ref=e150]: BroadcastReceiver
+                  - text: class for scheduling background work, see
+                  - link "Background optimization" [ref=e151] [cursor=pointer]:
+                    - /url: /topic/performance/background-optimization
+                  - text: .
+              - term [ref=e152]: "attributes:"
+              - definition [ref=e153]:
+                - generic [ref=e154]:
+                  - term [ref=e155]:
+                    - code [ref=e156]: android:directBootAware
+                  - definition [ref=e157]:
+                    - paragraph [ref=e158]: Whether the broadcast receiver is Direct-Boot aware, that is, whether it can run before the user unlocks the device.
+                    - paragraph [ref=e159]:
+                      - text: "Note: During"
+                      - link "Direct Boot" [ref=e160] [cursor=pointer]:
+                        - /url: /training/articles/direct-boot
+                      - text: ", a broadcast receiver in your application can only access the data that is stored in device protected storage."
+                    - paragraph [ref=e161]:
+                      - text: The default value is
+                      - code [ref=e162]: "\"false\""
+                      - text: .
+                  - term [ref=e163]:
+                    - code [ref=e164]: android:enabled
+                  - definition [ref=e165]:
+                    - text: Whether the broadcast receiver can be instantiated by the system. It's
+                    - code [ref=e166]: "\"true\""
+                    - text: if it can be, and
+                    - code [ref=e167]: "\"false\""
+                    - text: if not. The default value is
+                    - code [ref=e168]: "\"true\""
+                    - text: .
+                    - paragraph [ref=e169]:
+                      - text: The
+                      - code [ref=e170]:
+                        - link "<application>" [ref=e171] [cursor=pointer]:
+                          - /url: /guide/topics/manifest/application-element
+                      - text: element has its own
+                      - code [ref=e172]:
+                        - link "enabled" [ref=e173] [cursor=pointer]:
+                          - /url: /guide/topics/manifest/application-element#enabled
+                      - text: attribute that applies to all application components, including broadcast receivers. The
+                      - code [ref=e174]: <application>
+                      - text: and
+                      - code [ref=e175]: <receiver>
+                      - text: attributes must both be
+                      - code [ref=e176]: "\"true\""
+                      - text: for the broadcast receiver to be enabled. If either is
+                      - code [ref=e177]: "\"false\""
+                      - text: ", it's disabled and can't be instantiated."
+                  - term [ref=e178]:
+                    - code [ref=e179]: android:exported
+                  - definition [ref=e180]:
+                    - text: Whether the broadcast receiver can receive messages from non-system sources outside its application. It's
+                    - code [ref=e181]: "\"true\""
+                    - text: if it can, and
+                    - code [ref=e182]: "\"false\""
+                    - text: if not. If
+                    - code [ref=e183]: "\"false\""
+                    - text: ", the only messages the broadcast receiver receives are those sent by the system, components of the same application, or applications with the same user ID."
+                    - paragraph [ref=e184]:
+                      - text: If unspecified, the default value depends on whether the broadcast receiver contains intent filters. If the receiver contains at least one intent filter, then the default value is
+                      - code [ref=e185]: "\"true\""
+                      - text: . Otherwise, the default value is
+                      - code [ref=e186]: "\"false\""
+                      - text: .
+                    - paragraph [ref=e187]:
+                      - text: This attribute is not the only way to limit a broadcast receiver's external exposure. You can also use a permission to limit the external entities that can send it messages. See the
+                      - code [ref=e188]:
+                        - link "permission" [ref=e189] [cursor=pointer]:
+                          - /url: /guide/topics/manifest/receiver-element#prmsn
+                      - text: attribute.
+                  - term [ref=e190]:
+                    - code [ref=e191]: android:icon
+                  - definition [ref=e192]:
+                    - text: An icon representing the broadcast receiver. This attribute is set as a reference to a drawable resource containing the image definition. If it isn't set, the icon specified for the application as a whole is used instead. See the
+                    - code [ref=e193]:
+                      - link "<application>" [ref=e194] [cursor=pointer]:
+                        - /url: /guide/topics/manifest/application-element
+                    - text: element's
+                    - code [ref=e195]:
+                      - link "icon" [ref=e196] [cursor=pointer]:
+                        - /url: /guide/topics/manifest/application-element#icon
+                    - text: attribute.
+                    - paragraph [ref=e197]:
+                      - text: The broadcast receiver's icon, whether set here or by the
+                      - code [ref=e198]: <application>
+                      - text: element, is also the default icon for all the receiver's intent filters. See the
+                      - code [ref=e199]:
+                        - link "<intent-filter>" [ref=e200] [cursor=pointer]:
+                          - /url: /guide/topics/manifest/intent-filter-element
+                      - text: element's
+                      - code [ref=e201]:
+                        - link "icon" [ref=e202] [cursor=pointer]:
+                          - /url: /guide/topics/manifest/intent-filter-element#icon
+                      - text: attribute.
+                  - term [ref=e203]:
+                    - code [ref=e204]: android:intentMatchingFlags
+                  - definition [ref=e205]:
+                    - paragraph [ref=e206]: Use this attribute to fine-tune how the system matches incoming intents to app components. By default, no special matching rules are applied.
+                    - paragraph [ref=e207]:
+                      - text: The value set on a
+                      - code [ref=e208]: <receiver>
+                      - text: tag overrides the value set on the
+                      - code [ref=e209]: <application>
+                      - text: tag.
+                    - paragraph [ref=e210]:
+                      - text: The value must be one or more of the following flags, separated by '
+                      - code [ref=e211]: "|"
+                      - text: "':"
+                    - table [ref=e212]:
+                      - rowgroup [ref=e213]:
+                        - row [ref=e214]:
+                          - columnheader "Flag" [ref=e215]
+                          - columnheader "Description" [ref=e216]
+                        - row [ref=e217]:
+                          - cell [ref=e218]:
+                            - code [ref=e219]: none
+                          - cell [ref=e220]:
+                            - text: Disables all special matching rules for incoming intents. When specifying multiple flags, conflicting values are resolved by giving precedence to the
+                            - code [ref=e221]: none
+                            - text: flag.
+                        - row [ref=e222]:
+                          - cell [ref=e223]:
+                            - code [ref=e224]: enforceIntentFilter
+                          - cell [ref=e225]:
+                            - paragraph [ref=e226]: "Enforces stricter matching for incoming intents:"
+                            - list [ref=e227]:
+                              - listitem [ref=e228]: Explicit intents must match the target component's intent filter.
+                              - listitem [ref=e229]: Intents without an action don't match any intent filter.
+                        - row [ref=e230]:
+                          - cell [ref=e231]:
+                            - code [ref=e232]: allowNullAction
+                          - cell [ref=e233]:
+                            - paragraph [ref=e234]:
+                              - text: Relaxes the matching rules to allow intents without an action to match. This flag is used in conjunction with
+                              - code [ref=e235]: enforceIntentFilter
+                              - text: "to achieve the following behavior:"
+                            - list [ref=e236]:
+                              - listitem [ref=e237]: Explicit intents must match the target component's intent filter.
+                              - listitem [ref=e238]: Intents without an action are allowed to match any intent filter.
+                    - paragraph [ref=e239]:
+                      - text: For more information, see the
+                      - link "Safer Intents" [ref=e240] [cursor=pointer]:
+                        - /url: /about/versions/16/behavior-changes-16#safer-intents
+                      - text: section in the Android 16 (API level 36) behavior changes.
+                  - term [ref=e241]:
+                    - code [ref=e242]: android:label
+                  - definition [ref=e243]:
+                    - text: A user-readable label for the broadcast receiver. If this attribute isn't set, the label set for the application as a whole is used instead. See the
+                    - code [ref=e244]:
+                      - link "<application>" [ref=e245] [cursor=pointer]:
+                        - /url: /guide/topics/manifest/application-element
+                    - text: element's
+                    - code [ref=e246]:
+                      - link "label" [ref=e247] [cursor=pointer]:
+                        - /url: /guide/topics/manifest/application-element#label
+                    - text: attribute.
+                    - paragraph [ref=e248]:
+                      - text: The broadcast receiver's label, whether set here or by the
+                      - code [ref=e249]: <application>
+                      - text: element, is also the default label for all the receiver's intent filters. See the
+                      - code [ref=e250]:
+                        - link "<intent-filter>" [ref=e251] [cursor=pointer]:
+                          - /url: /guide/topics/manifest/intent-filter-element
+                      - text: element's
+                      - code [ref=e252]:
+                        - link "label" [ref=e253] [cursor=pointer]:
+                          - /url: /guide/topics/manifest/intent-filter-element#label
+                      - text: attribute.
+                    - paragraph [ref=e254]: The label is set as a reference to a string resource, so that it can be localized like other strings in the user interface. However, as a convenience while you're developing the application, it can also be set as a raw string.
+                  - term [ref=e255]:
+                    - code [ref=e256]: android:name
+                  - definition [ref=e257]:
+                    - text: The name of the class that implements the broadcast receiver, a subclass of
+                    - code [ref=e258]:
+                      - link "BroadcastReceiver" [ref=e259] [cursor=pointer]:
+                        - /url: /reference/android/content/BroadcastReceiver
+                    - text: . This is a fully qualified class name, such as
+                    - code [ref=e260]: "\"com.example.project.ReportReceiver\""
+                    - text: . However, as a shorthand, if the first character of the name is a period, for example,
+                    - code [ref=e261]: "\".ReportReceiver\""
+                    - text: ", it is appended to the package name specified in the"
+                    - code [ref=e262]:
+                      - link "<manifest>" [ref=e263] [cursor=pointer]:
+                        - /url: /guide/topics/manifest/manifest-element
+                    - text: element.
+                    - paragraph [ref=e264]:
+                      - text: Once you publish your application,
+                      - link "don't change this name" [ref=e265] [cursor=pointer]:
+                        - /url: http://android-developers.blogspot.com/2011/06/things-that-cannot-change.html
+                      - text: ", unless you set"
+                      - code [ref=e266]:
+                        - link "android:exported" [ref=e267] [cursor=pointer]:
+                          - /url: "#exported"
+                        - text: ="false"
+                      - text: .
+                    - paragraph [ref=e268]: There is no default. The name must be specified.
+                  - term [ref=e269]:
+                    - code [ref=e270]: android:permission
+                  - definition [ref=e271]:
+                    - text: The name of a permission that broadcasters need in order to send a message to the broadcast receiver. If this attribute isn't set, the permission set by the
+                    - code [ref=e272]:
+                      - link "<application>" [ref=e273] [cursor=pointer]:
+                        - /url: /guide/topics/manifest/application-element
+                    - text: element's
+                    - code [ref=e274]:
+                      - link "permission" [ref=e275] [cursor=pointer]:
+                        - /url: /guide/topics/manifest/application-element#prmsn
+                    - text: attribute applies to the broadcast receiver. If neither attribute is set, the receiver isn't protected by a permission.
+                    - paragraph [ref=e276]:
+                      - text: For more information about permissions, see the
+                      - link "Permissions" [ref=e277] [cursor=pointer]:
+                        - /url: /guide/topics/manifest/manifest-intro#perms
+                      - text: section in the app manifest overview and
+                      - link "Security tips" [ref=e278] [cursor=pointer]:
+                        - /url: /guide/topics/security/security
+                      - text: .
+                  - term [ref=e279]:
+                    - code [ref=e280]: android:process
+                  - definition [ref=e281]:
+                    - paragraph [ref=e282]: The name of the process in which the broadcast receiver runs. Normally, all components of an application run in the default process created for the application. It has the same name as the application package.
+                    - paragraph [ref=e283]:
+                      - text: The
+                      - code [ref=e284]:
+                        - link "<application>" [ref=e285] [cursor=pointer]:
+                          - /url: /guide/topics/manifest/application-element
+                      - text: element's
+                      - code [ref=e286]:
+                        - link "process" [ref=e287] [cursor=pointer]:
+                          - /url: /guide/topics/manifest/application-element#proc
+                      - text: attribute can set a different default for all components. But each component can override the default with its own
+                      - code [ref=e288]: process
+                      - text: attribute, letting you spread your application across multiple processes.
+                    - paragraph [ref=e289]:
+                      - text: If the name assigned to this attribute begins with a colon (
+                      - code [ref=e290]: ":"
+                      - text: ), a new process, private to the application, is created when it's needed, and the broadcast receiver runs in that process.
+                    - paragraph [ref=e291]: If the process name begins with a lowercase character, the receiver runs in a global process of that name, provided that it has permission to do so. This lets components in different applications share a process, reducing resource usage.
+              - term [ref=e292]: "introduced in:"
+              - definition [ref=e293]: API level 1
+          - generic [ref=e295]:
+            - paragraph [ref=e296]:
+              - text: Content and code samples on this page are subject to the licenses described in the
+              - link "Content License" [ref=e297] [cursor=pointer]:
+                - /url: /license
+              - text: . Java and OpenJDK are trademarks or registered trademarks of Oracle and/or its affiliates.
+            - paragraph [ref=e298]: Last updated 2026-07-01 UTC.
+      - navigation "Promotions" [ref=e300]:
+        - list [ref=e301]:
+          - listitem [ref=e302]:
+            - link [ref=e303] [cursor=pointer]:
+              - /url: //x.com/AndroidDev
+              - img "X" [ref=e305]
+              - text: X
+            - generic [ref=e306]: Follow @AndroidDev on X
+          - listitem [ref=e307]:
+            - link [ref=e308] [cursor=pointer]:
+              - /url: //www.youtube.com/user/androiddevelopers
+              - img "YouTube" [ref=e310]
+              - text: YouTube
+            - generic [ref=e311]: Check out Android Developers on YouTube
+          - listitem [ref=e312]:
+            - link [ref=e313] [cursor=pointer]:
+              - /url: //www.linkedin.com/showcase/androiddev
+              - img "LinkedIn" [ref=e315]
+              - text: LinkedIn
+            - generic [ref=e316]: Connect with the Android Developers community on LinkedIn
+      - navigation "Footer links" [ref=e318]:
+        - list [ref=e319]:
+          - listitem [ref=e320]:
+            - heading "More Android" [level=3] [ref=e321]
+            - list [ref=e322]:
+              - listitem [ref=e323]:
+                - link "Android" [ref=e324] [cursor=pointer]:
+                  - /url: //www.android.com
+              - listitem [ref=e325]:
+                - link "Android for Enterprise" [ref=e326] [cursor=pointer]:
+                  - /url: //www.android.com/enterprise/
+              - listitem [ref=e327]:
+                - link "Security" [ref=e328] [cursor=pointer]:
+                  - /url: //www.android.com/security-center/
+              - listitem [ref=e329]:
+                - link "Source" [ref=e330] [cursor=pointer]:
+                  - /url: //source.android.com
+              - listitem [ref=e331]:
+                - link "News" [ref=e332] [cursor=pointer]:
+                  - /url: /news
+              - listitem [ref=e333]:
+                - link "Blog" [ref=e334] [cursor=pointer]:
+                  - /url: //android-developers.googleblog.com/
+              - listitem [ref=e335]:
+                - link "Podcasts" [ref=e336] [cursor=pointer]:
+                  - /url: /podcasts
+          - listitem [ref=e337]:
+            - heading "Discover" [level=3] [ref=e338]
+            - list [ref=e339]:
+              - listitem [ref=e340]:
+                - link "Gaming" [ref=e341] [cursor=pointer]:
+                  - /url: /games
+              - listitem [ref=e342]:
+                - link "Machine Learning" [ref=e343] [cursor=pointer]:
+                  - /url: /ml
+              - listitem [ref=e344]:
+                - link "Health & Fitness" [ref=e345] [cursor=pointer]:
+                  - /url: /health-and-fitness
+              - listitem [ref=e346]:
+                - link "Camera & Media" [ref=e347] [cursor=pointer]:
+                  - /url: /media
+              - listitem [ref=e348]:
+                - link "Privacy" [ref=e349] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=e350]:
+                - link "5G" [ref=e351] [cursor=pointer]:
+                  - /url: /training/connectivity/5g
+          - listitem [ref=e352]:
+            - heading "Android Devices" [level=3] [ref=e353]
+            - list [ref=e354]:
+              - listitem [ref=e355]:
+                - link "Large screens" [ref=e356] [cursor=pointer]:
+                  - /url: /large-screens
+              - listitem [ref=e357]:
+                - link "Wear OS" [ref=e358] [cursor=pointer]:
+                  - /url: /wear
+              - listitem [ref=e359]:
+                - link "ChromeOS devices" [ref=e360] [cursor=pointer]:
+                  - /url: /chrome-os
+              - listitem [ref=e361]:
+                - link "Android for cars" [ref=e362] [cursor=pointer]:
+                  - /url: /cars
+              - listitem [ref=e363]:
+                - link "Android TV" [ref=e364] [cursor=pointer]:
+                  - /url: /tv
+          - listitem [ref=e365]:
+            - heading "Releases" [level=3] [ref=e366]
+            - list [ref=e367]:
+              - listitem [ref=e368]:
+                - link "Android 17" [ref=e369] [cursor=pointer]:
+                  - /url: /about/versions/17
+              - listitem [ref=e370]:
+                - link "Android 16" [ref=e371] [cursor=pointer]:
+                  - /url: /about/versions/16
+              - listitem [ref=e372]:
+                - link "Android 15" [ref=e373] [cursor=pointer]:
+                  - /url: /about/versions/15
+              - listitem [ref=e374]:
+                - link "Android 14" [ref=e375] [cursor=pointer]:
+                  - /url: /about/versions/14
+              - listitem [ref=e376]:
+                - link "Android 13" [ref=e377] [cursor=pointer]:
+                  - /url: /about/versions/13
+              - listitem [ref=e378]:
+                - link "Android 12" [ref=e379] [cursor=pointer]:
+                  - /url: /about/versions/12
+              - listitem [ref=e380]:
+                - link "Android 11" [ref=e381] [cursor=pointer]:
+                  - /url: /about/versions/11
+          - listitem [ref=e382]:
+            - heading "Documentation and Downloads" [level=3] [ref=e383]
+            - list [ref=e384]:
+              - listitem [ref=e385]:
+                - link "Android Studio guide" [ref=e386] [cursor=pointer]:
+                  - /url: /studio/intro
+              - listitem [ref=e387]:
+                - link "Developers guides" [ref=e388] [cursor=pointer]:
+                  - /url: /guide
+              - listitem [ref=e389]:
+                - link "API reference" [ref=e390] [cursor=pointer]:
+                  - /url: /reference
+              - listitem [ref=e391]:
+                - link "Download Studio" [ref=e392] [cursor=pointer]:
+                  - /url: /studio
+              - listitem [ref=e393]:
+                - link "Android NDK" [ref=e394] [cursor=pointer]:
+                  - /url: /ndk
+          - listitem [ref=e395]:
+            - heading "Support" [level=3] [ref=e396]
+            - list [ref=e397]:
+              - listitem [ref=e398]:
+                - link "Report platform bug" [ref=e399] [cursor=pointer]:
+                  - /url: //issuetracker.google.com/issues/new?component=190923&template=841312
+              - listitem [ref=e400]:
+                - link "Report documentation bug" [ref=e401] [cursor=pointer]:
+                  - /url: //issuetracker.google.com/issues/new?component=192697
+              - listitem [ref=e402]:
+                - link "Google Play support" [ref=e403] [cursor=pointer]:
+                  - /url: //support.google.com/googleplay/android-developer
+              - listitem [ref=e404]:
+                - link "Join research studies" [ref=e405] [cursor=pointer]:
+                  - /url: https://g.co/userresearch/androiddeveloperfooter
+      - generic [ref=e407]:
+        - navigation "Other Google Developers websites" [ref=e408]:
+          - link [ref=e409] [cursor=pointer]:
+            - /url: https://developers.google.com/
+            - img "Google Developers" [ref=e411]
+          - list [ref=e412]:
+            - listitem [ref=e413]:
+              - link "Android" [ref=e414] [cursor=pointer]:
+                - /url: //developer.android.com
+            - listitem [ref=e415]:
+              - link "Chrome" [ref=e416] [cursor=pointer]:
+                - /url: //developer.chrome.com/home
+            - listitem [ref=e417]:
+              - link "Firebase" [ref=e418] [cursor=pointer]:
+                - /url: //firebase.google.com
+            - listitem [ref=e419]:
+              - link "Google Cloud Platform" [ref=e420] [cursor=pointer]:
+                - /url: //cloud.google.com
+            - listitem [ref=e421]:
+              - link "All products" [ref=e422] [cursor=pointer]:
+                - /url: //developers.google.com/products/
+        - navigation "Utility links" [ref=e423]:
+          - list [ref=e424]:
+            - listitem [ref=e425]:
+              - link "Privacy" [ref=e426] [cursor=pointer]:
+                - /url: //policies.google.com/privacy
+            - listitem [ref=e427]:
+              - text: "|"
+              - link "License" [ref=e428] [cursor=pointer]:
+                - /url: /license
+            - listitem [ref=e429]:
+              - text: "|"
+              - link "Brand guidelines" [ref=e430] [cursor=pointer]:
+                - /url: /distribute/marketing-tools/brand-guidelines
+            - text: "|"
+            - listitem [ref=e431]:
+              - generic [ref=e432]: Get news and tips by email
+              - link "Subscribe" [ref=e433] [cursor=pointer]:
+                - /url: /updates

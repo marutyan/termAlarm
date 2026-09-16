@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    自動バックアップ（クラウドバックアップ）および端末間データ移行の設定。
+    自動バックアップ（クラウドバックアップ）および端末間データ移行の設定（Android 12 / API 31以降）。
 
     【何を預けて何を預けないか】
     ・預けるもの:
@@ -10,6 +10,17 @@
     ・預けないもの:
       キャッシュファイルや一時ファイル（getCacheDir() 等）は預けない。
       明示的に指定した端末保護ストレージ領域のみを含め、不要な一時データは対象外とする。
+    ・時計ウィジェット設定が対象外である理由:
+      時計ウィジェットの設定は Glance の PreferencesGlanceStateDefinition により
+      通常ストレージの filesDir/datastore/ 以下へ保存される。
+      機種変更時は appWidgetId が変わり、復元しても正しく対応づかないため、
+      意図して端末保護ストレージ（device_*）のみを対象とし、ウィジェット設定はバックアップ対象外としている。
+
+    【暗号化設定（disableIfNoEncryptionCapabilities="true"）を入れた理由】
+    クラウドバックアップの端末側の鍵によるエンドツーエンド暗号化は、画面ロック（PIN・パターン・パスワード）が
+    設定されている端末でのみ成立する。
+    プライバシーポリシーに「Android 9以降は暗号化される」と記載しているため、記述どおりの動作を保証するべく、
+    画面ロックがなく暗号化できない端末ではクラウドへ預けられないよう disableIfNoEncryptionCapabilities="true" を指定している。
 
     【なぜ既定任せにせず明示するのか】
     バックアップ対象をシステムの既定任せにせず、何が預けられるかを決めておくため。
@@ -21,7 +32,7 @@
     外部への不正な情報収集や送信は行わないこと）を記載している。
 -->
 <data-extraction-rules>
-    <cloud-backup>
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
         <include domain="device_database" path="." />
         <include domain="device_sharedpref" path="." />
         <include domain="device_file" path="." />

@@ -68,14 +68,14 @@ enum class WidgetBackgroundStyle {
  * @property family Glanceのテキスト描画に用いるフォントファミリー。
  * @property timeWidthRatio 実機でandroid.graphics.Paint.measureTextを使って測った時刻「12:34」の文字サイズに対する横幅比。数字とコロンの送り幅を見積もり、領域内に時刻を最大化して収める役割を持つ。
  * @property dateWidthRatio 実機でandroid.graphics.Paint.measureTextを使って測った月日「12月30日(月)」の文字サイズに対する横幅比。漢字・数字・括弧を含む日付行が領域幅を超えないよう上限サイズを算出する役割を持つ。
- * @property nextRingWidthRatio 実機でandroid.graphics.Paint.measureTextを使って測った次の鳴動「12:34（水）」の文字サイズに対する横幅比（曜日を含む）。次回アラーム情報が領域幅からはみ出して途切れるのを防ぐ上限サイズを算出する役割を持つ。
+ * @property nextRingWidthRatio 実機でandroid.graphics.Paint.measureTextを使って測った次の鳴動「12:34(水)」の文字サイズに対する横幅比（曜日を含む）。次回アラーム情報が領域幅からはみ出して途切れるのを防ぐ上限サイズを算出する役割を持つ。
  * @property lineHeightRatio 実機でandroid.text.StaticLayoutを使って測った、文字列によらずフォントが占める1行全体の高さ比（文字サイズ1emあたり）。行全体の必要領域を見積もる役割を持つ。
  * @property timeBodyHeightRatio 実機でandroid.graphics.Paint.getTextBoundsを使って測った時刻「12:34」の文字実体の高さ比（文字サイズ1emあたり）。文字実体基準の配置と間隔計算に用いる役割を持つ。
  * @property timeTopPaddingRatio 実機でandroid.text.StaticLayoutとPaint.getTextBoundsを使って測った時刻「12:34」の行上端から文字実体上端までの距離比（文字サイズ1emあたり）。実体位置に基づくpadding(top)算出に用いる役割を持つ。
  * @property dateBodyHeightRatio 実機でandroid.graphics.Paint.getTextBoundsを使って測った月日「12月30日(月)」の文字実体の高さ比（文字サイズ1emあたり）。文字実体基準の配置と間隔計算に用いる役割を持つ。
  * @property dateTopPaddingRatio 実機でandroid.text.StaticLayoutとPaint.getTextBoundsを使って測った月日「12月30日(月)」の行上端から文字実体上端までの距離比（文字サイズ1emあたり）。実体位置に基づくpadding(top)算出に用いる役割を持つ。
- * @property nextRingBodyHeightRatio 実機でandroid.graphics.Paint.getTextBoundsを使って測った次の鳴動「12:34（水）」の文字実体の高さ比（文字サイズ1emあたり）。行の実体高さをアイコンと比べる際に用いる役割を持つ。
- * @property nextRingTopPaddingRatio 実機でandroid.text.StaticLayoutとPaint.getTextBoundsを使って測った次の鳴動「12:34（水）」の行上端から文字実体上端までの距離比（文字サイズ1emあたり）。実体位置に基づくpadding(top)算出に用いる役割を持つ。
+ * @property nextRingBodyHeightRatio 実機でandroid.graphics.Paint.getTextBoundsを使って測った次の鳴動「12:34(水)」の文字実体の高さ比（文字サイズ1emあたり）。行の実体高さをアイコンと比べる際に用いる役割を持つ。
+ * @property nextRingTopPaddingRatio 実機でandroid.text.StaticLayoutとPaint.getTextBoundsを使って測った次の鳴動「12:34(水)」の行上端から文字実体上端までの距離比（文字サイズ1emあたり）。実体位置に基づくpadding(top)算出に用いる役割を持つ。
  */
 enum class WidgetFontStyle(
     val family: FontFamily,
@@ -97,13 +97,13 @@ enum class WidgetFontStyle(
      * 実機でandroid.text.StaticLayoutとPaint.getTextBoundsにより測った1emあたりの比率：
      * 行が占める高さ1.34、時刻「12:34」（実体高0.74、上端距離0.33、幅2.48）、
      * 月日「12月30日(月)」（実体高1.04、上端距離0.25、幅5.93）、
-     * 次の鳴動「12:34（水）」（実体高0.98、上端距離0.19、幅5.48）。
+     * 次の鳴動「12:34(水)」（実体高0.98、上端距離0.19、幅4.17）。
      */
     STANDARD(
         family = FontFamily.SansSerif,
         timeWidthRatio = 2.48f,
         dateWidthRatio = 5.93f,
-        nextRingWidthRatio = 5.48f,
+        nextRingWidthRatio = 4.17f,
         lineHeightRatio = 1.34f,
         timeBodyHeightRatio = 0.74f,
         timeTopPaddingRatio = 0.33f,
@@ -120,13 +120,13 @@ enum class WidgetFontStyle(
      * 実機でandroid.text.StaticLayoutとPaint.getTextBoundsにより測った1emあたりの比率：
      * 行が占める高さ1.34、時刻「12:34」（実体高0.73、上端距離0.34、幅3.00）、
      * 月日「12月30日(月)」（実体高0.96、上端距離0.26、幅6.60）、
-     * 次の鳴動「12:34（水）」（実体高0.98、上端距離0.19、幅6.00）。
+     * 次の鳴動「12:34(水)」（実体高0.98、上端距離0.19、幅5.20）。
      */
     MONOSPACE(
         family = FontFamily.Monospace,
         timeWidthRatio = 3.00f,
         dateWidthRatio = 6.60f,
-        nextRingWidthRatio = 6.00f,
+        nextRingWidthRatio = 5.20f,
         lineHeightRatio = 1.34f,
         timeBodyHeightRatio = 0.73f,
         timeTopPaddingRatio = 0.34f,
@@ -143,13 +143,13 @@ enum class WidgetFontStyle(
      * 実機でandroid.text.StaticLayoutとPaint.getTextBoundsにより測った1emあたりの比率：
      * 行が占める高さ1.30、時刻「12:34」（実体高0.74、上端距離0.32、幅2.53）、
      * 月日「12月30日(月)」（実体高0.94、上端距離0.24、幅5.94）、
-     * 次の鳴動「12:34（水）」（実体高0.94、上端距離0.20、幅5.53）。
+     * 次の鳴動「12:34(水)」（実体高0.94、上端距離0.20、幅4.23）。
      */
     SERIF(
         family = FontFamily.Serif,
         timeWidthRatio = 2.53f,
         dateWidthRatio = 5.94f,
-        nextRingWidthRatio = 5.53f,
+        nextRingWidthRatio = 4.23f,
         lineHeightRatio = 1.30f,
         timeBodyHeightRatio = 0.74f,
         timeTopPaddingRatio = 0.32f,

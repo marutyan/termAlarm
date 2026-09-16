@@ -132,7 +132,8 @@
 
     <!-- ライセンス -->
     <string name="about_title">ライセンス情報</string>
-    <string name="about_section_dependencies">このアプリが使っているもの</string>
+    <string name="about_term_alarm_notice">This application is distributed under the GNU General Public License version 3.</string>
+    <string name="about_source_code_notice">Source code is available at https://github.com/marutyan/termAlarm</string>
     <string name="about_section_apache_license">Apache License 2.0</string>
     <string name="about_section_font_license">IBM Plex Mono</string>
     <string name="about_section_libraries">Libraries</string>
