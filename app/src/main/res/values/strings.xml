@@ -252,7 +252,7 @@
     <!-- タイマー -->
     <!-- メニュー: プライバシー ポリシーとライセンス -->
     <string name="menu_privacy">プライバシー</string>
-    <string name="menu_about">このアプリについて</string>
+    <string name="menu_about">ライセンス情報</string>
     <string name="privacy_policy_title">プライバシー ポリシー</string>
 
     <!-- 記録画面 (design/Records.dc.html) -->
