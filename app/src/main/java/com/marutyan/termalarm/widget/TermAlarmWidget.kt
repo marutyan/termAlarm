@@ -103,7 +103,7 @@ class TermAlarmWidget : GlanceAppWidget() {
             .mapNotNull { schedule -> nextTrigger(schedule, now)?.let { schedule to it } }
             .minByOrNull { it.second }
         val nextTime = next?.second?.let {
-            "${it.format(DAY_OF_WEEK_FORMAT)} ${it.format(TIME_FORMAT)}"
+            "${it.format(TIME_FORMAT)}（${it.format(DAY_OF_WEEK_FORMAT)}）"
         }
         return WidgetContent(
             date = LocalDateTime.now().format(DATE_FORMAT),
@@ -230,11 +230,19 @@ private const val MAX_SECONDARY_FONT_SIZE_SP = 30f
 
 /**
  * 時刻表示の横幅比率（文字サイズに対する比率）。
- * 実測では最も幅をとる「12:34」（数字4文字＋コロン）でも約2.06em（数字約0.45em×4＋コロン約0.26em）であったが、
- * 端末の書体差や数字の組み合わせによるぶれを安全側に見込んで2.25fとする。
+ * 実機で「9:52」と「10:04」の2つを測り、数字1文字が約0.4909em、コロンが約0.1413emと分かった。
+ * 最も幅をとる4桁＋コロンで約2.105em（文字の実体の幅）になる。
+ * 文字の送り幅は実体より広く、端末の書体差もあるため、安全側に見込んで2.35fとする。
  * 使える幅から時刻の大きさ上限を求める役割を持つ。
  */
-private const val TIME_WIDTH_RATIO = 2.25f
+private const val TIME_WIDTH_RATIO = 2.35f
+
+/**
+ * 時刻が横方向に使ってよい幅の割合。
+ * 幅いっぱいまで使うと左右に余白が無く、時刻だけが大きすぎて見えるため、
+ * 少し内側に収めて左右の余白を残す役割を持つ。
+ */
+private const val TIME_WIDTH_USAGE = 0.85f
 
 // 月日「9月16日(水)」の横幅比（全角3文字＋半角5文字ぶん）。文字の大きさのおよそ5.2倍を使う。
 // 横並びのときに右の列へ月日が収まる上限サイズを解くために必要となる。
@@ -337,7 +345,7 @@ private fun WidgetBody(
         // 左側の時刻1行は数字行の見積もり（1.17倍）を用いる
         val heightLimit = h / DIGIT_LINE_HEIGHT_RATIO
         val rightHeightLimit = h / ((KANJI_LINE_HEIGHT_RATIO + DIGIT_LINE_HEIGHT_RATIO) * SECONDARY_FONT_RATIO)
-        val leftWidthLimit = leftAvailableWidth / TIME_WIDTH_RATIO
+        val leftWidthLimit = leftAvailableWidth * TIME_WIDTH_USAGE / TIME_WIDTH_RATIO
         val rightWidthLimit = rightAvailableWidth / (DATE_WIDTH_RATIO * SECONDARY_FONT_RATIO)
         val maxTimeFontSize = minOf(heightLimit, rightHeightLimit, leftWidthLimit, rightWidthLimit)
         maxTimeFontSize.coerceAtLeast(12f).sp
@@ -348,7 +356,7 @@ private fun WidgetBody(
         // 実際に出すかどうかにかかわらず、常に3行ぶん（時刻＋月日＋次の鳴動）で必要な高さを計算する。
         // 上限・下限に当たることを踏まえて時刻の大きさを解き直す
         val heightLimit = calculateVerticalTimeHeightLimit(h)
-        val widthLimit = w / TIME_WIDTH_RATIO
+        val widthLimit = w * TIME_WIDTH_USAGE / TIME_WIDTH_RATIO
         minOf(heightLimit, widthLimit).coerceAtLeast(12f).sp
     }
 
@@ -452,14 +460,14 @@ private fun WidgetLayer(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = content.time, style = timeStyle)
+            Text(text = content.time, style = timeStyle, maxLines = 1)
             Spacer(GlanceModifier.width(HORIZONTAL_SPACING))
             Column(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalAlignment = Alignment.Start,
             ) {
                 if (showDate) {
-                    Text(text = content.date, style = dateStyle)
+                    Text(text = content.date, style = dateStyle, maxLines = 1)
                 }
                 if (showNextRing && content.nextTime != null) {
                     NextRingRow(time = content.nextTime, style = dateStyle, iconSize = style.iconSize)
@@ -503,12 +511,14 @@ private fun WidgetLayer(
                     text = content.date,
                     style = dateStyle,
                     modifier = GlanceModifier.padding(top = dateTop),
+                    maxLines = 1,
                 )
             }
             Text(
                 text = content.time,
                 style = timeStyle,
                 modifier = GlanceModifier.padding(top = timeTop),
+                maxLines = 1,
             )
             if (showNextRing && content.nextTime != null) {
                 NextRingRow(
@@ -544,6 +554,6 @@ private fun NextRingRow(
             colorFilter = ColorFilter.tint(style.color),
         )
         Spacer(GlanceModifier.width(4.dp))
-        Text(text = time, style = style)
+        Text(text = time, style = style, maxLines = 1)
     }
 }
