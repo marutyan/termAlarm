@@ -30,6 +30,7 @@ import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
@@ -46,6 +47,7 @@ import com.marutyan.termalarm.domain.nextTrigger
 import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlinx.coroutines.flow.first
 
 // ウィジェットに出す内容。次の鳴動の有無で表示が変わるため、画面側で組み立てずここへまとめる
@@ -55,11 +57,13 @@ private data class WidgetContent(
     val nextTime: String?,
 )
 
-// 日付と曜日の書式。「9月16日(水)」のように月日と曜日を並べる
-private val DATE_FORMAT = DateTimeFormatter.ofPattern("M月d日(E)")
+// 日付と曜日の書式。「9月16日(水)」のように月日と曜日を並べる。
+// 端末の地域設定が日本語以外でも「Wed」等の英字表記になって横幅が約1割広がり文字切れするのを防ぐため、明示的に日本語Localeを指定する。
+private val DATE_FORMAT = DateTimeFormatter.ofPattern("M月d日(E)", Locale.JAPANESE)
 
-// 曜日の書式。月日のDATE_FORMATと同じ言い回し（E）で曜日を取り出し、次の鳴動の先頭に添えるために用いる
-private val DAY_OF_WEEK_FORMAT = DateTimeFormatter.ofPattern("E")
+// 曜日の書式。月日のDATE_FORMATと同じ言い回し（E）で曜日を取り出し、次の鳴動の先頭に添えるために用いる。
+// 端末言語によらず日本語の曜日表記で統一するため、明示的に日本語Localeを指定する。
+private val DAY_OF_WEEK_FORMAT = DateTimeFormatter.ofPattern("E", Locale.JAPANESE)
 
 // 時刻の書式。秒はウィジェットでは出さない。1分ごとの更新で足りるため
 private val TIME_FORMAT = DateTimeFormatter.ofPattern("H:mm")
@@ -116,7 +120,7 @@ class TermAlarmWidget : GlanceAppWidget() {
 /**
  * 月日や次の鳴動時刻に適用する文字の太さを決める関数。
  * 選ばれた太さが標準のときだけ見やすさのためにMEDIUMへ上げ、MEDIUMとBOLDはそのまま使う。
- * ウィジェット本体と設定画面の見本で同じ決め方を使うため、ここ1か所へまとめている。
+ * 設定画面の見本は固定寸法（40sp）で描画しており本体のような動的サイズ計算は行わないが、太さの変換ルールを共通化するためにここ1か所へまとめている。
  */
 fun secondaryFontWeight(weight: WidgetFontWeight): WidgetFontWeight {
     return when (weight) {
@@ -127,35 +131,17 @@ fun secondaryFontWeight(weight: WidgetFontWeight): WidgetFontWeight {
 }
 
 /**
- * 添える文字（月日・次の鳴動）の大きさをspの数値で求める関数。
- * 時刻に対する割合と下限・上限を、ウィジェット本体と設定画面の見本で同じにするために必要となる。
+ * 添える文字（月日・次の鳴動）の大きさを求める関数。
+ * 設定画面の見本は固定寸法（40sp）で描画しており本体のような動的サイズ計算は行わないが、
+ * 時刻に対する割合（0.32倍）と下限・上限（11〜30）の共通ルールを共有するために必要となる。
  */
 fun secondaryFontSizeSp(timeFontSizeSp: Float): Float =
-    (timeFontSizeSp * SECONDARY_FONT_RATIO).coerceIn(MIN_SECONDARY_FONT_SIZE_SP, MAX_SECONDARY_FONT_SIZE_SP)
+    (timeFontSizeSp * SECONDARY_FONT_RATIO).coerceIn(MIN_SECONDARY_FONT_SIZE_DP, MAX_SECONDARY_FONT_SIZE_DP)
 
 /**
- * 描画領域の幅を考慮して、添える文字（月日・次の鳴動）の大きさをspの数値で求める関数。
- * 時刻に対する割合に基づく大きさに加え、月日および次の鳴動が利用可能な横幅に収まる上限サイズを掛け合わせることで、
- * 狭いウィジェット領域でも文字の途切れを防ぐために必要となる。
- * 幅による上限計算を行い、下限（11sp）と上限（30sp）の範囲内で最適なフォントサイズを決定する役割を持つ。
- */
-fun secondaryFontSizeSp(
-    timeFontSizeSp: Float,
-    availableWidth: Float,
-    dateWidthRatio: Float,
-    nextRingWidthRatio: Float,
-): Float {
-    val baseSize = timeFontSizeSp * SECONDARY_FONT_RATIO
-    val dateLimit = availableWidth / dateWidthRatio
-    val availableForNextRing = (availableWidth - NEXT_RING_ICON_SPACING_DP).coerceAtLeast(0f)
-    val nextRingLimit = availableForNextRing / (nextRingWidthRatio + ICON_TO_SECONDARY_RATIO)
-    val maxAllowed = minOf(MAX_SECONDARY_FONT_SIZE_SP, dateLimit, nextRingLimit)
-    return minOf(baseSize, maxAllowed).coerceAtLeast(MIN_SECONDARY_FONT_SIZE_SP)
-}
-
-/**
- * 時計アイコンの大きさをdpの数値で求める関数。
- * 添える文字に対して0.90倍とする決め方を、本体と見本で同じにするために必要となる。
+ * 時計アイコンの大きさを求める関数。
+ * 設定画面の見本は固定寸法で描画しており本体のような動的サイズ計算は行わないが、
+ * 添える文字に対して0.90倍とするアイコン寸法のルールを共有するために必要となる。
  */
 fun nextRingIconSizeDp(secondaryFontSizeSp: Float): Float = secondaryFontSizeSp * ICON_TO_SECONDARY_RATIO
 
@@ -167,74 +153,10 @@ fun nextRingIconSizeDp(secondaryFontSizeSp: Float): Float = secondaryFontSizeSp 
 private const val ICON_TO_SECONDARY_RATIO = 0.90f
 
 /**
- * 数字だけの行（時刻「9:16」や次の鳴動「9:17」）が占める高さの比率。
- * 数字中心の行は英数字用に行高を抑えられるため1.17倍で見積もり、ウィジェット内で時刻の文字を最大限大きく描くために必要となる。
- * 縦並びの時刻および次の鳴動の行高計算や、横並びの時刻の高さ上限算出において、必要な行高を解く係数の役割を持つ。
- */
-private const val DIGIT_LINE_HEIGHT_RATIO = 1.17f
-
-/**
- * 漢字を含む行（月日「9月16日(水)」）が占める高さの比率。
- * 日本語フォントの漢字行は英数字よりも上下に広い行高を要するため1.45倍を確保し、行の重なりや文字切れを防ぐために必要となる。
- * 縦並びの月日行の行高計算や、横並びの右列の高さ上限算出において、必要な行高を解く係数の役割を持つ。
- */
-private const val KANJI_LINE_HEIGHT_RATIO = 1.45f
-
-/**
- * 月日「9月16日(水)」26spにおける文字実体の高さ比率。
- * 実機で描画された月日行（全高1.45em）のうち、上下の余白を除いた実際の文字部分の高さ0.864emを実測した値である。
- * 縦並びで文字の実体を基準に配置位置と必要な高さを解くために必要となり、月日行の実体高さの計算に用いる役割を持つ。
- */
-private const val KANJI_BODY_HEIGHT_RATIO = 0.864f
-
-/**
- * 月日「9月16日(水)」26spにおける上の余白比率。
- * 実機で描画された月日行（全高1.45em）のうち、行上端から文字実体上端までの余白0.4165emを実測した値である。
- * 縦並びで文字実体を行の上端へ詰めて配置するためのpadding(top)算出と、全体の高さ見積もりに用いる役割を持つ。
- */
-private const val KANJI_TOP_PADDING_RATIO = 0.4165f
-
-/**
- * 時刻「9:52」145.4sp（Roboto）における文字実体の高さ比率。
- * 実機で描画された時刻行（全高1.17em）のうち、上下の余白を除いた実際の数字実体の高さ0.624emを実測した値である。
- * 縦並びで文字の実体を基準に配置位置と必要な高さを解くために必要となり、時刻の実体高さの計算に用いる役割を持つ。
- */
-private const val DIGIT_BODY_HEIGHT_RATIO = 0.624f
-
-/**
- * 時刻「9:52」145.4sp（Roboto）における上の余白比率。
- * 実機で描画された時刻行（全高1.17em）のうち、行上端から数字実体上端までの余白0.285emを実測した値である。
- * 縦並びで数字実体を行の上端へ詰めて配置するためのpadding(top)算出に用いる役割を持つ。
- */
-private const val DIGIT_TOP_PADDING_RATIO = 0.285f
-
-/**
- * 次の鳴動の行の高さ比率。
- * アイコン（0.90em）と文字の実体（0.624em）のうち高い方であるアイコンの高さ（0.90em）を採用する。
- * 縦並びにおいて次の鳴動行の実体としての高さを定義し、全体の高さ見積もりや位置計算に用いる役割を持つ。
- */
-private const val NEXT_RING_ROW_HEIGHT_RATIO = ICON_TO_SECONDARY_RATIO
-
-/**
- * 次の鳴動の行の上下余白比率。
- * 数字行全体の高さ1.17emの中で、高さ0.90emのアイコンと文字を縦中央揃えにした際に生じる上下余白 (1.17 - 0.90) / 2 = 0.135em を表す。
- * 縦並びにおいて次の鳴動行を配置する際のpadding(top)算出および下部の余白見積もりに用いる役割を持つ。
- */
-private const val NEXT_RING_ROW_PADDING_RATIO = (DIGIT_LINE_HEIGHT_RATIO - NEXT_RING_ROW_HEIGHT_RATIO) / 2f
-
-/**
- * 縦並びで添える文字（月日と次の鳴動）が占める高さの総係数。
- * 月日の上の余白(0.4165) + 月日実体(0.864) + 次の鳴動行(0.90) + 次の鳴動の下の余白(0.135) を合算した値である。
- * 縦並びの高さ制約式から時刻サイズtを解く際に、添える文字sに掛かる係数として計算を一元化する役割を持つ。
- */
-private const val VERTICAL_SECONDARY_HEIGHT_COEFFICIENT =
-    KANJI_TOP_PADDING_RATIO + KANJI_BODY_HEIGHT_RATIO + NEXT_RING_ROW_HEIGHT_RATIO + NEXT_RING_ROW_PADDING_RATIO
-
-/**
  * 縦並びにおける行と行の固定間隔(dp)。
  * 行間隔を文字サイズに比例させると、文字を大きくした際に間隔まで過大に広がり領域の高さを圧迫してしまうため、
  * 視覚的な区切りを一定に保ちつつ時刻を最大限大きく描くために10dpの固定値とする。
- * 縦並びの各行の配置位置決めと高さ計算において間隔の基準となる役割を持つ。
+ * 縦並びおよび横並び右列の各行の配置位置決めと高さ計算において間隔の基準となる役割を持つ。
  */
 private const val VERTICAL_LINE_SPACING_DP = 10f
 
@@ -243,10 +165,13 @@ private const val VERTICAL_LINE_SPACING_DP = 10f
 // 空いたぶんだけ時刻を大きく解けるようになる
 private const val SECONDARY_FONT_RATIO = 0.32f
 
-// 月日と次の鳴動の大きさの下限と上限(sp)。
+// 添える文字（月日・次の鳴動）の大きさの下限と上限(dp)。
 // 縦並びの解き直しと添える文字の大きさ算出で同じ範囲を共有する
-private const val MIN_SECONDARY_FONT_SIZE_SP = 11f
-private const val MAX_SECONDARY_FONT_SIZE_SP = 30f
+private const val MIN_SECONDARY_FONT_SIZE_DP = 11f
+private const val MAX_SECONDARY_FONT_SIZE_DP = 30f
+
+// 時刻の文字の大きさの下限(dp)。
+private const val MIN_TIME_FONT_SIZE_DP = 12f
 
 /**
  * 端末差を考慮して文字の横幅比に掛ける安全係数。
@@ -303,28 +228,51 @@ private data class WidgetLayerStyle(
 )
 
 /**
- * 縦並び配置において、利用可能な高さから時刻文字の大きさの上限(sp)を算出する関数。
- * 文字の実体の位置で置くレイアウトに合わせ、使える高さ ≧ 月日の上の余白 + 0.864s + G + 0.624t + G + 0.90s + 次の鳴動の下の余白 を満たすtを求める。
- * 月日と次の鳴動の文字サイズsが上限や下限に当たった場合は、上限値または下限値で固定した上で時刻の大きさを解き直す。
- * 縦並び表示で描画領域の高さを最大限に活かし、文字がはみ出すことなく時刻をできる限り大きく表示する役割を持つ。
+ * ウィジェットで表示する各行の識別子。
  */
-private fun calculateVerticalTimeHeightLimit(availableHeight: Float): Float {
+private enum class RowId { DATE, TIME, NEXT_RING }
+
+/**
+ * 実体基準の配置計算に用いる1行分の寸法情報（すべてdp）。
+ */
+private data class RowLayoutInfo(
+    val id: RowId,
+    val bodyHeight: Float,
+    val topPadding: Float,
+    val bottomPadding: Float,
+)
+
+/**
+ * 縦並び配置において、利用可能な高さから時刻文字の大きさの上限(dp)を算出する関数。
+ * 実機で実測した書体ごとの行高比率および文字実体の高さ比率に基づき、
+ * 月日・時刻・次の鳴動の3行が利用可能な高さに収まる時刻の最大サイズ(dp)を求める。
+ * 「次の鳴動の有無で時刻の大きさが変わらない」仕様を守るため、実際の表示行数にかかわらず常に3行分を前提として解く。
+ * 添える文字のサイズが上限(30dp)や下限(11dp)に達した場合は、その限界値で固定して時刻サイズを解き直す。
+ */
+private fun calculateVerticalTimeHeightLimit(
+    availableHeight: Float,
+    fontStyle: WidgetFontStyle,
+): Float {
     val availableForContent = availableHeight - 2f * VERTICAL_LINE_SPACING_DP
+    val nextRingRowBodyHeightRatio = maxOf(fontStyle.nextRingBodyHeightRatio, ICON_TO_SECONDARY_RATIO)
+    val secondaryHeightCoeff = fontStyle.dateTopPaddingRatio + fontStyle.dateBodyHeightRatio +
+        fontStyle.lineHeightRatio - fontStyle.nextRingTopPaddingRatio
+    val timeHeightCoeff = fontStyle.timeBodyHeightRatio
 
     // (a) まず上限・下限を考慮せず、月日と次の鳴動が時刻の0.32倍になる前提で解く
-    val unconstrainedRatio = DIGIT_BODY_HEIGHT_RATIO + VERTICAL_SECONDARY_HEIGHT_COEFFICIENT * SECONDARY_FONT_RATIO
+    val unconstrainedRatio = timeHeightCoeff + secondaryHeightCoeff * SECONDARY_FONT_RATIO
     val t0 = availableForContent / unconstrainedRatio
 
     // (b) t0から求めた月日の大きさs0が上限・下限に当たるか確認する
     val s0 = t0 * SECONDARY_FONT_RATIO
     return when {
         // (c) 上限を超える場合は、月日と次の鳴動を上限値で固定して時刻を解き直す
-        s0 > MAX_SECONDARY_FONT_SIZE_SP -> {
-            (availableForContent - MAX_SECONDARY_FONT_SIZE_SP * VERTICAL_SECONDARY_HEIGHT_COEFFICIENT) / DIGIT_BODY_HEIGHT_RATIO
+        s0 > MAX_SECONDARY_FONT_SIZE_DP -> {
+            (availableForContent - MAX_SECONDARY_FONT_SIZE_DP * secondaryHeightCoeff) / timeHeightCoeff
         }
         // (d) 下限を下回る場合は、月日と次の鳴動を下限値で固定して時刻を解き直す
-        s0 < MIN_SECONDARY_FONT_SIZE_SP -> {
-            (availableForContent - MIN_SECONDARY_FONT_SIZE_SP * VERTICAL_SECONDARY_HEIGHT_COEFFICIENT) / DIGIT_BODY_HEIGHT_RATIO
+        s0 < MIN_SECONDARY_FONT_SIZE_DP -> {
+            (availableForContent - MIN_SECONDARY_FONT_SIZE_DP * secondaryHeightCoeff) / timeHeightCoeff
         }
         // 上限にも下限にも当たらなければt0をそのまま使う
         else -> t0
@@ -346,6 +294,16 @@ private fun WidgetBody(
     // アプリ起動用Intentの生成に用いるContextを取得する
     val context = LocalContext.current
 
+    // 端末の文字サイズ設定（fontScale）の取得。
+    // ウィジェットの描画領域は物理的なdpで決まっているため、文字サイズ設定をそのまま反映すると
+    // 利用者が文字を大きく設定している端末では計算よりも大きく描画されて確実に領域からはみ出してしまう。
+    // そのため、すべての寸法・配置計算をdp基準で行い、最後に文字サイズを (解いたdp / fontScale) でspへ変換する。
+    // これにより、端末のfontScaleが何倍であっても、実際に描画される文字の大きさ（sp × fontScale）が解いたdpと完全に一致し、
+    // どんな文字サイズ設定の端末でも確実に領域内に収めることができる。
+    // なお、システムから0以下や極端に大きな異常値が返った場合に備え、0.5〜2.0の安全な範囲へ丸めて使用する。
+    val rawFontScale = context.resources.configuration.fontScale
+    val fontScale = rawFontScale.coerceIn(0.5f, 2.0f)
+
     // ウィジェットが配置された領域の寸法を取得し、外枠余白と有効な描画領域を計算する
     val size = LocalSize.current
     val padding = minOf(4f, size.height.value * 0.035f).dp
@@ -358,46 +316,76 @@ private fun WidgetBody(
     val dateWidthRatio = fontStyle.dateWidthRatio * FONT_WIDTH_SAFETY_FACTOR
     val nextRingWidthRatio = fontStyle.nextRingWidthRatio * FONT_WIDTH_SAFETY_FACTOR
 
-    val showDate: Boolean
-    val showNextRing: Boolean
     val secondaryAvailableWidth: Float
-    val timeFontSize = if (isHorizontal) {
-        // 横に並べる場合：左に時刻、右に月日と次の鳴動を縦へ積む
+    val timeFontSizeDp: Float
+
+    if (isHorizontal) {
+        // 横並びの場合：左に時刻、右に月日と次の鳴動を縦へ積む
         val leftAvailableWidth = w * 0.58f
         val rightAvailableWidth = w - leftAvailableWidth - HORIZONTAL_SPACING_DP
         secondaryAvailableWidth = rightAvailableWidth
-        // 右側は、h >= 40f なら月日と次の鳴動の両方、そうでなければ次の鳴動だけを出す。
-        // 次に鳴る時刻が無い場合は月日だけを出す。
-        showDate = content.nextTime == null || h >= 40f
-        showNextRing = content.nextTime != null
-        // 時刻の大きさは、右の列（月日＋次の鳴動）が常に2行あるものとして解く。
-        // 左側の時刻1行は数字行の見積もり（1.17倍）を用いる
-        val heightLimit = h / DIGIT_LINE_HEIGHT_RATIO
-        val rightHeightLimit = h / ((KANJI_LINE_HEIGHT_RATIO + DIGIT_LINE_HEIGHT_RATIO) * SECONDARY_FONT_RATIO)
+
+        // 時刻の大きさ(dp)を解く。実体基準に基づき、左側の時刻行の全高比率はfontStyle.lineHeightRatioとなる
+        val heightLimit = h / fontStyle.lineHeightRatio
         val leftWidthLimit = leftAvailableWidth * TIME_WIDTH_USAGE / timeWidthRatio
         val rightWidthLimit = rightAvailableWidth / (dateWidthRatio * SECONDARY_FONT_RATIO)
-        val maxTimeFontSize = minOf(heightLimit, rightHeightLimit, leftWidthLimit, rightWidthLimit)
-        maxTimeFontSize.coerceAtLeast(12f).sp
+        val otherLimits = minOf(heightLimit, rightWidthLimit)
+        // 時刻は必ず表示するため、下限12dpでも幅に入らない場合は幅に収まる大きさまで下げる
+        timeFontSizeDp = minOf(otherLimits.coerceAtLeast(MIN_TIME_FONT_SIZE_DP), leftWidthLimit)
     } else {
         secondaryAvailableWidth = w
         // 縦に並べる場合（既定）：上から月日、時刻、次の鳴動の順で並べる
-        showDate = h >= 56f
-        showNextRing = h >= 84f && content.nextTime != null
-        // 実際に出すかどうかにかかわらず、常に3行ぶん（時刻＋月日＋次の鳴動）で必要な高さを計算する。
-        // 上限・下限に当たることを踏まえて時刻の大きさを解き直す
-        val heightLimit = calculateVerticalTimeHeightLimit(h)
+        // 実際に出すかどうかにかかわらず、常に3行ぶん（時刻＋月日＋次の鳴動）で必要な高さを計算する
+        val heightLimit = calculateVerticalTimeHeightLimit(h, fontStyle)
         val widthLimit = w * TIME_WIDTH_USAGE / timeWidthRatio
-        minOf(heightLimit, widthLimit).coerceAtLeast(12f).sp
+        // 時刻は必ず表示するため、下限12dpでも幅に入らない場合は幅に収まる大きさまで下げる
+        timeFontSizeDp = minOf(heightLimit.coerceAtLeast(MIN_TIME_FONT_SIZE_DP), widthLimit)
     }
 
-    // 時刻の大きさに合わせて添える文字（月日・次の鳴動）と時計アイコンの大きさを決定する
-    val secondaryFontSize = secondaryFontSizeSp(
-        timeFontSizeSp = timeFontSize.value,
-        availableWidth = secondaryAvailableWidth,
-        dateWidthRatio = dateWidthRatio,
-        nextRingWidthRatio = nextRingWidthRatio,
-    ).sp
-    val iconSize = nextRingIconSizeDp(secondaryFontSize.value).dp
+    // 月日・次の鳴動の下限必要幅を算出し、下限の大きさでも幅に入らない行は出さない
+    val minDateWidth = MIN_SECONDARY_FONT_SIZE_DP * dateWidthRatio
+    val minNextRingWidth =
+        MIN_SECONDARY_FONT_SIZE_DP * (nextRingWidthRatio + ICON_TO_SECONDARY_RATIO) + NEXT_RING_ICON_SPACING_DP
+    val dateFitsWidth = secondaryAvailableWidth >= minDateWidth
+    val nextRingFitsWidth = secondaryAvailableWidth >= minNextRingWidth
+
+    val showDate: Boolean
+    val showNextRing: Boolean
+    if (isHorizontal) {
+        // 横並びでは、高さ40dp以上なら月日と次の鳴動の両方、未満なら次の鳴動のみを基本としつつ幅判定を適用する
+        showDate = (content.nextTime == null || h >= 40f) && dateFitsWidth
+        showNextRing = (content.nextTime != null) && nextRingFitsWidth
+    } else {
+        // 縦並びでは、高さ56dp以上で月日、84dp以上で次の鳴動を表示可能としつつ幅判定を適用する
+        showDate = (h >= 56f) && dateFitsWidth
+        showNextRing = (h >= 84f && content.nextTime != null) && nextRingFitsWidth
+    }
+
+    // 添える文字（月日・次の鳴動）の大きさをdpで決定する。表示する行の幅制限に収める
+    val baseSecondary =
+        (timeFontSizeDp * SECONDARY_FONT_RATIO).coerceIn(MIN_SECONDARY_FONT_SIZE_DP, MAX_SECONDARY_FONT_SIZE_DP)
+    val widthLimits = mutableListOf<Float>()
+    if (showDate) {
+        widthLimits.add(secondaryAvailableWidth / dateWidthRatio)
+    }
+    if (showNextRing && content.nextTime != null) {
+        widthLimits.add(
+            (secondaryAvailableWidth - NEXT_RING_ICON_SPACING_DP).coerceAtLeast(0f) /
+                (nextRingWidthRatio + ICON_TO_SECONDARY_RATIO),
+        )
+    }
+    val secondaryFontSizeDp = if (widthLimits.isEmpty()) {
+        baseSecondary
+    } else {
+        minOf(baseSecondary, widthLimits.minOrNull() ?: baseSecondary)
+    }
+
+    val iconSizeDp = nextRingIconSizeDp(secondaryFontSizeDp)
+
+    // dpで解いた大きさをfontScaleで割り、Glanceへ渡すspへ変換する
+    val timeFontSize = (timeFontSizeDp / fontScale).sp
+    val secondaryFontSize = (secondaryFontSizeDp / fontScale).sp
+    val iconSize = iconSizeDp.dp
     val secondaryWeight = secondaryFontWeight(fontWeight)
 
     // 第4版の共通契約に基づき、背景色・時刻の色・月日と次の鳴動の色を取得する
@@ -424,6 +412,90 @@ private fun WidgetBody(
     }
     val shadowStyle = baseStyle.copy(timeColor = shadowTimeColor, secondaryColor = SHADOW_COLOR)
 
+    // 実機計測した比率に基づいて各行の実体高と余白（すべてdp）を計算する
+    val dateBodyHeight = fontStyle.dateBodyHeightRatio * secondaryFontSizeDp
+    val dateTopPadding = fontStyle.dateTopPaddingRatio * secondaryFontSizeDp
+    val dateBottomPadding =
+        (fontStyle.lineHeightRatio - fontStyle.dateTopPaddingRatio - fontStyle.dateBodyHeightRatio) * secondaryFontSizeDp
+
+    val timeBodyHeight = fontStyle.timeBodyHeightRatio * timeFontSizeDp
+    val timeTopPadding = fontStyle.timeTopPaddingRatio * timeFontSizeDp
+    val timeBottomPadding =
+        (fontStyle.lineHeightRatio - fontStyle.timeTopPaddingRatio - fontStyle.timeBodyHeightRatio) * timeFontSizeDp
+
+    val nextRingRowBodyHeightRatio = maxOf(fontStyle.nextRingBodyHeightRatio, ICON_TO_SECONDARY_RATIO)
+    val nextRingBodyHeight = nextRingRowBodyHeightRatio * secondaryFontSizeDp
+    val nextRingTopPadding = fontStyle.nextRingTopPaddingRatio * secondaryFontSizeDp
+    val nextRingBottomPadding =
+        (fontStyle.lineHeightRatio - fontStyle.nextRingTopPaddingRatio - nextRingRowBodyHeightRatio) * secondaryFontSizeDp
+
+    var dateTop = 0.dp
+    var timeTop = 0.dp
+    var nextRingTop = 0.dp
+
+    if (isHorizontal) {
+        // 横並び配置：時刻（左列）は1行を実体基準で上下中央に配置
+        val timeRequiredHeight = timeTopPadding + timeBodyHeight + timeBottomPadding
+        timeTop = ((h - timeRequiredHeight) / 2f).coerceAtLeast(0f).dp
+
+        // 右列：実際に描画する行だけを積み、実体間隔10dpで上下中央に配置
+        val rightRows = mutableListOf<RowLayoutInfo>()
+        if (showDate) {
+            rightRows.add(RowLayoutInfo(RowId.DATE, dateBodyHeight, dateTopPadding, dateBottomPadding))
+        }
+        if (showNextRing && content.nextTime != null) {
+            rightRows.add(RowLayoutInfo(RowId.NEXT_RING, nextRingBodyHeight, nextRingTopPadding, nextRingBottomPadding))
+        }
+
+        if (rightRows.isNotEmpty()) {
+            val firstRRow = rightRows.first()
+            val lastRRow = rightRows.last()
+            val totalRBodiesHeight = rightRows.sumOf { it.bodyHeight.toDouble() }.toFloat() +
+                (rightRows.size - 1) * VERTICAL_LINE_SPACING_DP
+            val actualRRequiredHeight = firstRRow.topPadding + totalRBodiesHeight + lastRRow.bottomPadding
+            val rContentTopOffset = (h - actualRRequiredHeight) / 2f
+
+            var currentRBodyTop = rContentTopOffset + firstRRow.topPadding
+            for (row in rightRows) {
+                val top = (currentRBodyTop - row.topPadding).coerceAtLeast(0f).dp
+                when (row.id) {
+                    RowId.DATE -> dateTop = top
+                    RowId.NEXT_RING -> nextRingTop = top
+                    else -> {}
+                }
+                currentRBodyTop += row.bodyHeight + VERTICAL_LINE_SPACING_DP
+            }
+        }
+    } else {
+        // 縦並び配置：実際に描画する行だけを積み、実体間隔10dpで上下中央に配置
+        val verticalRows = mutableListOf<RowLayoutInfo>()
+        if (showDate) {
+            verticalRows.add(RowLayoutInfo(RowId.DATE, dateBodyHeight, dateTopPadding, dateBottomPadding))
+        }
+        verticalRows.add(RowLayoutInfo(RowId.TIME, timeBodyHeight, timeTopPadding, timeBottomPadding))
+        if (showNextRing && content.nextTime != null) {
+            verticalRows.add(RowLayoutInfo(RowId.NEXT_RING, nextRingBodyHeight, nextRingTopPadding, nextRingBottomPadding))
+        }
+
+        val firstVRow = verticalRows.first()
+        val lastVRow = verticalRows.last()
+        val totalVBodiesHeight = verticalRows.sumOf { it.bodyHeight.toDouble() }.toFloat() +
+            (verticalRows.size - 1) * VERTICAL_LINE_SPACING_DP
+        val actualVRequiredHeight = firstVRow.topPadding + totalVBodiesHeight + lastVRow.bottomPadding
+        val vContentTopOffset = (h - actualVRequiredHeight) / 2f
+
+        var currentVBodyTop = vContentTopOffset + firstVRow.topPadding
+        for (row in verticalRows) {
+            val top = (currentVBodyTop - row.topPadding).coerceAtLeast(0f).dp
+            when (row.id) {
+                RowId.DATE -> dateTop = top
+                RowId.TIME -> timeTop = top
+                RowId.NEXT_RING -> nextRingTop = top
+            }
+            currentVBodyTop += row.bodyHeight + VERTICAL_LINE_SPACING_DP
+        }
+    }
+
     // 背景色・角丸・余白・タップ時のアプリ起動アクションを設定した共通修飾子
     val rootModifier = GlanceModifier
         .fillMaxSize()
@@ -444,7 +516,9 @@ private fun WidgetBody(
             isHorizontal = isHorizontal,
             showDate = showDate,
             showNextRing = showNextRing,
-            availableHeight = h,
+            dateTop = dateTop,
+            timeTop = timeTop,
+            nextRingTop = nextRingTop,
             modifier = GlanceModifier.fillMaxSize()
                 .padding(start = SHADOW_OFFSET, top = SHADOW_OFFSET),
         )
@@ -454,7 +528,9 @@ private fun WidgetBody(
             isHorizontal = isHorizontal,
             showDate = showDate,
             showNextRing = showNextRing,
-            availableHeight = h,
+            dateTop = dateTop,
+            timeTop = timeTop,
+            nextRingTop = nextRingTop,
             modifier = GlanceModifier.fillMaxSize()
                 .padding(end = SHADOW_OFFSET, bottom = SHADOW_OFFSET),
         )
@@ -472,7 +548,9 @@ private fun WidgetLayer(
     isHorizontal: Boolean,
     showDate: Boolean,
     showNextRing: Boolean,
-    availableHeight: Float,
+    dateTop: Dp,
+    timeTop: Dp,
+    nextRingTop: Dp,
     modifier: GlanceModifier,
 ) {
     val dateStyle = TextStyle(
@@ -489,54 +567,45 @@ private fun WidgetLayer(
     )
 
     if (isHorizontal) {
-        // 横並び配置：左に時刻、右に月日と次の鳴動を配置し、左右の間をあける
+        // 横並び配置：左に時刻、右に月日と次の鳴動を配置し、実体基準で上下中央に揃える
         Row(
             modifier = modifier,
+            verticalAlignment = Alignment.Top,
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = content.time, style = timeStyle, maxLines = 1)
-            Spacer(GlanceModifier.width(HORIZONTAL_SPACING))
-            Column(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalAlignment = Alignment.Start,
-            ) {
-                if (showDate) {
-                    Text(text = content.date, style = dateStyle, maxLines = 1)
-                }
-                if (showNextRing && content.nextTime != null) {
-                    NextRingRow(time = content.nextTime, style = dateStyle, iconSize = style.iconSize)
+            Text(
+                text = content.time,
+                style = timeStyle,
+                modifier = GlanceModifier.padding(top = timeTop),
+                maxLines = 1,
+            )
+            if (showDate || (showNextRing && content.nextTime != null)) {
+                Spacer(GlanceModifier.width(HORIZONTAL_SPACING))
+                Box(
+                    modifier = GlanceModifier.fillMaxHeight(),
+                    contentAlignment = Alignment.TopStart,
+                ) {
+                    if (showDate) {
+                        Text(
+                            text = content.date,
+                            style = dateStyle,
+                            modifier = GlanceModifier.padding(top = dateTop),
+                            maxLines = 1,
+                        )
+                    }
+                    if (showNextRing && content.nextTime != null) {
+                        NextRingRow(
+                            time = content.nextTime,
+                            style = dateStyle,
+                            iconSize = style.iconSize,
+                            modifier = GlanceModifier.padding(top = nextRingTop),
+                        )
+                    }
                 }
             }
         }
     } else {
-        // 縦並び配置（既定）：文字の実体位置に基づき、各行の上部パディングを計算してBoxへ配置する
-        val s = style.secondaryFontSize.value
-        val t = style.timeFontSize.value
-        val g = VERTICAL_LINE_SPACING_DP
-
-        // 3つの行の実体を間隔gで並べた全体の高さ（月日実体 + 間隔 + 時刻実体 + 間隔 + 次の鳴動行）
-        val totalContentHeight =
-            KANJI_BODY_HEIGHT_RATIO * s + g + DIGIT_BODY_HEIGHT_RATIO * t + g + NEXT_RING_ROW_HEIGHT_RATIO * s
-
-        // 全体を使える高さの中で上下中央に配置するための上端オフセット
-        val verticalOffset = (availableHeight - totalContentHeight) / 2f
-
-        // 各行の実体を置きたい位置
-        val dateBodyTop = verticalOffset
-        val timeBodyTop = dateBodyTop + KANJI_BODY_HEIGHT_RATIO * s + g
-        val nextRingBodyTop = timeBodyTop + DIGIT_BODY_HEIGHT_RATIO * t + g
-
-        // 各行が持つ上の余白
-        val dateTopPadding = KANJI_TOP_PADDING_RATIO * s
-        val timeTopPadding = DIGIT_TOP_PADDING_RATIO * t
-        val nextRingTopPadding = NEXT_RING_ROW_PADDING_RATIO * s
-
-        // 各行の配置位置（実体を置きたい位置 − その行が持つ上の余白）。負の場合は0にする
-        val dateTop = (dateBodyTop - dateTopPadding).coerceAtLeast(0f).dp
-        val timeTop = (timeBodyTop - timeTopPadding).coerceAtLeast(0f).dp
-        val nextRingTop = (nextRingBodyTop - nextRingTopPadding).coerceAtLeast(0f).dp
-
+        // 縦並び配置（既定）：文字の実体位置に基づき、計算済みの各行の上部パディングでBoxへ配置する
         Box(
             modifier = modifier,
             contentAlignment = Alignment.TopCenter,

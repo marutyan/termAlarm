@@ -496,8 +496,13 @@ private fun DynamicColorChoice(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    val color = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        colorResource(android.R.color.system_accent1_100)
+    } else {
+        Color.White
+    }
     ColorChoice(
-        color = colorResource(android.R.color.system_accent1_100),
+        color = color,
         contentDescription = contentDescription,
         selected = selected,
         onClick = onClick,

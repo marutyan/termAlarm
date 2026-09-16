@@ -8,6 +8,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -220,7 +221,7 @@ fun TimerScreen(
                                     items = sortedTimers,
                                     key = { it.id },
                                     span = {
-                                        if (sortedTimers.size == 1) GridItemSpan(2) else GridItemSpan(1)
+                                        if (isSingle) GridItemSpan(2) else GridItemSpan(1)
                                     },
                                 ) { timer ->
                                     val itemModifier = if (reduceMotion) {
@@ -237,7 +238,7 @@ fun TimerScreen(
                                         targetState = isSingle,
                                         transitionSpec = {
                                             if (reduceMotion) {
-                                                EnterTransition.None.togetherWith(ExitTransition.None)
+                                                EnterTransition.None.togetherWith(ExitTransition.None).using(SizeTransform { _, _ -> snap() })
                                             } else if (targetState) {
                                                 // 2件以上から1件へ: 小さいカードから大きいカードへ広がりながらフェード
                                                 (fadeIn(animationSpec = tween(TIMER_ITEM_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing)) +

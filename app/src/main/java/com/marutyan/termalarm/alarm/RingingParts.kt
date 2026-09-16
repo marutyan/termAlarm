@@ -31,7 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -47,7 +46,11 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -260,7 +263,6 @@ internal fun RingingEndTermCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val coroutineScope = rememberCoroutineScope()
     val hapticFeedback = LocalHapticFeedback.current
     val currentOnClick by rememberUpdatedState(onClick)
     val progress = remember { Animatable(0f) }
@@ -297,44 +299,54 @@ internal fun RingingEndTermCard(
                 shape = RoundedCornerShape(16.dp),
             )
             .pointerInput(Unit) {
-                awaitEachGesture {
-                    awaitFirstDown(requireUnconsumed = false)
-                    isPressed = true
-                    var completed = false
+                coroutineScope {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        var completed = false
+                        var holdJob: Job? = null
+                        try {
+                            isPressed = true
+                            // 長押し判定とゲージアニメーションは、rememberCoroutineScopeではなくpointerInput側のスコープ（awaitEachGesture配下）で動かす。
+                            // 画面側のスコープで起動すると、通知シェード引き下げや画面消灯などの操作取り消し時にもジョブが生き残り、誤って終了処理が実行されてしまうため。
+                            holdJob = launch {
+                                progress.snapTo(0f)
+                                val result = progress.animateTo(
+                                    targetValue = 1f,
+                                    animationSpec = tween(
+                                        durationMillis = END_TERM_HOLD_DURATION_MS,
+                                        easing = LinearEasing,
+                                    ),
+                                )
+                                if (result.endReason == AnimationEndReason.Finished) {
+                                    completed = true
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    currentOnClick()
+                                }
+                            }
 
-                    val holdJob = coroutineScope.launch {
-                        progress.snapTo(0f)
-                        val result = progress.animateTo(
-                            targetValue = 1f,
-                            animationSpec = tween(
-                                durationMillis = END_TERM_HOLD_DURATION_MS,
-                                easing = LinearEasing,
-                            ),
-                        )
-                        if (result.endReason == AnimationEndReason.Finished) {
-                            completed = true
-                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                            currentOnClick()
-                        }
-                    }
-
-                    waitForUpOrCancellation()
-                    isPressed = false
-                    holdJob.cancel()
-
-                    if (!completed) {
-                        coroutineScope.launch {
-                            progress.animateTo(
-                                targetValue = 0f,
-                                animationSpec = tween(
-                                    durationMillis = END_TERM_RELEASE_DURATION_MS,
-                                    easing = LinearEasing,
-                                ),
-                            )
-                        }
-                    } else {
-                        coroutineScope.launch {
-                            progress.snapTo(0f)
+                            waitForUpOrCancellation()
+                        } finally {
+                            holdJob?.cancel()
+                            isPressed = false
+                            launch {
+                                withContext(NonCancellable) {
+                                    try {
+                                        if (!completed) {
+                                            progress.animateTo(
+                                                targetValue = 0f,
+                                                animationSpec = tween(
+                                                    durationMillis = END_TERM_RELEASE_DURATION_MS,
+                                                    easing = LinearEasing,
+                                                ),
+                                            )
+                                        } else {
+                                            progress.snapTo(0f)
+                                        }
+                                    } finally {
+                                        progress.snapTo(0f)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
