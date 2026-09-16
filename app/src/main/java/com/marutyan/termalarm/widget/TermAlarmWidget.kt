@@ -58,6 +58,9 @@ private data class WidgetContent(
 // 日付と曜日の書式。「9月16日(水)」のように月日と曜日を並べる
 private val DATE_FORMAT = DateTimeFormatter.ofPattern("M月d日(E)")
 
+// 曜日の書式。月日のDATE_FORMATと同じ言い回し（E）で曜日を取り出し、次の鳴動の先頭に添えるために用いる
+private val DAY_OF_WEEK_FORMAT = DateTimeFormatter.ofPattern("E")
+
 // 時刻の書式。秒はウィジェットでは出さない。1分ごとの更新で足りるため
 private val TIME_FORMAT = DateTimeFormatter.ofPattern("H:mm")
 
@@ -99,10 +102,13 @@ class TermAlarmWidget : GlanceAppWidget() {
             .filter { it.enabled }
             .mapNotNull { schedule -> nextTrigger(schedule, now)?.let { schedule to it } }
             .minByOrNull { it.second }
+        val nextTime = next?.second?.let {
+            "${it.format(DAY_OF_WEEK_FORMAT)} ${it.format(TIME_FORMAT)}"
+        }
         return WidgetContent(
             date = LocalDateTime.now().format(DATE_FORMAT),
             time = LocalDateTime.now().format(TIME_FORMAT),
-            nextTime = next?.second?.format(TIME_FORMAT),
+            nextTime = nextTime,
         )
     }
 }
@@ -129,12 +135,16 @@ fun secondaryFontSizeSp(timeFontSizeSp: Float): Float =
 
 /**
  * 時計アイコンの大きさをdpの数値で求める関数。
- * 添える文字よりほんの少し大きくする決め方を、本体と見本で同じにするために必要となる。
+ * 添える文字に対して0.90倍とする決め方を、本体と見本で同じにするために必要となる。
  */
 fun nextRingIconSizeDp(secondaryFontSizeSp: Float): Float = secondaryFontSizeSp * ICON_TO_SECONDARY_RATIO
 
-// 時計アイコンは添える文字より少しだけ大きくすると、文字と並べたときに釣り合って見える
-private const val ICON_TO_SECONDARY_RATIO = 1.05f
+/**
+ * 時計アイコンの大きさ比率。
+ * 添える文字の大きさに対して0.90倍とし、文字とバランスよくひと回り小さく並べるために用いる。
+ * ウィジェット本体および設定画面の見本でアイコンの寸法を決定する役割を持つ。
+ */
+private const val ICON_TO_SECONDARY_RATIO = 0.90f
 
 /**
  * 数字だけの行（時刻「9:16」や次の鳴動「9:17」）が占める高さの比率。
@@ -150,6 +160,64 @@ private const val DIGIT_LINE_HEIGHT_RATIO = 1.17f
  */
 private const val KANJI_LINE_HEIGHT_RATIO = 1.45f
 
+/**
+ * 月日「9月16日(水)」26spにおける文字実体の高さ比率。
+ * 実機で描画された月日行（全高1.45em）のうち、上下の余白を除いた実際の文字部分の高さ0.864emを実測した値である。
+ * 縦並びで文字の実体を基準に配置位置と必要な高さを解くために必要となり、月日行の実体高さの計算に用いる役割を持つ。
+ */
+private const val KANJI_BODY_HEIGHT_RATIO = 0.864f
+
+/**
+ * 月日「9月16日(水)」26spにおける上の余白比率。
+ * 実機で描画された月日行（全高1.45em）のうち、行上端から文字実体上端までの余白0.4165emを実測した値である。
+ * 縦並びで文字実体を行の上端へ詰めて配置するためのpadding(top)算出と、全体の高さ見積もりに用いる役割を持つ。
+ */
+private const val KANJI_TOP_PADDING_RATIO = 0.4165f
+
+/**
+ * 時刻「9:52」145.4sp（Roboto）における文字実体の高さ比率。
+ * 実機で描画された時刻行（全高1.17em）のうち、上下の余白を除いた実際の数字実体の高さ0.624emを実測した値である。
+ * 縦並びで文字の実体を基準に配置位置と必要な高さを解くために必要となり、時刻の実体高さの計算に用いる役割を持つ。
+ */
+private const val DIGIT_BODY_HEIGHT_RATIO = 0.624f
+
+/**
+ * 時刻「9:52」145.4sp（Roboto）における上の余白比率。
+ * 実機で描画された時刻行（全高1.17em）のうち、行上端から数字実体上端までの余白0.285emを実測した値である。
+ * 縦並びで数字実体を行の上端へ詰めて配置するためのpadding(top)算出に用いる役割を持つ。
+ */
+private const val DIGIT_TOP_PADDING_RATIO = 0.285f
+
+/**
+ * 次の鳴動の行の高さ比率。
+ * アイコン（0.90em）と文字の実体（0.624em）のうち高い方であるアイコンの高さ（0.90em）を採用する。
+ * 縦並びにおいて次の鳴動行の実体としての高さを定義し、全体の高さ見積もりや位置計算に用いる役割を持つ。
+ */
+private const val NEXT_RING_ROW_HEIGHT_RATIO = ICON_TO_SECONDARY_RATIO
+
+/**
+ * 次の鳴動の行の上下余白比率。
+ * 数字行全体の高さ1.17emの中で、高さ0.90emのアイコンと文字を縦中央揃えにした際に生じる上下余白 (1.17 - 0.90) / 2 = 0.135em を表す。
+ * 縦並びにおいて次の鳴動行を配置する際のpadding(top)算出および下部の余白見積もりに用いる役割を持つ。
+ */
+private const val NEXT_RING_ROW_PADDING_RATIO = (DIGIT_LINE_HEIGHT_RATIO - NEXT_RING_ROW_HEIGHT_RATIO) / 2f
+
+/**
+ * 縦並びで添える文字（月日と次の鳴動）が占める高さの総係数。
+ * 月日の上の余白(0.4165) + 月日実体(0.864) + 次の鳴動行(0.90) + 次の鳴動の下の余白(0.135) を合算した値である。
+ * 縦並びの高さ制約式から時刻サイズtを解く際に、添える文字sに掛かる係数として計算を一元化する役割を持つ。
+ */
+private const val VERTICAL_SECONDARY_HEIGHT_COEFFICIENT =
+    KANJI_TOP_PADDING_RATIO + KANJI_BODY_HEIGHT_RATIO + NEXT_RING_ROW_HEIGHT_RATIO + NEXT_RING_ROW_PADDING_RATIO
+
+/**
+ * 縦並びにおける行と行の固定間隔(dp)。
+ * 行間隔を文字サイズに比例させると、文字を大きくした際に間隔まで過大に広がり領域の高さを圧迫してしまうため、
+ * 視覚的な区切りを一定に保ちつつ時刻を最大限大きく描くために10dpの固定値とする。
+ * 縦並びの各行の配置位置決めと高さ計算において間隔の基準となる役割を持つ。
+ */
+private const val VERTICAL_LINE_SPACING_DP = 10f
+
 // 月日と次の鳴動の大きさ。時刻に対するこの割合にする。
 // 添える文字を小さくすると、その行が占める高さも下がって時刻と近づき、
 // 空いたぶんだけ時刻を大きく解けるようになる
@@ -158,10 +226,15 @@ private const val SECONDARY_FONT_RATIO = 0.32f
 // 月日と次の鳴動の大きさの下限と上限(sp)。
 // 縦並びの解き直しと添える文字の大きさ算出で同じ範囲を共有する
 private const val MIN_SECONDARY_FONT_SIZE_SP = 11f
-private const val MAX_SECONDARY_FONT_SIZE_SP = 26f
+private const val MAX_SECONDARY_FONT_SIZE_SP = 30f
 
-// 時刻「12:34」の横幅は、その文字の大きさのおよそ2.75倍になる
-private const val TIME_WIDTH_RATIO = 2.75f
+/**
+ * 時刻表示の横幅比率（文字サイズに対する比率）。
+ * 実測では最も幅をとる「12:34」（数字4文字＋コロン）でも約2.06em（数字約0.45em×4＋コロン約0.26em）であったが、
+ * 端末の書体差や数字の組み合わせによるぶれを安全側に見込んで2.25fとする。
+ * 使える幅から時刻の大きさ上限を求める役割を持つ。
+ */
+private const val TIME_WIDTH_RATIO = 2.25f
 
 // 月日「9月16日(水)」の横幅比（全角3文字＋半角5文字ぶん）。文字の大きさのおよそ5.2倍を使う。
 // 横並びのときに右の列へ月日が収まる上限サイズを解くために必要となる。
@@ -200,29 +273,27 @@ private data class WidgetLayerStyle(
 
 /**
  * 縦並び配置において、利用可能な高さから時刻文字の大きさの上限(sp)を算出する関数。
- * 月日と次の鳴動の文字サイズが上限や下限に当たった場合、固定比率(0.38倍)の前提が崩れて
- * ウィジェット内に高さの余りや不足が生じるため、上限値または下限値で固定した上で時刻の大きさを解き直す。
+ * 文字の実体の位置で置くレイアウトに合わせ、使える高さ ≧ 月日の上の余白 + 0.864s + G + 0.624t + G + 0.90s + 次の鳴動の下の余白 を満たすtを求める。
+ * 月日と次の鳴動の文字サイズsが上限や下限に当たった場合は、上限値または下限値で固定した上で時刻の大きさを解き直す。
  * 縦並び表示で描画領域の高さを最大限に活かし、文字がはみ出すことなく時刻をできる限り大きく表示する役割を持つ。
  */
 private fun calculateVerticalTimeHeightLimit(availableHeight: Float): Float {
-    // (a) まず上限・下限を考慮せず、月日と次の鳴動が時刻の0.38倍になる前提で解く
-    val unconstrainedRatio = DIGIT_LINE_HEIGHT_RATIO +
-        SECONDARY_FONT_RATIO * KANJI_LINE_HEIGHT_RATIO +
-        SECONDARY_FONT_RATIO * DIGIT_LINE_HEIGHT_RATIO
-    val t0 = availableHeight / unconstrainedRatio
+    val availableForContent = availableHeight - 2f * VERTICAL_LINE_SPACING_DP
+
+    // (a) まず上限・下限を考慮せず、月日と次の鳴動が時刻の0.32倍になる前提で解く
+    val unconstrainedRatio = DIGIT_BODY_HEIGHT_RATIO + VERTICAL_SECONDARY_HEIGHT_COEFFICIENT * SECONDARY_FONT_RATIO
+    val t0 = availableForContent / unconstrainedRatio
 
     // (b) t0から求めた月日の大きさs0が上限・下限に当たるか確認する
     val s0 = t0 * SECONDARY_FONT_RATIO
     return when {
         // (c) 上限を超える場合は、月日と次の鳴動を上限値で固定して時刻を解き直す
         s0 > MAX_SECONDARY_FONT_SIZE_SP -> {
-            val s = MAX_SECONDARY_FONT_SIZE_SP
-            (availableHeight - s * KANJI_LINE_HEIGHT_RATIO - s * DIGIT_LINE_HEIGHT_RATIO) / DIGIT_LINE_HEIGHT_RATIO
+            (availableForContent - MAX_SECONDARY_FONT_SIZE_SP * VERTICAL_SECONDARY_HEIGHT_COEFFICIENT) / DIGIT_BODY_HEIGHT_RATIO
         }
         // (d) 下限を下回る場合は、月日と次の鳴動を下限値で固定して時刻を解き直す
         s0 < MIN_SECONDARY_FONT_SIZE_SP -> {
-            val s = MIN_SECONDARY_FONT_SIZE_SP
-            (availableHeight - s * KANJI_LINE_HEIGHT_RATIO - s * DIGIT_LINE_HEIGHT_RATIO) / DIGIT_LINE_HEIGHT_RATIO
+            (availableForContent - MIN_SECONDARY_FONT_SIZE_SP * VERTICAL_SECONDARY_HEIGHT_COEFFICIENT) / DIGIT_BODY_HEIGHT_RATIO
         }
         // 上限にも下限にも当たらなければt0をそのまま使う
         else -> t0
@@ -269,7 +340,7 @@ private fun WidgetBody(
         val leftWidthLimit = leftAvailableWidth / TIME_WIDTH_RATIO
         val rightWidthLimit = rightAvailableWidth / (DATE_WIDTH_RATIO * SECONDARY_FONT_RATIO)
         val maxTimeFontSize = minOf(heightLimit, rightHeightLimit, leftWidthLimit, rightWidthLimit)
-        maxTimeFontSize.coerceIn(12f, 160f).sp
+        maxTimeFontSize.coerceAtLeast(12f).sp
     } else {
         // 縦に並べる場合（既定）：上から月日、時刻、次の鳴動の順で並べる
         showDate = h >= 56f
@@ -278,7 +349,7 @@ private fun WidgetBody(
         // 上限・下限に当たることを踏まえて時刻の大きさを解き直す
         val heightLimit = calculateVerticalTimeHeightLimit(h)
         val widthLimit = w / TIME_WIDTH_RATIO
-        minOf(heightLimit, widthLimit).coerceIn(12f, 160f).sp
+        minOf(heightLimit, widthLimit).coerceAtLeast(12f).sp
     }
 
     // 時刻の大きさに合わせて添える文字（月日・次の鳴動）と時計アイコンの大きさを決定する
@@ -330,6 +401,7 @@ private fun WidgetBody(
             isHorizontal = isHorizontal,
             showDate = showDate,
             showNextRing = showNextRing,
+            availableHeight = h,
             modifier = GlanceModifier.fillMaxSize()
                 .padding(start = SHADOW_OFFSET, top = SHADOW_OFFSET),
         )
@@ -339,6 +411,7 @@ private fun WidgetBody(
             isHorizontal = isHorizontal,
             showDate = showDate,
             showNextRing = showNextRing,
+            availableHeight = h,
             modifier = GlanceModifier.fillMaxSize()
                 .padding(end = SHADOW_OFFSET, bottom = SHADOW_OFFSET),
         )
@@ -356,6 +429,7 @@ private fun WidgetLayer(
     isHorizontal: Boolean,
     showDate: Boolean,
     showNextRing: Boolean,
+    availableHeight: Float,
     modifier: GlanceModifier,
 ) {
     val dateStyle = TextStyle(
@@ -393,18 +467,56 @@ private fun WidgetLayer(
             }
         }
     } else {
-        // 縦並び配置（既定）：上から月日、時刻、次の鳴動の順で並べ、余白を詰める
-        Column(
+        // 縦並び配置（既定）：文字の実体位置に基づき、各行の上部パディングを計算してBoxへ配置する
+        val s = style.secondaryFontSize.value
+        val t = style.timeFontSize.value
+        val g = VERTICAL_LINE_SPACING_DP
+
+        // 3つの行の実体を間隔gで並べた全体の高さ（月日実体 + 間隔 + 時刻実体 + 間隔 + 次の鳴動行）
+        val totalContentHeight =
+            KANJI_BODY_HEIGHT_RATIO * s + g + DIGIT_BODY_HEIGHT_RATIO * t + g + NEXT_RING_ROW_HEIGHT_RATIO * s
+
+        // 全体を使える高さの中で上下中央に配置するための上端オフセット
+        val verticalOffset = (availableHeight - totalContentHeight) / 2f
+
+        // 各行の実体を置きたい位置
+        val dateBodyTop = verticalOffset
+        val timeBodyTop = dateBodyTop + KANJI_BODY_HEIGHT_RATIO * s + g
+        val nextRingBodyTop = timeBodyTop + DIGIT_BODY_HEIGHT_RATIO * t + g
+
+        // 各行が持つ上の余白
+        val dateTopPadding = KANJI_TOP_PADDING_RATIO * s
+        val timeTopPadding = DIGIT_TOP_PADDING_RATIO * t
+        val nextRingTopPadding = NEXT_RING_ROW_PADDING_RATIO * s
+
+        // 各行の配置位置（実体を置きたい位置 − その行が持つ上の余白）。負の場合は0にする
+        val dateTop = (dateBodyTop - dateTopPadding).coerceAtLeast(0f).dp
+        val timeTop = (timeBodyTop - timeTopPadding).coerceAtLeast(0f).dp
+        val nextRingTop = (nextRingBodyTop - nextRingTopPadding).coerceAtLeast(0f).dp
+
+        Box(
             modifier = modifier,
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalAlignment = Alignment.CenterVertically,
+            contentAlignment = Alignment.TopCenter,
         ) {
             if (showDate) {
-                Text(text = content.date, style = dateStyle)
+                Text(
+                    text = content.date,
+                    style = dateStyle,
+                    modifier = GlanceModifier.padding(top = dateTop),
+                )
             }
-            Text(text = content.time, style = timeStyle)
+            Text(
+                text = content.time,
+                style = timeStyle,
+                modifier = GlanceModifier.padding(top = timeTop),
+            )
             if (showNextRing && content.nextTime != null) {
-                NextRingRow(time = content.nextTime, style = dateStyle, iconSize = style.iconSize)
+                NextRingRow(
+                    time = content.nextTime,
+                    style = dateStyle,
+                    iconSize = style.iconSize,
+                    modifier = GlanceModifier.padding(top = nextRingTop),
+                )
             }
         }
     }
@@ -419,8 +531,12 @@ private fun NextRingRow(
     time: String,
     style: TextStyle,
     iconSize: Dp,
+    modifier: GlanceModifier = GlanceModifier,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Image(
             provider = ImageProvider(R.drawable.ic_widget_alarm),
             contentDescription = null,
