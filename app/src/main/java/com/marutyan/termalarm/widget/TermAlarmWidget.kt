@@ -71,8 +71,8 @@ private val DATE_FORMAT = DateTimeFormatter.ofPattern("M月d日(E)", Locale.JAPA
 private val DAY_OF_WEEK_FORMAT = DateTimeFormatter.ofPattern("E", Locale.JAPANESE)
 
 // 時刻の書式。秒はウィジェットでは出さない。1分ごとの更新で足りるため。
-// なお、TextClockレイアウト（widget_time_clock_*.xml）の format12Hour / format24Hour にも同じ "H:mm" を指定しているため、
-// 時刻書式を変更する場合はKotlin側とレイアウトXMLの両方を修正すること。
+// なお、strings.xml の widget_time_clock_format にも同じ "H:mm" があるため、
+// 時刻書式を変更する場合はKotlin側とstrings.xmlの両方を修正すること。
 private val TIME_FORMAT = DateTimeFormatter.ofPattern("H:mm")
 
 /**

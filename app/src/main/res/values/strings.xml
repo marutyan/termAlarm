@@ -328,6 +328,13 @@
     <string name="widget_preview_time">7:30</string>
     <string name="widget_preview_next_time">7:35</string>
 
+    <!--
+        ウィジェットのTextClock（widget_time_clock_*.xml）で用いる時刻書式（24時間・先頭ゼロなし）。
+        Kotlin側のTIME_FORMAT（java.timeの書式）と同じ表示になる必要があるが、
+        書式の方言が異なる（java.timeとandroid.text.format.DateFormat）ためKotlin側と統合はできない。
+    -->
+    <string name="widget_time_clock_format">H:mm</string>
+
     <!-- タイマーの設定。アラームとは別の音を選べる -->
     <string name="settings_section_timer">タイマー</string>
     <string name="settings_timer_sound_item_title">音</string>
