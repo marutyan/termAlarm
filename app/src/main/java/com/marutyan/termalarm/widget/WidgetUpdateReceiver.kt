@@ -11,8 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
- * ウィジェットの定期更新やシステムイベントを受信するブロードキャストレシーバー。
- * 1分ごとのタイマー、鳴動停止、端末再起動、時刻変更、アプリ更新の契機で次回更新を予約しウィジェットを再描画するために用いる。
+ * ウィジェットの再描画やシステムイベントを受信するブロードキャストレシーバー。
+ * 日付切り替わりタイマー（0:00）、鳴動停止、端末再起動、時刻変更、アプリ更新の契機で次回更新を予約しウィジェットを再描画するために用いる。
  */
 class WidgetUpdateReceiver : BroadcastReceiver() {
 
@@ -27,18 +27,20 @@ class WidgetUpdateReceiver : BroadcastReceiver() {
                 val glanceIds = glanceManager.getGlanceIds(TermAlarmWidget::class.java)
 
                 if (glanceIds.isEmpty()) {
-                    WidgetUpdateScheduler.cancelTick(appContext)
+                    WidgetUpdateScheduler.cancelRefresh(appContext)
                     return@launch
                 }
 
                 when (action) {
+                    ACTION_WIDGET_REFRESH,
+                    // 以前の版の旧Action。取り消し処理の前に発火した1回分でも月日が古いまま残らないよう、新Actionと同様に描き直して次回を予約する
                     ACTION_WIDGET_TICK,
                     RingingService.ACTION_RINGING_FINISHED,
                     Intent.ACTION_BOOT_COMPLETED,
                     Intent.ACTION_TIME_CHANGED,
                     Intent.ACTION_TIMEZONE_CHANGED,
                     Intent.ACTION_MY_PACKAGE_REPLACED -> {
-                        WidgetUpdateScheduler.scheduleNextTick(appContext)
+                        WidgetUpdateScheduler.scheduleNextRefresh(appContext)
                         runCatching { TermAlarmWidget().updateAll(appContext) }
                     }
                 }

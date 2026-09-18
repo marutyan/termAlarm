@@ -127,7 +127,7 @@ class WidgetConfigActivity : ComponentActivity() {
                 prefs[WIDGET_FONT_WEIGHT_KEY] = fontWeight.name
             }
             TermAlarmWidget().update(this@WidgetConfigActivity, glanceId)
-            WidgetUpdateScheduler.scheduleNextTick(this@WidgetConfigActivity)
+            WidgetUpdateScheduler.scheduleNextRefresh(this@WidgetConfigActivity)
             setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId))
             finish()
         }

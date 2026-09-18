@@ -70,7 +70,7 @@ private val DATE_FORMAT = DateTimeFormatter.ofPattern("M月d日(E)", Locale.JAPA
 // 端末言語によらず日本語の曜日表記で統一するため、明示的に日本語Localeを指定する。
 private val DAY_OF_WEEK_FORMAT = DateTimeFormatter.ofPattern("E", Locale.JAPANESE)
 
-// 時刻の書式。秒はウィジェットでは出さない。1分ごとの更新で足りるため。
+// 時刻の書式。次の鳴動の表示に使う。鳴動は分単位で設定されるため秒は出さない。
 // なお、strings.xml の widget_time_clock_format にも同じ "H:mm" があるため、
 // 時刻書式を変更する場合はKotlin側とstrings.xmlの両方を修正すること。
 private val TIME_FORMAT = DateTimeFormatter.ofPattern("H:mm")
@@ -104,16 +104,11 @@ class TermAlarmWidget : GlanceAppWidget() {
         }
     }
 
-    // 次に鳴るタームを選び、画面へ出す形へ整える。時刻の計算はdomainの関数へ任せる
+    // 次に鳴るタームを選び、画面へ出す形へ整える。時刻の計算は共通のnextWidgetAlarmTriggerへ任せる
     private suspend fun loadContent(context: Context): WidgetContent {
         val now = ZonedDateTime.now()
-        val schedules = runCatching { Repositories.alarm(context).observeAll().first() }
-            .getOrDefault(emptyList())
-        val next = schedules
-            .filter { it.enabled }
-            .mapNotNull { schedule -> nextTrigger(schedule, now)?.let { schedule to it } }
-            .minByOrNull { it.second }
-        val nextTime = next?.second?.let {
+        val next = nextWidgetAlarmTrigger(context, now)
+        val nextTime = next?.let {
             "${it.format(TIME_FORMAT)}(${it.format(DAY_OF_WEEK_FORMAT)})"
         }
         return WidgetContent(
@@ -121,6 +116,20 @@ class TermAlarmWidget : GlanceAppWidget() {
             nextTime = nextTime,
         )
     }
+}
+
+/**
+ * 有効なアラーム設定の中から、指定日時以降で最も早く鳴る予定日時を求める関数。
+ * ウィジェットの表示内容決定（loadContent）と次回の更新予約（WidgetUpdateScheduler）で
+ * まったく同じ鳴動判定を共有し、表示と予約の不整合を防ぐ役割を持つ。
+ */
+internal suspend fun nextWidgetAlarmTrigger(context: Context, now: ZonedDateTime): ZonedDateTime? {
+    val schedules = runCatching { Repositories.alarm(context).observeAll().first() }
+        .getOrDefault(emptyList())
+    return schedules
+        .filter { it.enabled }
+        .mapNotNull { nextTrigger(it, now) }
+        .minOrNull()
 }
 
 /**
