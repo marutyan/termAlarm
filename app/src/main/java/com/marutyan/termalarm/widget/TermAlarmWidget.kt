@@ -2,10 +2,14 @@ package com.marutyan.termalarm.widget
 
 import android.content.Context
 import android.content.Intent
+import android.util.TypedValue
+import android.widget.RemoteViews
+import androidx.annotation.LayoutRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
@@ -18,6 +22,7 @@ import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
@@ -50,10 +55,10 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.flow.first
 
-// ウィジェットに出す内容。次の鳴動の有無で表示が変わるため、画面側で組み立てずここへまとめる
+// ウィジェットに出す内容。次の鳴動の有無で表示が変わるため、画面側で組み立てずここへまとめる。
+// 時刻はTextClockがシステム時計から直接描画するため、ここには保持しない。
 private data class WidgetContent(
     val date: String,
-    val time: String,
     val nextTime: String?,
 )
 
@@ -65,7 +70,9 @@ private val DATE_FORMAT = DateTimeFormatter.ofPattern("M月d日(E)", Locale.JAPA
 // 端末言語によらず日本語の曜日表記で統一するため、明示的に日本語Localeを指定する。
 private val DAY_OF_WEEK_FORMAT = DateTimeFormatter.ofPattern("E", Locale.JAPANESE)
 
-// 時刻の書式。秒はウィジェットでは出さない。1分ごとの更新で足りるため
+// 時刻の書式。秒はウィジェットでは出さない。1分ごとの更新で足りるため。
+// なお、TextClockレイアウト（widget_time_clock_*.xml）の format12Hour / format24Hour にも同じ "H:mm" を指定しているため、
+// 時刻書式を変更する場合はKotlin側とレイアウトXMLの両方を修正すること。
 private val TIME_FORMAT = DateTimeFormatter.ofPattern("H:mm")
 
 /**
@@ -111,7 +118,6 @@ class TermAlarmWidget : GlanceAppWidget() {
         }
         return WidgetContent(
             date = LocalDateTime.now().format(DATE_FORMAT),
-            time = LocalDateTime.now().format(TIME_FORMAT),
             nextTime = nextTime,
         )
     }
@@ -218,7 +224,7 @@ private val SHADOW_COLOR = ColorProvider(Color.Black.copy(alpha = WIDGET_SHADOW_
  * 引数の数を増やさずに両方の層へ同じ寸法を渡す役割を持つ。
  */
 private data class WidgetLayerStyle(
-    val timeFontSize: TextUnit,
+    val timeFontSizeDp: Float,
     val secondaryFontSize: TextUnit,
     val iconSize: Dp,
     val iconSpacing: Dp,
@@ -228,6 +234,54 @@ private data class WidgetLayerStyle(
     val timeColor: ColorProvider,
     val secondaryColor: ColorProvider,
 )
+
+/**
+ * 書体と太さの組み合わせに対応するTextClockのレイアウトIDを返す関数。
+ * RemoteViewsでは実行時にフォントや太さを動的に切り替えられないため、あらかじめ定義されたXMLリソースから適切なものを選択する。
+ * enumが追加された場合にコンパイルエラーで気付けるよう、whenではelseを使用せず全パターンを網羅する。
+ */
+@LayoutRes
+private fun timeClockLayoutId(
+    fontStyle: WidgetFontStyle,
+    fontWeight: WidgetFontWeight,
+): Int = when (fontStyle) {
+    WidgetFontStyle.STANDARD -> when (fontWeight) {
+        WidgetFontWeight.NORMAL -> R.layout.widget_time_clock_sans_400
+        WidgetFontWeight.MEDIUM -> R.layout.widget_time_clock_sans_500
+        WidgetFontWeight.BOLD -> R.layout.widget_time_clock_sans_700
+    }
+    WidgetFontStyle.MONOSPACE -> when (fontWeight) {
+        WidgetFontWeight.NORMAL -> R.layout.widget_time_clock_mono_400
+        WidgetFontWeight.MEDIUM -> R.layout.widget_time_clock_mono_500
+        WidgetFontWeight.BOLD -> R.layout.widget_time_clock_mono_700
+    }
+    WidgetFontStyle.SERIF -> when (fontWeight) {
+        WidgetFontWeight.NORMAL -> R.layout.widget_time_clock_serif_400
+        WidgetFontWeight.MEDIUM -> R.layout.widget_time_clock_serif_500
+        WidgetFontWeight.BOLD -> R.layout.widget_time_clock_serif_700
+    }
+}
+
+/**
+ * 時刻表示用のRemoteViewsを生成する関数。
+ * GlanceのTextではなくAndroid標準のTextClockを用いることで、ランチャーが毎分自動で時刻を描き直し、
+ * アプリがDoze等で停止していても時刻表示が遅れないようにする役割を持つ。
+ * 書体と太さに対応するレイアウトXMLを選択し、解いた文字サイズ(dp)と指定色(ARGB)を設定する。
+ */
+private fun createTimeClockRemoteViews(
+    context: Context,
+    fontStyle: WidgetFontStyle,
+    fontWeight: WidgetFontWeight,
+    fontSizeDp: Float,
+    colorProvider: ColorProvider,
+): RemoteViews {
+    val layoutId = timeClockLayoutId(fontStyle, fontWeight)
+    val colorArgb = colorProvider.getColor(context).toArgb()
+    return RemoteViews(context.packageName, layoutId).apply {
+        setTextViewTextSize(R.id.widget_time_clock, TypedValue.COMPLEX_UNIT_DIP, fontSizeDp)
+        setTextColor(R.id.widget_time_clock, colorArgb)
+    }
+}
 
 /**
  * ウィジェットで表示する各行の識別子。
@@ -385,8 +439,8 @@ private fun WidgetBody(
     val iconSizeDp = nextRingIconSizeDp(secondaryFontSizeDp)
     val iconSpacingDp = secondaryFontSizeDp * NEXT_RING_ICON_SPACING_RATIO
 
-    // dpで解いた大きさをfontScaleで割り、Glanceへ渡すspへ変換する
-    val timeFontSize = (timeFontSizeDp / fontScale).sp
+    // 添える文字（月日・次の鳴動）はdpで解いた大きさをfontScaleで割り、Glanceへ渡すspへ変換する。
+    // 時刻はRemoteViews.setTextViewTextSizeでdpを直接指定するためfontScaleによる変換は行わない
     val secondaryFontSize = (secondaryFontSizeDp / fontScale).sp
     val iconSize = iconSizeDp.dp
     val iconSpacing = iconSpacingDp.dp
@@ -399,7 +453,7 @@ private fun WidgetBody(
     val secondaryColor = widgetSecondaryColorProvider()
 
     val baseStyle = WidgetLayerStyle(
-        timeFontSize = timeFontSize,
+        timeFontSizeDp = timeFontSizeDp,
         secondaryFontSize = secondaryFontSize,
         iconSize = iconSize,
         iconSpacing = iconSpacing,
@@ -558,17 +612,21 @@ private fun WidgetLayer(
     nextRingTop: Dp,
     modifier: GlanceModifier,
 ) {
+    val context = LocalContext.current
     val dateStyle = TextStyle(
         color = style.secondaryColor,
         fontSize = style.secondaryFontSize,
         fontFamily = style.fontStyle.family,
         fontWeight = style.secondaryWeight.glanceWeight,
     )
-    val timeStyle = TextStyle(
-        color = style.timeColor,
-        fontSize = style.timeFontSize,
-        fontFamily = style.fontStyle.family,
-        fontWeight = style.timeWeight.glanceWeight,
+    // 時刻の行はGlanceのTextではなくAndroid標準のTextClock（RemoteViews）で描画する。
+    // ランチャー側が毎分自動で描き直すため、アプリのプロセスがDoze等で寝ていても時刻が遅れなくなる
+    val timeRemoteViews = createTimeClockRemoteViews(
+        context = context,
+        fontStyle = style.fontStyle,
+        fontWeight = style.timeWeight,
+        fontSizeDp = style.timeFontSizeDp,
+        colorProvider = style.timeColor,
     )
 
     if (isHorizontal) {
@@ -578,11 +636,9 @@ private fun WidgetLayer(
             verticalAlignment = Alignment.Top,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                text = content.time,
-                style = timeStyle,
+            AndroidRemoteViews(
+                remoteViews = timeRemoteViews,
                 modifier = GlanceModifier.padding(top = timeTop),
-                maxLines = 1,
             )
             if (showDate || (showNextRing && content.nextTime != null)) {
                 Spacer(GlanceModifier.width(HORIZONTAL_SPACING))
@@ -624,11 +680,9 @@ private fun WidgetLayer(
                     maxLines = 1,
                 )
             }
-            Text(
-                text = content.time,
-                style = timeStyle,
+            AndroidRemoteViews(
+                remoteViews = timeRemoteViews,
                 modifier = GlanceModifier.padding(top = timeTop),
-                maxLines = 1,
             )
             if (showNextRing && content.nextTime != null) {
                 NextRingRow(
