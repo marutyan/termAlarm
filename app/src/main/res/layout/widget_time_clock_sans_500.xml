@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ウィジェットの時刻表示用TextClockレイアウト（標準書体・中間の太さ 500）。
+    GlanceのTextではなくAndroid標準のTextClockを用いることで、ランチャーが毎分自動で
+    時刻を描き直し、アプリのプロセスが起動していなくても表示時刻が遅れないようにする役割を持つ。
+    RemoteViewsからは動的に書体や太さを変更できないため、組み合わせごとにXMLを分割して定義する。
+
+    時刻書式（format12Hour / format24Hour）は「H:mm」（24時間・先頭ゼロなし）で統一しており、
+    strings.xmlのwidget_time_clock_formatを参照している。
+
+    太さについて:
+    GlanceのMediumは実装上boldで描かれており、月日と次の鳴動は今もGlanceで描くため、
+    時刻もそれに合わせてboldにしないと太さが逆転する。「Mediumが中間の太さになっていない」のは
+    元からの問題で、別の変更で扱う。
+    AOSPの実装（TextView.javaのresolveStyleAndSetTypeface）では、textFontWeightが指定されている場合
+    textStyleのboldは無視されてtextFontWeightが優先されるため、textFontWeight="500"のままでは
+    API 28以上でboldにならず太さが逆転してしまう。そのため、textFontWeightを700に変えて
+    *_700.xmlと同じ太字（textFontWeight="700"かつtextStyle="bold"）にしている。
+-->
+<TextClock xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_time_clock"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:format12Hour="@string/widget_time_clock_format"
+    android:format24Hour="@string/widget_time_clock_format"
+    android:ellipsize="end"
+    android:maxLines="1"
+    android:fontFamily="sans-serif"
+    android:textFontWeight="700"
+    android:textStyle="bold" />

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ウィジェットの時刻表示用TextClockレイアウト（明朝書体・標準の太さ 400）。
+    GlanceのTextではなくAndroid標準のTextClockを用いることで、ランチャーが毎分自動で
+    時刻を描き直し、アプリのプロセスが起動していなくても表示時刻が遅れないようにする役割を持つ。
+    RemoteViewsからは動的に書体や太さを変更できないため、組み合わせごとにXMLを分割して定義する。
+
+    時刻書式（format12Hour / format24Hour）は「H:mm」（24時間・先頭ゼロなし）で統一しており、
+    strings.xmlのwidget_time_clock_formatを参照している。
+    API 28未満（minSdk 26/27）ではtextFontWeightが効かないため、Medium(500)はNormal(400)と同じ見え方になる。
+-->
+<TextClock xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_time_clock"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:format12Hour="@string/widget_time_clock_format"
+    android:format24Hour="@string/widget_time_clock_format"
+    android:ellipsize="end"
+    android:maxLines="1"
+    android:fontFamily="serif"
+    android:textFontWeight="400" />
