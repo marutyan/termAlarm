@@ -39,7 +39,7 @@ object WidgetUpdateManager {
                 val glanceManager = GlanceAppWidgetManager(appContext)
                 val glanceIds = glanceManager.getGlanceIds(TermAlarmWidget::class.java)
                 if (glanceIds.isNotEmpty()) {
-                    WidgetUpdateScheduler.scheduleNextTick(appContext)
+                    WidgetUpdateScheduler.scheduleNextRefresh(appContext)
                     runCatching { TermAlarmWidget().updateAll(appContext) }
                 }
             }

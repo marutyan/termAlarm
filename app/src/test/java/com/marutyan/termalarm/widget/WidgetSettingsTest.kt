@@ -6,7 +6,10 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.preferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.marutyan.termalarm.ui.theme.DynamicThemePreviewColors
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 /**
@@ -91,13 +94,115 @@ class WidgetSettingsTest {
     }
 
     @Test
-    fun `次の分の頭へ更新を予約する`() {
-        // 00:00:01.000 の場合、次の分の頭は 00:01:00.000 (60,000ms)
-        assertEquals(60_000L, WidgetUpdateScheduler.nextMinuteEpochMillis(1_000L))
-        // 00:00:59.999 でも同じ
-        assertEquals(60_000L, WidgetUpdateScheduler.nextMinuteEpochMillis(59_999L))
-        // ちょうど分の頭のときは、次の分へ送る
-        assertEquals(120_000L, WidgetUpdateScheduler.nextMinuteEpochMillis(60_000L))
+    fun `ふつうの日は翌日の0時00分を返す`() {
+        // 2026-09-19 04:31 (Asia/Tokyo) → 2026-09-20 00:00 (Asia/Tokyo)
+        val zone = ZoneId.of("Asia/Tokyo")
+        val now = ZonedDateTime.of(2026, 9, 19, 4, 31, 0, 0, zone)
+        val expected = ZonedDateTime.of(2026, 9, 20, 0, 0, 0, 0, zone).toInstant().toEpochMilli()
+
+        val actual = WidgetUpdateScheduler.nextMidnightEpochMillis(now)
+
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `0時00分ちょうどのときは翌日の0時00分を返す`() {
+        // 2026-09-20 00:00:00.000 (Asia/Tokyo) → 2026-09-21 00:00 (Asia/Tokyo)
+        val zone = ZoneId.of("Asia/Tokyo")
+        val now = ZonedDateTime.of(2026, 9, 20, 0, 0, 0, 0, zone)
+        val expected = ZonedDateTime.of(2026, 9, 21, 0, 0, 0, 0, zone).toInstant().toEpochMilli()
+
+        val actual = WidgetUpdateScheduler.nextMidnightEpochMillis(now)
+
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `23時59分59秒999ミリ秒のときは翌日の0時00分を返す`() {
+        // 2026-09-20 23:59:59.999 (Asia/Tokyo) → 2026-09-21 00:00 (Asia/Tokyo)
+        val zone = ZoneId.of("Asia/Tokyo")
+        val now = ZonedDateTime.of(2026, 9, 20, 23, 59, 59, 999_000_000, zone)
+        val expected = ZonedDateTime.of(2026, 9, 21, 0, 0, 0, 0, zone).toInstant().toEpochMilli()
+
+        val actual = WidgetUpdateScheduler.nextMidnightEpochMillis(now)
+
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `夏時間の切り替え日を含む地域で翌日0時までの時間が24時間でないことを確かめる`() {
+        // America/New_York の 2026-11-01 は夏時間終了日（秋の切り替えで1日が25時間になる日）
+        val zone = ZoneId.of("America/New_York")
+        val startOfDay = ZonedDateTime.of(2026, 11, 1, 0, 0, 0, 0, zone)
+        val expectedMidnight = ZonedDateTime.of(2026, 11, 2, 0, 0, 0, 0, zone).toInstant().toEpochMilli()
+
+        val actualMidnight = WidgetUpdateScheduler.nextMidnightEpochMillis(startOfDay)
+
+        assertEquals(expectedMidnight, actualMidnight)
+
+        // 2026-11-01 0:00 から 2026-11-02 0:00 までの実時間が24時間（86,400,000ミリ秒）ではないことを確かめる
+        val durationMillis = actualMidnight - startOfDay.toInstant().toEpochMilli()
+        val twentyFourHoursMillis = 24L * 60L * 60L * 1000L
+        val twentyFiveHoursMillis = 25L * 60L * 60L * 1000L
+
+        assertNotEquals(twentyFourHoursMillis, durationMillis)
+        assertEquals(twentyFiveHoursMillis, durationMillis)
+    }
+
+    @Test
+    fun `夏時間開始日（春の切り替え）で翌日0時までの間隔が23時間であることを確かめる`() {
+        // America/New_York の 2026-03-08 00:00 → 2026-03-09 00:00 で、間隔が 23 時間（1380 分）
+        val zone = ZoneId.of("America/New_York")
+        val now = ZonedDateTime.of(2026, 3, 8, 0, 0, 0, 0, zone)
+        val expectedMidnight = ZonedDateTime.of(2026, 3, 9, 0, 0, 0, 0, zone).toInstant().toEpochMilli()
+
+        val actualMidnight = WidgetUpdateScheduler.nextMidnightEpochMillis(now)
+
+        assertEquals(expectedMidnight, actualMidnight)
+
+        val durationMillis = actualMidnight - now.toInstant().toEpochMilli()
+        val expectedTwentyThreeHoursMillis = 82_800_000L // 23時間 = 1380分 = 82,800,000ミリ秒
+        assertEquals(expectedTwentyThreeHoursMillis, durationMillis)
+    }
+
+    @Test
+    fun `夏時間開始により0時が存在しない地域で開始時刻の1時00分を返すことを確かめる`() {
+        // America/Santiago の 2026-09-05 23:30 → 2026-09-06 01:00（この地域ではこの日の 0:00 が存在しない）
+        val zone = ZoneId.of("America/Santiago")
+        val now = ZonedDateTime.of(2026, 9, 5, 23, 30, 0, 0, zone)
+        val expectedMidnight = ZonedDateTime.of(2026, 9, 6, 1, 0, 0, 0, zone).toInstant().toEpochMilli()
+
+        val actualMidnight = WidgetUpdateScheduler.nextMidnightEpochMillis(now)
+
+        assertEquals(expectedMidnight, actualMidnight)
+    }
+
+    @Test
+    fun `次の鳴動が0時より前にあるときは鳴動時刻プラス1秒を予約時刻とする`() {
+        val zone = ZoneId.of("Asia/Tokyo")
+        val now = ZonedDateTime.of(2026, 9, 19, 12, 0, 0, 0, zone)
+        val nextAlarm = ZonedDateTime.of(2026, 9, 19, 21, 30, 0, 0, zone)
+        val expected = nextAlarm.toInstant().toEpochMilli() + 1_000L
+
+        val actual = WidgetUpdateScheduler.calculateNextRefreshEpochMillis(now, nextAlarm)
+
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `次の鳴動が0時より後または無いときは0時を予約時刻とする`() {
+        val zone = ZoneId.of("Asia/Tokyo")
+        val now = ZonedDateTime.of(2026, 9, 19, 12, 0, 0, 0, zone)
+        val nextAlarmTomorrow = ZonedDateTime.of(2026, 9, 20, 7, 0, 0, 0, zone)
+        val expectedMidnight = ZonedDateTime.of(2026, 9, 20, 0, 0, 0, 0, zone).toInstant().toEpochMilli()
+
+        // 翌朝鳴動の場合は0:00が先に来るため0:00が選ばれる
+        val actualTomorrow = WidgetUpdateScheduler.calculateNextRefreshEpochMillis(now, nextAlarmTomorrow)
+        assertEquals(expectedMidnight, actualTomorrow)
+
+        // 次の鳴動予定が無い（null）場合も0:00が選ばれる
+        val actualNull = WidgetUpdateScheduler.calculateNextRefreshEpochMillis(now, null)
+        assertEquals(expectedMidnight, actualNull)
     }
 
     /**

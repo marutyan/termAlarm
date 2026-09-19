@@ -201,7 +201,7 @@
                 android:resource="@xml/term_alarm_widget_info" />
         </receiver>
 
-        <!-- ウィジェットの定期更新（1分タイマー発火先）・鳴動終了・端末時刻変更・アプリ更新を受け取るレシーバー。
+        <!-- ウィジェットの次回更新（次の 0:00 または次の鳴動の直後に描き直す受け口）・鳴動終了・端末時刻変更・アプリ更新を受け取るレシーバー。
              BOOT_COMPLETEDなどシステムが送るものを受けるため exported は true にする必要がある
              （exported="false" にするとシステムからのブロードキャストが届かず、再起動後に復帰しなくなる）。
              自前のRINGING_FINISHEDは送る側がsetPackageで自アプリへ限定しているため、
